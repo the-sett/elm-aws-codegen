@@ -22,7 +22,7 @@ import L3 exposing (DefaultProperties, L3, Processor, PropertiesAPI)
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
-import Templates.L1
+import Templates.Elm
 
 
 protocolEnum : Enum String
@@ -461,7 +461,7 @@ requestFnRequest name request =
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             let
                 ( loweredType, loweredLinkage ) =
-                    Templates.L1.lowerType l1RequestType
+                    Templates.Elm.lowerType l1RequestType
 
                 linkage =
                     CG.combineLinkage
@@ -520,7 +520,7 @@ requestFnResponse name response =
         (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
             let
                 ( loweredType, loweredLinkage ) =
-                    Templates.L1.lowerType l1ResponseType
+                    Templates.Elm.lowerType l1ResponseType
 
                 responseType =
                     loweredType
@@ -582,7 +582,7 @@ typeDeclaration name decl =
                     CG.emptyDocComment
                         |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
             in
-            Templates.L1.typeDecl name doc decl
+            Templates.Elm.typeDecl name doc decl
 
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
@@ -598,7 +598,7 @@ jsonCodec name decl =
             ( [], CG.emptyLinkage )
 
         _ ->
-            Templates.L1.codec name decl
+            Templates.Elm.codec name decl
                 |> Tuple.mapFirst List.singleton
 
 
