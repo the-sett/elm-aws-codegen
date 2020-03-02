@@ -42,7 +42,7 @@ port codeOutPort : ( String, String, List String ) -> Cmd msg
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Error _ ->
+        Error ->
             Sub.none
 
         _ ->
@@ -57,12 +57,8 @@ subscriptions model =
 
 type Model
     = Initial
-    | Seeded { seed : Seed }
-    | LoadedModel { seed : Seed, dataModel : AWSService }
-    | ModelProcessed
-    | TemplateProcessed
     | Done
-    | Error String
+    | Error
 
 
 
@@ -70,27 +66,21 @@ type Model
 
 
 type Msg
-    = CreateSeed Posix
-    | ModelData String String
+    = ModelData String String
 
 
 init : a -> ( Model, Cmd Msg )
 init _ =
-    ( Initial
-    , Task.perform CreateSeed Time.now
-    )
+    ( Initial, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( model, msg ) of
-        ( Initial, CreateSeed posix ) ->
-            ( Seeded { seed = Random.initialSeed <| Time.posixToMillis posix }, Cmd.none )
-
-        ( Seeded { seed }, ModelData name val ) ->
+        ( Initial, ModelData name val ) ->
             case processServiceModel val of
                 Ok ( service, outputString ) ->
-                    ( Seeded { seed = seed }
+                    ( Done
                     , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
                     )
 
@@ -99,7 +89,7 @@ update msg model =
                         _ =
                             Debug.log "Errors" errors
                     in
-                    ( Seeded { seed = seed }, Cmd.none )
+                    ( Error, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )
