@@ -6,6 +6,7 @@ import Checker
 import Console
 import Dict exposing (Dict)
 import Enum exposing (Enum)
+import Errors exposing (Error(..))
 import HttpMethod exposing (HttpMethod(..))
 import L1
     exposing
@@ -60,23 +61,20 @@ errorToString err =
             "Unknown not implemented."
 
 
-transform : AWSService -> ResultME String (L3 ())
+transform : AWSService -> ResultME Error (L3 ())
 transform service =
     let
-        mappingsResult : ResultME String (L1 ())
+        mappingsResult : ResultME Error (L1 ())
         mappingsResult =
             modelShapes service.shapes
-                |> ResultME.mapError errorToString
 
-        operationsResult : ResultME String (L1 ())
+        operationsResult : ResultME Error (L1 ())
         operationsResult =
             modelOperations service.operations
-                |> ResultME.mapError errorToString
 
         l2Result =
             Result.map2 List.append mappingsResult operationsResult
-                |> ResultME.andThen
-                    (Checker.check >> ResultME.mapError Checker.errorToString)
+                |> ResultME.andThen Checker.check
     in
     ResultME.map
         (\l2 ->
@@ -187,13 +185,14 @@ shapeRefToL1Type ref =
 
 modelShapes :
     Dict String Shape
-    -> ResultME (TransformError ()) (L1 ())
+    -> ResultME Error (L1 ())
 modelShapes shapeDict =
     Dict.map
         (\key value -> modelShape value key)
         shapeDict
         |> ResultME.combineDict
-        |> Result.map Dict.toList
+        |> ResultME.map Dict.toList
+        |> ResultME.mapError (errorToString >> Error)
 
 
 modelShape : Shape -> String -> ResultME (TransformError ()) (Declarable () Unchecked)
@@ -386,13 +385,14 @@ modelMap shape name =
 
 modelOperations :
     Dict String Operation
-    -> ResultME (TransformError ()) (L1 ())
+    -> ResultME Error (L1 ())
 modelOperations operations =
     Dict.map
         (\name operation -> modelOperation name operation)
         operations
         |> ResultME.combineDict
-        |> Result.map Dict.toList
+        |> ResultME.map Dict.toList
+        |> ResultME.mapError (errorToString >> Error)
 
 
 modelOperation : String -> Operation -> ResultME (TransformError ()) (Declarable () Unchecked)
