@@ -374,7 +374,7 @@ modelMap shape name =
                 Just valRef ->
                     shapeRefToL1Type valRef |> Ok
     in
-    ResultME.combine2
+    ResultME.map2
         (\keyType valType -> TContainer () L1.emptyProperties (CDict keyType valType) |> DAlias () L1.emptyProperties)
         keyTypeRes
         valTypeRes
@@ -412,7 +412,7 @@ modelOperation name operation =
         responseRes =
             paramType operation.output "Output"
     in
-    ResultME.combine2
+    ResultME.map2
         (\request response ->
             let
                 declProps =

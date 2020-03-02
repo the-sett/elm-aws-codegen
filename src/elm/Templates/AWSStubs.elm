@@ -143,7 +143,7 @@ check l3 =
 
 generate : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError File
 generate propertiesApi model =
-    ResultME.combine5
+    ResultME.map5
         (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) documentation ->
             let
                 declarations =
@@ -211,7 +211,7 @@ service propertiesApi model =
 
 optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError LetDeclaration
 optionsFn propertiesApi model =
-    ResultME.combine4
+    ResultME.map4
         (\jsonVersion signingName targetPrefix xmlNamespace ->
             let
                 jsonVersionOption =
@@ -254,7 +254,7 @@ optionsFn propertiesApi model =
 
 regionalService : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( Declaration, Linkage )
 regionalService propertiesApi model =
-    ResultME.combine5
+    ResultME.map5
         (\endpointPrefix apiVersion protocol signer options ->
             let
                 sig =
@@ -297,7 +297,7 @@ regionalService propertiesApi model =
 
 globalService : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( Declaration, Linkage )
 globalService propertiesApi model =
-    ResultME.combine5
+    ResultME.map5
         (\endpointPrefix apiVersion protocol signer options ->
             let
                 sig =
@@ -395,7 +395,7 @@ requestFn declPropertyGet funPropertyGet name pos request response =
                 Nothing ->
                     wrappedResponseType
     in
-    ResultME.combine3
+    ResultME.map3
         (\url httpMethod documentation ->
             let
                 requestImpl =
