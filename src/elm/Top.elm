@@ -5,11 +5,13 @@ import Codec
 import Dict exposing (Dict)
 import Elm.Pretty
 import Elm.Writer
+import Errors exposing (Error(..))
 import Json.Decode as Decode
 import Json.Decode.Generic as Generic
 import L3
 import Pretty
 import Random exposing (Seed)
+import ResultME exposing (ResultME)
 import String.Case as Case
 import Task
 import Templates.AWSStubs
@@ -94,51 +96,35 @@ update msg model =
 processServiceModel : String -> String -> Seed -> ( Model, Cmd Msg )
 processServiceModel name val seed =
     let
-        serviceResult =
+        codegenResult =
             Codec.decodeString AWSService.awsServiceCodec val
+                |> ResultME.fromResult
+                |> ResultME.mapError (Decode.errorToString >> Errors.Error)
+                |> ResultME.andThen
+                    (\service ->
+                        Transform.transform service
+                            |> ResultME.map (Tuple.pair service)
+                    )
+                |> ResultME.andThen
+                    (\( service, apiModel ) ->
+                        let
+                            propsAPI =
+                                L3.makePropertiesAPI Templates.AWSStubs.generator.defaults apiModel
+                        in
+                        Templates.AWSStubs.generate propsAPI apiModel
+                            |> ResultME.map (Tuple.pair service)
+                    )
+                |> ResultME.map (Tuple.mapSecond (Elm.Pretty.pretty 120))
     in
-    case serviceResult of
-        Ok service ->
-            case Transform.transform service of
-                Ok apiModel ->
-                    let
-                        generator =
-                            Templates.AWSStubs.generator
+    case codegenResult of
+        Ok ( service, outputString ) ->
+            ( Seeded { seed = seed }
+            , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
+            )
 
-                        propsAPI =
-                            L3.makePropertiesAPI generator.defaults apiModel
-
-                        codegenResult =
-                            apiModel
-                                |> Templates.AWSStubs.generate propsAPI
-                    in
-                    case codegenResult of
-                        Ok file ->
-                            let
-                                codegen =
-                                    Elm.Pretty.pretty 120 file
-                            in
-                            ( Seeded { seed = seed }
-                            , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", codegen, [] ) |> codeOutPort
-                            )
-
-                        Err errors ->
-                            let
-                                _ =
-                                    Debug.log "Errors" errors
-                            in
-                            ( Seeded { seed = seed }, Cmd.none )
-
-                Err errors ->
-                    let
-                        _ =
-                            Debug.log "Errors" errors
-                    in
-                    ( Seeded { seed = seed }, Cmd.none )
-
-        Err err ->
+        Err errors ->
             let
                 _ =
-                    Debug.log "Error" (name ++ " - " ++ Decode.errorToString err)
+                    Debug.log "Errors" errors
             in
             ( Seeded { seed = seed }, Cmd.none )
