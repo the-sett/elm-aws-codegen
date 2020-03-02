@@ -3,6 +3,7 @@ port module Top exposing (main)
 import AWSService exposing (AWSService)
 import Codec
 import Dict exposing (Dict)
+import Elm.CodeGen as CG
 import Elm.Pretty
 import Elm.Writer
 import Errors exposing (Error(..))
@@ -87,44 +88,54 @@ update msg model =
             ( Seeded { seed = Random.initialSeed <| Time.posixToMillis posix }, Cmd.none )
 
         ( Seeded { seed }, ModelData name val ) ->
-            processServiceModel name val seed
+            case processServiceModel val of
+                Ok ( service, outputString ) ->
+                    ( Seeded { seed = seed }
+                    , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
+                    )
+
+                Err errors ->
+                    let
+                        _ =
+                            Debug.log "Errors" errors
+                    in
+                    ( Seeded { seed = seed }, Cmd.none )
 
         ( _, _ ) ->
             ( model, Cmd.none )
 
 
-processServiceModel : String -> String -> Seed -> ( Model, Cmd Msg )
-processServiceModel name val seed =
-    let
-        codegenResult =
-            Codec.decodeString AWSService.awsServiceCodec val
-                |> ResultME.fromResult
-                |> ResultME.mapError (Decode.errorToString >> Errors.Error)
-                |> ResultME.andThen
-                    (\service ->
-                        Transform.transform service
-                            |> ResultME.map (Tuple.pair service)
-                    )
-                |> ResultME.andThen
-                    (\( service, apiModel ) ->
-                        let
-                            propsAPI =
-                                L3.makePropertiesAPI Templates.AWSStubs.generator.defaults apiModel
-                        in
-                        Templates.AWSStubs.generate propsAPI apiModel
-                            |> ResultME.map (Tuple.pair service)
-                    )
-                |> ResultME.map (Tuple.mapSecond (Elm.Pretty.pretty 120))
-    in
-    case codegenResult of
-        Ok ( service, outputString ) ->
-            ( Seeded { seed = seed }
-            , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
-            )
+processServiceModel : String -> ResultME Error ( AWSService, String )
+processServiceModel val =
+    decodeServiceModel val
+        |> ResultME.andThen transformToApiModel
+        |> ResultME.andThen generateAWSStubs
+        |> ResultME.map prettyPrint
 
-        Err errors ->
-            let
-                _ =
-                    Debug.log "Errors" errors
-            in
-            ( Seeded { seed = seed }, Cmd.none )
+
+decodeServiceModel : String -> ResultME Error AWSService
+decodeServiceModel val =
+    Codec.decodeString AWSService.awsServiceCodec val
+        |> ResultME.fromResult
+        |> ResultME.mapError (Decode.errorToString >> Errors.Error)
+
+
+transformToApiModel : AWSService -> ResultME Error ( AWSService, L3.L3 () )
+transformToApiModel service =
+    Transform.transform service
+        |> ResultME.map (Tuple.pair service)
+
+
+generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.File )
+generateAWSStubs ( service, apiModel ) =
+    let
+        propsAPI =
+            L3.makePropertiesAPI Templates.AWSStubs.generator.defaults apiModel
+    in
+    Templates.AWSStubs.generate propsAPI apiModel
+        |> ResultME.map (Tuple.pair service)
+
+
+prettyPrint : ( AWSService, CG.File ) -> ( AWSService, String )
+prettyPrint ( service, stubFile ) =
+    ( service, Elm.Pretty.pretty 120 stubFile )
