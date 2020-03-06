@@ -1,11 +1,7 @@
 module Templates.AWSStubs exposing
-    ( AWSStubsError(..)
-    , check
-    , defaultProperties
-    , elmEnumStyleEnum
-    , errorToString
+    ( elmEnumStyleEnum
     , generate
-    , generator
+    , processorImpl
     , protocolEnum
     , signerEnum
     )
@@ -15,14 +11,24 @@ import Dict
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Enum exposing (Enum)
+import Errors exposing (Error(..))
 import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
-import L3 exposing (DefaultProperties, L3, Processor, PropertiesAPI)
+import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropertiesAPI)
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import Templates.Elm
+
+
+processorImpl : ProcessorImpl pos L3.PropCheckError
+processorImpl =
+    { name = "AWSStubs"
+    , defaults = defaultProperties
+    , check = check
+    , buildError = L3.errorBuilder
+    }
 
 
 protocolEnum : Enum String
@@ -113,35 +119,13 @@ defaultProperties =
     }
 
 
-generator : Processor pos AWSStubsError
-generator =
-    { name = "AWSStubs"
-    , defaults = defaultProperties
-    , check = check
-    , errorToString = errorToString
-    }
-
-
-type AWSStubsError
-    = AWSStubsError
-
-
-errorToString : (pos -> String) -> pos -> err -> String
-errorToString _ _ _ =
-    "errorToString"
-
-
 check : L3 pos -> ResultME err (L3 pos)
 check l3 =
     -- Debug.todo "check"
     l3 |> Ok
 
 
-
---generate : L3 pos -> ResultME String File
-
-
-generate : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError File
+generate : PropertiesAPI pos -> L3 pos -> ResultME Error File
 generate propertiesApi model =
     ResultME.map5
         (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) documentation ->
@@ -180,6 +164,7 @@ generate propertiesApi model =
         (jsonCodecs propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation")
         |> ResultME.flatten
+        |> ResultME.mapError (L3.errorBuilder (always ""))
 
 
 
