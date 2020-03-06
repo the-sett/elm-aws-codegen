@@ -56,8 +56,7 @@ subscriptions model =
 
 
 type Model
-    = Initial
-    | Done
+    = Ready
     | Error
 
 
@@ -71,21 +70,24 @@ type Msg
 
 init : a -> ( Model, Cmd Msg )
 init _ =
-    ( Initial, Cmd.none )
+    ( Ready, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( model, msg ) of
-        ( Initial, ModelData name val ) ->
+        ( Ready, ModelData name val ) ->
             case processServiceModel val of
                 Ok ( service, outputString ) ->
-                    ( Done
+                    ( Ready
                     , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
                     )
 
                 Err errors ->
                     let
+                        _ =
+                            Debug.log "Errors" "There are errors."
+
                         _ =
                             Debug.log "Errors" errors
                     in
@@ -105,9 +107,17 @@ processServiceModel val =
 
 decodeServiceModel : String -> ResultME Error AWSService
 decodeServiceModel val =
+    let
+        decodeErrorFn err =
+            Errors.Error
+                { code = -1
+                , title = "Decode Error"
+                , body = []
+                }
+    in
     Codec.decodeString AWSService.awsServiceCodec val
         |> ResultME.fromResult
-        |> ResultME.mapError (Decode.errorToString >> Errors.Error)
+        |> ResultME.mapError decodeErrorFn
 
 
 transformToApiModel : AWSService -> ResultME Error ( AWSService, L3.L3 () )
@@ -119,8 +129,14 @@ transformToApiModel service =
 generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.File )
 generateAWSStubs ( service, apiModel ) =
     let
+        posFn _ =
+            ""
+
+        l3StubProcessor =
+            L3.builder posFn Templates.AWSStubs.processorImpl
+
         propsAPI =
-            L3.makePropertiesAPI Templates.AWSStubs.generator.defaults apiModel
+            L3.makePropertiesAPI l3StubProcessor.defaults apiModel
     in
     Templates.AWSStubs.generate propsAPI apiModel
         |> ResultME.map (Tuple.pair service)

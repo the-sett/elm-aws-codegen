@@ -6,7 +6,7 @@ import Checker
 import Console
 import Dict exposing (Dict)
 import Enum exposing (Enum)
-import Errors exposing (Error(..))
+import Errors exposing (Error(..), ErrorBuilder)
 import HttpMethod exposing (HttpMethod(..))
 import L1
     exposing
@@ -39,42 +39,114 @@ type TransformError pos
     | UnknownNotImplemented pos
 
 
-errorToString : TransformError pos -> String
-errorToString err =
+{-| The error catalogue for this transform.
+-}
+errorCatalogue =
+    Dict.fromList
+        [ ( 801
+          , Error
+                { code = 801
+                , title = "Unresolved Reference"
+
+                --hint ++ " reference did not resolve."
+                , body = []
+                }
+          )
+        , ( 802
+          , Error
+                { code = 802
+                , title = "Structure has No Members"
+
+                --     name ++ ": structure has no members"
+                , body = []
+                }
+          )
+        , ( 803
+          , Error
+                { code = 803
+                , title = "Map Key Empty"
+
+                --     "Map .key is empty."
+                , body = []
+                }
+          )
+        , ( 804
+          , Error
+                { code = 804
+                , title = "Map Value Empty"
+
+                --     "Map .value is empty."
+                , body = []
+                }
+          )
+        , ( 805
+          , Error
+                { code = 805
+                , title = "List Member is Empty"
+
+                --     "List .member is empty, but should be a shape reference."
+                , body = []
+                }
+          )
+        , ( 806
+          , Error
+                { code = 806
+                , title = "Unknown Not Implemented"
+
+                --     "Unknown not implemented."
+                , body = []
+                }
+          )
+        ]
+
+
+errorBuilder : ErrorBuilder pos (TransformError pos)
+errorBuilder posFn err =
     case err of
         UnresolvedRef _ hint ->
-            hint ++ " reference did not resolve."
+            Errors.lookupError errorCatalogue 801
 
         NoMembers _ name ->
-            name ++ ": structure has no members"
+            Errors.lookupError errorCatalogue 802
 
         MapKeyEmpty _ ->
-            "Map .key is empty."
+            Errors.lookupError errorCatalogue 803
 
         MapValueEmpty _ ->
-            "Map .value is empty."
+            Errors.lookupError errorCatalogue 804
 
         ListMemberEmpty _ ->
-            "List .member is empty, but should be a shape reference."
+            Errors.lookupError errorCatalogue 805
 
         UnknownNotImplemented _ ->
-            "Unknown not implemented."
+            Errors.lookupError errorCatalogue 806
 
 
 transform : AWSService -> ResultME Error (L3 ())
 transform service =
     let
+        posFn _ =
+            ""
+
+        errorMapFn =
+            errorBuilder posFn
+
         mappingsResult : ResultME Error (L1 ())
         mappingsResult =
             modelShapes service.shapes
+                |> ResultME.mapError errorMapFn
 
         operationsResult : ResultME Error (L1 ())
         operationsResult =
             modelOperations service.operations
+                |> ResultME.mapError errorMapFn
+
+        l2Checker =
+            L2.builder posFn Checker.processorImpl
 
         l2Result =
             Result.map2 List.append mappingsResult operationsResult
-                |> ResultME.andThen Checker.check
+                |> ResultME.andThen l2Checker.check
     in
     ResultME.map
         (\l2 ->
@@ -185,14 +257,13 @@ shapeRefToL1Type ref =
 
 modelShapes :
     Dict String Shape
-    -> ResultME Error (L1 ())
+    -> ResultME (TransformError ()) (L1 ())
 modelShapes shapeDict =
     Dict.map
         (\key value -> modelShape value key)
         shapeDict
         |> ResultME.combineDict
         |> ResultME.map Dict.toList
-        |> ResultME.mapError (errorToString >> Error)
 
 
 modelShape : Shape -> String -> ResultME (TransformError ()) (Declarable () Unchecked)
@@ -385,14 +456,13 @@ modelMap shape name =
 
 modelOperations :
     Dict String Operation
-    -> ResultME Error (L1 ())
+    -> ResultME (TransformError ()) (L1 ())
 modelOperations operations =
     Dict.map
         (\name operation -> modelOperation name operation)
         operations
         |> ResultME.combineDict
         |> ResultME.map Dict.toList
-        |> ResultME.mapError (errorToString >> Error)
 
 
 modelOperation : String -> Operation -> ResultME (TransformError ()) (Declarable () Unchecked)
