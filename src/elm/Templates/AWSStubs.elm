@@ -1,11 +1,7 @@
 module Templates.AWSStubs exposing
-    ( AWSStubsError(..)
-    , check
-    , defaultProperties
-    , elmEnumStyleEnum
-    , errorToString
+    ( elmEnumStyleEnum
     , generate
-    , generator
+    , processorImpl
     , protocolEnum
     , signerEnum
     )
@@ -19,11 +15,25 @@ import Errors exposing (Error(..))
 import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
-import L3 exposing (DefaultProperties, L3, Processor, PropertiesAPI)
+import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropertiesAPI)
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import Templates.Elm
+
+
+processorImpl : ProcessorImpl pos L3.PropCheckError
+processorImpl =
+    { name = "AWSStubs"
+    , defaults = defaultProperties
+    , check = check
+    , buildError = errorBuilder
+    }
+
+
+errorBuilder : (pos -> String) -> err -> Error
+errorBuilder _ _ =
+    Errors.defaultError
 
 
 protocolEnum : Enum String
@@ -114,32 +124,10 @@ defaultProperties =
     }
 
 
-generator : Processor pos AWSStubsError
-generator =
-    { name = "AWSStubs"
-    , defaults = defaultProperties
-    , check = check
-    , errorToString = errorToString
-    }
-
-
-type AWSStubsError
-    = AWSStubsError
-
-
-errorToString : (pos -> String) -> pos -> err -> String
-errorToString _ _ _ =
-    "errorToString"
-
-
 check : L3 pos -> ResultME err (L3 pos)
 check l3 =
     -- Debug.todo "check"
     l3 |> Ok
-
-
-
---generate : L3 pos -> ResultME String File
 
 
 generate : PropertiesAPI pos -> L3 pos -> ResultME Error File
@@ -181,7 +169,7 @@ generate propertiesApi model =
         (jsonCodecs propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation")
         |> ResultME.flatten
-        |> ResultME.mapError (L3.propCheckErrorToString >> Error)
+        |> ResultME.mapError (always Errors.defaultError)
 
 
 
