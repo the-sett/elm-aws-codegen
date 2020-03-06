@@ -164,7 +164,7 @@ generate propertiesApi model =
         (jsonCodecs propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation")
         |> ResultME.flatten
-        |> ResultME.mapError (always Errors.defaultError)
+        |> ResultME.mapError (L3.errorBuilder (always ""))
 
 
 
