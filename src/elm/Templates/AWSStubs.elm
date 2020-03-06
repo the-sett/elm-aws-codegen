@@ -27,13 +27,8 @@ processorImpl =
     { name = "AWSStubs"
     , defaults = defaultProperties
     , check = check
-    , buildError = errorBuilder
+    , buildError = L3.errorBuilder
     }
-
-
-errorBuilder : (pos -> String) -> err -> Error
-errorBuilder _ _ =
-    Errors.defaultError
 
 
 protocolEnum : Enum String
