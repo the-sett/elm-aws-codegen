@@ -385,7 +385,7 @@ requestFn declPropertyGet funPropertyGet name pos request response =
             let
                 requestImpl =
                     CG.apply
-                        [ CG.fqFun coreHttpMod "request"
+                        [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
                         , CG.string (Naming.safeCCU name)
                         , CG.fqVal coreHttpMod httpMethod
                         , CG.string url
