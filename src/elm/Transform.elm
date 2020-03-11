@@ -159,12 +159,12 @@ transform service =
                         (protocolToString service.metaData.protocol
                             |> PEnum AWSStubs.protocolEnum
                         )
-                    |> Dict.insert "signer"
-                        (service.metaData.signatureVersion
-                            |> Maybe.withDefault SignV4
-                            |> signerToString
-                            |> PEnum AWSStubs.signerEnum
-                        )
+                    -- |> Dict.insert "signer"
+                    --     (service.metaData.signatureVersion
+                    --         |> Maybe.withDefault SignV4
+                    --         |> signerToString
+                    --         |> PEnum AWSStubs.signerEnum
+                    --     )
                     |> Dict.insert "xmlNamespace"
                         (Maybe.map PString service.metaData.xmlNamespace
                             |> POptional PSString

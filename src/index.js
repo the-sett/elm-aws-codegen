@@ -89,7 +89,7 @@ app.ports.codeOutPort.subscribe(request => {
 });
 
 app.ports.errorOutPort.subscribe(request => {
-  console.log("=== Errors ===: " + request[0] + "\n");
+  console.log("=== Errors While Processing ========= " + request[0] + "\n");
 
   request[1].forEach(function(item, index) {
     console.log(item + "\n");
