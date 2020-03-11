@@ -40,6 +40,9 @@ port modelInPort : (( String, String ) -> msg) -> Sub msg
 port codeOutPort : ( String, String, List String ) -> Cmd msg
 
 
+port errorOutPort : ( String, List String ) -> Cmd msg
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
@@ -81,20 +84,20 @@ update msg model =
             case processServiceModel val of
                 Ok ( service, outputString ) ->
                     ( Ready
-                    , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm", outputString, [] ) |> codeOutPort
+                    , ( Case.toCamelCaseUpper service.metaData.serviceId ++ ".elm"
+                      , outputString
+                      , []
+                      )
+                        |> codeOutPort
                     )
 
                 Err errors ->
                     let
-                        _ =
-                            List.Nonempty.map
-                                (\error -> Debug.log "" (Errors.asConsoleString error))
-                                errors
-
-                        _ =
-                            Debug.log "Errors" errors
+                        printableErrors =
+                            List.Nonempty.map Errors.asConsoleString errors
+                                |> List.Nonempty.toList
                     in
-                    ( Error, Cmd.none )
+                    ( Error, ( name, printableErrors ) |> errorOutPort )
 
         ( _, _ ) ->
             ( model, Cmd.none )

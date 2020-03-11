@@ -73,7 +73,6 @@ specs.forEach(function(item, index) {
 });
 
 app.ports.codeOutPort.subscribe(request => {
-
   console.log("=== Processed ===: " + request[0] + "\n");
 
   request[2].forEach(function(item, index) {
@@ -87,4 +86,12 @@ app.ports.codeOutPort.subscribe(request => {
 
     formatFile(filename);
   })
+});
+
+app.ports.errorOutPort.subscribe(request => {
+  console.log("=== Errors ===: " + request[0] + "\n");
+
+  request[1].forEach(function(item, index) {
+    console.log(item + "\n");
+  });
 });
