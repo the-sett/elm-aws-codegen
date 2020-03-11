@@ -3,7 +3,6 @@ module Transform exposing (transform)
 import AWS.Core.Service exposing (Protocol(..), Signer(..))
 import AWSService exposing (AWSService, AWSType(..), Operation, Shape, ShapeRef)
 import Checker
-import Console
 import Dict exposing (Dict)
 import Enum exposing (Enum)
 import Errors exposing (Error(..), ErrorBuilder)
