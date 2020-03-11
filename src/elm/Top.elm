@@ -10,6 +10,7 @@ import Errors exposing (Error(..))
 import Json.Decode as Decode
 import Json.Decode.Generic as Generic
 import L3
+import List.Nonempty
 import Pretty
 import Random exposing (Seed)
 import ResultME exposing (ResultME)
@@ -86,7 +87,9 @@ update msg model =
                 Err errors ->
                     let
                         _ =
-                            Debug.log "Errors" "There are errors."
+                            List.Nonempty.map
+                                (\error -> Debug.log "" (Errors.asConsoleString error))
+                                errors
 
                         _ =
                             Debug.log "Errors" errors

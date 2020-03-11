@@ -69,18 +69,10 @@ nodeToComment node isTop accum comment =
 
                 ( taggedAccum, taggedInnerComment ) =
                     case ( el, innerAccum ) of
-                        -- ( "p", _ ) ->
-                        --     ( [], CG.markdown (List.reverse innerAccum |> String.join "") innerComment )
                         ( "fullname", hd :: tl ) ->
                             ( ("## " ++ hd) :: tl, innerComment )
 
-                        -- ( "ul", _ ) ->
-                        --     ( [], CG.markdown (List.reverse innerAccum |> String.join "") innerComment )
                         ( "li", _ ) ->
-                            let
-                                _ =
-                                    Debug.log "innerAccum" innerAccum
-                            in
                             ( [ "\n - " ++ (List.reverse innerAccum |> String.join "") ]
                             , innerComment
                             )
