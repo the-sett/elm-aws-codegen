@@ -90,23 +90,29 @@ errorCatalogue =
 errorBuilder : ErrorBuilder pos (TransformError pos)
 errorBuilder posFn err =
     case err of
-        UnresolvedRef pos hint ->
-            Errors.lookupError errorCatalogue 801 [ posFn pos ]
+        UnresolvedRef pos name ->
+            Errors.lookupError errorCatalogue
+                801
+                (Dict.fromList [ ( "name", name ) ])
+                [ posFn pos ]
 
         NoMembers pos name ->
-            Errors.lookupError errorCatalogue 802 [ posFn pos ]
+            Errors.lookupError errorCatalogue
+                802
+                (Dict.fromList [ ( "name", name ) ])
+                [ posFn pos ]
 
         MapKeyEmpty pos ->
-            Errors.lookupError errorCatalogue 803 [ posFn pos ]
+            Errors.lookupErrorNoArgs errorCatalogue 803 [ posFn pos ]
 
         MapValueEmpty pos ->
-            Errors.lookupError errorCatalogue 804 [ posFn pos ]
+            Errors.lookupErrorNoArgs errorCatalogue 804 [ posFn pos ]
 
         ListMemberEmpty pos ->
-            Errors.lookupError errorCatalogue 805 [ posFn pos ]
+            Errors.lookupErrorNoArgs errorCatalogue 805 [ posFn pos ]
 
         UnknownNotImplemented pos ->
-            Errors.lookupError errorCatalogue 806 [ posFn pos ]
+            Errors.lookupErrorNoArgs errorCatalogue 806 [ posFn pos ]
 
 
 transform : AWSService -> ResultME Error (L3 ())

@@ -118,6 +118,7 @@ decodeServiceModel val =
             { code = -1
             , title = "Decode Error"
             , body = "Could not decode the AWS service descriptor."
+            , args = Dict.empty
             , sources = []
             }
     in
