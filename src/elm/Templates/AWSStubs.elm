@@ -11,7 +11,7 @@ import Dict
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Enum exposing (Enum)
-import Errors exposing (Error(..))
+import Errors exposing (Error)
 import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)

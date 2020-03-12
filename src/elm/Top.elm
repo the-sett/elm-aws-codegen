@@ -6,7 +6,7 @@ import Dict exposing (Dict)
 import Elm.CodeGen as CG
 import Elm.Pretty
 import Elm.Writer
-import Errors exposing (Error(..))
+import Errors exposing (Error)
 import Json.Decode as Decode
 import Json.Decode.Generic as Generic
 import L3
@@ -115,11 +115,10 @@ decodeServiceModel : String -> ResultME Error AWSService
 decodeServiceModel val =
     let
         decodeErrorFn err =
-            Errors.Error
-                { code = -1
-                , title = "Decode Error"
-                , body = []
-                }
+            { code = -1
+            , title = "Decode Error"
+            , body = []
+            }
     in
     Codec.decodeString AWSService.awsServiceCodec val
         |> ResultME.fromResult

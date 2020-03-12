@@ -5,7 +5,7 @@ import AWSService exposing (AWSService, AWSType(..), Operation, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
 import Enum exposing (Enum)
-import Errors exposing (Error(..), ErrorBuilder)
+import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod(..))
 import L1
     exposing
@@ -43,58 +43,52 @@ type TransformError pos
 errorCatalogue =
     Dict.fromList
         [ ( 801
-          , Error
-                { code = 801
-                , title = "Unresolved Reference"
+          , { code = 801
+            , title = "Unresolved Reference"
 
-                --hint ++ " reference did not resolve."
-                , body = []
-                }
+            --hint ++ " reference did not resolve."
+            , body = []
+            }
           )
         , ( 802
-          , Error
-                { code = 802
-                , title = "Structure has No Members"
+          , { code = 802
+            , title = "Structure has No Members"
 
-                --     name ++ ": structure has no members"
-                , body = []
-                }
+            --     name ++ ": structure has no members"
+            , body = []
+            }
           )
         , ( 803
-          , Error
-                { code = 803
-                , title = "Map Key Empty"
+          , { code = 803
+            , title = "Map Key Empty"
 
-                --     "Map .key is empty."
-                , body = []
-                }
+            --     "Map .key is empty."
+            , body = []
+            }
           )
         , ( 804
-          , Error
-                { code = 804
-                , title = "Map Value Empty"
+          , { code = 804
+            , title = "Map Value Empty"
 
-                --     "Map .value is empty."
-                , body = []
-                }
+            --     "Map .value is empty."
+            , body = []
+            }
           )
         , ( 805
-          , Error
-                { code = 805
-                , title = "List Member is Empty"
+          , { code = 805
+            , title = "List Member is Empty"
 
-                --     "List .member is empty, but should be a shape reference."
-                , body = []
-                }
+            --     "List .member is empty, but should be a shape reference."
+            , body = []
+            }
           )
         , ( 806
-          , Error
-                { code = 806
-                , title = "Unknown Not Implemented"
+          , { code = 806
+            , title = "Unknown Not Implemented"
 
-                --     "Unknown not implemented."
-                , body = []
-                }
+            --     "Unknown not implemented."
+            , body = []
+            }
           )
         ]
 
