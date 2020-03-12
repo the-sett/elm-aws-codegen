@@ -117,7 +117,8 @@ decodeServiceModel val =
         decodeErrorFn err =
             { code = -1
             , title = "Decode Error"
-            , body = []
+            , body = "Could not decode the AWS service descriptor."
+            , sources = []
             }
     in
     Codec.decodeString AWSService.awsServiceCodec val
@@ -135,7 +136,7 @@ generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.F
 generateAWSStubs ( service, apiModel ) =
     let
         posFn _ =
-            ""
+            Errors.emptySourceLines
 
         l3StubProcessor =
             L3.builder posFn Templates.AWSStubs.processorImpl
