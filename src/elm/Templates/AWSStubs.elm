@@ -11,15 +11,48 @@ import Dict
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Enum exposing (Enum)
-import Errors exposing (Error)
+import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
-import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropertiesAPI)
+import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropCheckError(..), PropertiesAPI)
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import Templates.Elm
+
+
+{-| The error catalogue for this processor.
+-}
+errorCatalogue =
+    Dict.fromList
+        [ ( 301
+          , { title = "Required Property Missing"
+            , body = "The required property []{arg|key=name } was not set."
+            }
+          )
+        , ( 302
+          , { title = "Property is the Wrong Kind"
+            , body = "The required property []{arg|key=name } was not set."
+            }
+          )
+        ]
+
+
+errorBuilder : ErrorBuilder pos PropCheckError
+errorBuilder posFn err =
+    case err of
+        CheckedPropertyMissing name propSpec ->
+            Errors.lookupError errorCatalogue
+                301
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+        CheckedPropertyWrongKind name propSpec ->
+            Errors.lookupError errorCatalogue
+                302
+                (Dict.fromList [ ( "name", name ) ])
+                []
 
 
 processorImpl : ProcessorImpl pos L3.PropCheckError
@@ -27,7 +60,7 @@ processorImpl =
     { name = "AWSStubs"
     , defaults = defaultProperties
     , check = check
-    , buildError = L3.errorBuilder
+    , buildError = errorBuilder
     }
 
 
