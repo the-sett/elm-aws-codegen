@@ -43,51 +43,45 @@ type TransformError pos
 errorCatalogue =
     Dict.fromList
         [ ( 801
-          , { code = 801
-            , title = "Unresolved Reference"
+          , { title = "Unresolved Reference"
 
             --hint ++ " reference did not resolve."
-            , body = []
+            , body = ""
             }
           )
         , ( 802
-          , { code = 802
-            , title = "Structure has No Members"
+          , { title = "Structure has No Members"
 
             --     name ++ ": structure has no members"
-            , body = []
+            , body = ""
             }
           )
         , ( 803
-          , { code = 803
-            , title = "Map Key Empty"
+          , { title = "Map Key Empty"
 
             --     "Map .key is empty."
-            , body = []
+            , body = ""
             }
           )
         , ( 804
-          , { code = 804
-            , title = "Map Value Empty"
+          , { title = "Map Value Empty"
 
             --     "Map .value is empty."
-            , body = []
+            , body = ""
             }
           )
         , ( 805
-          , { code = 805
-            , title = "List Member is Empty"
+          , { title = "List Member is Empty"
 
             --     "List .member is empty, but should be a shape reference."
-            , body = []
+            , body = ""
             }
           )
         , ( 806
-          , { code = 806
-            , title = "Unknown Not Implemented"
+          , { title = "Unknown Not Implemented"
 
             --     "Unknown not implemented."
-            , body = []
+            , body = ""
             }
           )
         ]
@@ -96,30 +90,36 @@ errorCatalogue =
 errorBuilder : ErrorBuilder pos (TransformError pos)
 errorBuilder posFn err =
     case err of
-        UnresolvedRef _ hint ->
-            Errors.lookupError errorCatalogue 801
+        UnresolvedRef pos name ->
+            Errors.lookupError errorCatalogue
+                801
+                (Dict.fromList [ ( "name", name ) ])
+                [ posFn pos ]
 
-        NoMembers _ name ->
-            Errors.lookupError errorCatalogue 802
+        NoMembers pos name ->
+            Errors.lookupError errorCatalogue
+                802
+                (Dict.fromList [ ( "name", name ) ])
+                [ posFn pos ]
 
-        MapKeyEmpty _ ->
-            Errors.lookupError errorCatalogue 803
+        MapKeyEmpty pos ->
+            Errors.lookupErrorNoArgs errorCatalogue 803 [ posFn pos ]
 
-        MapValueEmpty _ ->
-            Errors.lookupError errorCatalogue 804
+        MapValueEmpty pos ->
+            Errors.lookupErrorNoArgs errorCatalogue 804 [ posFn pos ]
 
-        ListMemberEmpty _ ->
-            Errors.lookupError errorCatalogue 805
+        ListMemberEmpty pos ->
+            Errors.lookupErrorNoArgs errorCatalogue 805 [ posFn pos ]
 
-        UnknownNotImplemented _ ->
-            Errors.lookupError errorCatalogue 806
+        UnknownNotImplemented pos ->
+            Errors.lookupErrorNoArgs errorCatalogue 806 [ posFn pos ]
 
 
 transform : AWSService -> ResultME Error (L3 ())
 transform service =
     let
         posFn _ =
-            ""
+            Errors.emptySourceLines
 
         errorMapFn =
             errorBuilder posFn
@@ -153,12 +153,12 @@ transform service =
                         (protocolToString service.metaData.protocol
                             |> PEnum AWSStubs.protocolEnum
                         )
-                    -- |> Dict.insert "signer"
-                    --     (service.metaData.signatureVersion
-                    --         |> Maybe.withDefault SignV4
-                    --         |> signerToString
-                    --         |> PEnum AWSStubs.signerEnum
-                    --     )
+                    |> Dict.insert "signer"
+                        (service.metaData.signatureVersion
+                            |> Maybe.withDefault SignV4
+                            |> signerToString
+                            |> PEnum AWSStubs.signerEnum
+                        )
                     |> Dict.insert "xmlNamespace"
                         (Maybe.map PString service.metaData.xmlNamespace
                             |> POptional PSString
