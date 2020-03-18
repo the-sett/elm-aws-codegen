@@ -19,6 +19,7 @@ import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropCheckError(..), Pr
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
+import SourcePos exposing (SourceLines)
 import Templates.Elm
 
 
@@ -158,8 +159,8 @@ check l3 =
     l3 |> Ok
 
 
-generate : PropertiesAPI pos -> L3 pos -> ResultME Error File
-generate propertiesApi model =
+generate : (pos -> SourceLines) -> PropertiesAPI pos -> L3 pos -> ResultME Error File
+generate posFn propertiesApi model =
     ResultME.map5
         (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) documentation ->
             let
@@ -197,7 +198,7 @@ generate propertiesApi model =
         (jsonCodecs propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation")
         |> ResultME.flatten
-        |> ResultME.mapError (L3.errorBuilder (always Errors.emptySourceLines))
+        |> ResultME.mapError (errorBuilder posFn)
 
 
 

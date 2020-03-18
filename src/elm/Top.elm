@@ -129,26 +129,35 @@ decodeServiceModel val =
 
 transformToApiModel : AWSService -> ResultME Error ( AWSService, L3.L3 () )
 transformToApiModel service =
-    Transform.transform service
+    Transform.transform posFn service
         |> ResultME.map (Tuple.pair service)
 
 
 generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.File )
 generateAWSStubs ( service, apiModel ) =
     let
-        posFn _ =
-            Errors.emptySourceLines
-
         l3StubProcessor =
             L3.builder posFn Templates.AWSStubs.processorImpl
 
         propsAPI =
             L3.makePropertiesAPI l3StubProcessor.defaults apiModel
     in
-    Templates.AWSStubs.generate propsAPI apiModel
+    Templates.AWSStubs.generate posFn propsAPI apiModel
         |> ResultME.map (Tuple.pair service)
 
 
 prettyPrint : ( AWSService, CG.File ) -> ( AWSService, String )
 prettyPrint ( service, stubFile ) =
     ( service, Elm.Pretty.pretty 120 stubFile )
+
+
+
+-- Error reporting
+
+
+{-| TODO: Dummy implementation. Do a better job of quoting the source JSON.
+-}
+posFn _ =
+    { lines = Dict.empty
+    , highlight = Nothing
+    }

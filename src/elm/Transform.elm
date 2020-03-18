@@ -25,6 +25,7 @@ import List.Nonempty
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
+import SourcePos exposing (SourceLines)
 import String.Case as Case
 import Templates.AWSStubs as AWSStubs
 
@@ -115,12 +116,9 @@ errorBuilder posFn err =
             Errors.lookupErrorNoArgs errorCatalogue 806 [ posFn pos ]
 
 
-transform : AWSService -> ResultME Error (L3 ())
-transform service =
+transform : (() -> SourceLines) -> AWSService -> ResultME Error (L3 ())
+transform posFn service =
     let
-        posFn _ =
-            Errors.emptySourceLines
-
         errorMapFn =
             errorBuilder posFn
 
