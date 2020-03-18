@@ -5,7 +5,7 @@
         "/home/rupert/sc/github/the-sett/elm-syntax-dsl/src",
         "/home/rupert/sc/github/the-sett/salix/src"
     ],
-    "elm-version": "0.19.0",
+    "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
             "Chadtech/elm-bool-extra": "2.4.0",
