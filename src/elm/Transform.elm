@@ -28,6 +28,7 @@ import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
 import String.Case as Case
 import Templates.AWSStubs as AWSStubs
+import UrlParser
 
 
 type TransformError pos
@@ -37,6 +38,7 @@ type TransformError pos
     | MapValueEmpty pos
     | ListMemberEmpty pos
     | UnknownNotImplemented pos
+    | UnsupportedProtocol String
 
 
 {-| The error catalogue for this transform.
@@ -85,6 +87,11 @@ errorCatalogue =
             , body = ""
             }
           )
+        , ( 807
+          , { title = "Unsupported protocol."
+            , body = "The []{arg|key=protocol } protocol is not supported."
+            }
+          )
         ]
 
 
@@ -115,6 +122,12 @@ errorBuilder posFn err =
         UnknownNotImplemented pos ->
             Errors.lookupErrorNoArgs errorCatalogue 806 [ posFn pos ]
 
+        UnsupportedProtocol protocol ->
+            Errors.lookupError errorCatalogue
+                807
+                (Dict.fromList [ ( "protocol", protocol ) ])
+                []
+
 
 transform : (() -> SourceLines) -> AWSService -> ResultME Error (L3 ())
 transform posFn service =
@@ -138,6 +151,21 @@ transform posFn service =
         l2Result =
             Result.map2 List.append mappingsResult operationsResult
                 |> ResultME.andThen l2Checker.check
+                |> ResultME.andThen
+                    (\checked ->
+                        case service.metaData.protocol of
+                            JSON ->
+                                checked |> Ok
+
+                            REST_JSON ->
+                                checked |> Ok
+
+                            _ ->
+                                protocolToString service.metaData.protocol
+                                    |> UnsupportedProtocol
+                                    |> ResultME.error
+                                    |> ResultME.mapError errorMapFn
+                    )
     in
     ResultME.map
         (\l2 ->

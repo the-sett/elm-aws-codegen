@@ -51,6 +51,7 @@ ${formatLocations.join('\n')}`);
 const specs = [
   "athena-2017-05-18.normal.json",
   "batch-2016-08-10.normal.json",
+  "ce-2017-10-25.normal.json",
   "cloudformation-2010-05-15.normal.json",
   "cloudfront-2019-03-26.normal.json",
   "cloudtrail-2013-11-01.normal.json",
