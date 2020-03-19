@@ -30,6 +30,10 @@ main =
     Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
+type Model
+    = Ready
+
+
 
 -- Ports for data input and output
 
@@ -44,24 +48,10 @@ port errorOutPort : ( String, List String ) -> Cmd msg
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model of
-        Error ->
-            Sub.none
-
-        _ ->
-            Sub.batch
-                [ modelInPort (\( name, value ) -> ModelData name value)
-                ]
-
-
-
--- State Machine
-
-
-type Model
-    = Ready
-    | Error
+subscriptions _ =
+    Sub.batch
+        [ modelInPort (\( name, value ) -> ModelData name value)
+        ]
 
 
 
@@ -97,10 +87,7 @@ update msg model =
                             List.Nonempty.map Errors.asConsoleString errors
                                 |> List.Nonempty.toList
                     in
-                    ( Error, ( name, printableErrors ) |> errorOutPort )
-
-        ( _, _ ) ->
-            ( model, Cmd.none )
+                    ( Ready, ( name, printableErrors ) |> errorOutPort )
 
 
 processServiceModel : String -> ResultME Error ( AWSService, String )
