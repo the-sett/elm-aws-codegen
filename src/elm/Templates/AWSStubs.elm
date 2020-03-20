@@ -16,6 +16,7 @@ import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
 import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropCheckError(..), PropertiesAPI)
+import List.Nonempty as Nonempty exposing (Nonempty(..))
 import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
@@ -96,6 +97,18 @@ elmEnumStyleEnum =
         identity
 
 
+locationEnum : Enum String
+locationEnum =
+    Enum.define
+        [ "header"
+        , "queryString"
+        , "statusCode"
+        , "uri"
+        , "body"
+        ]
+        identity
+
+
 defaultProperties : DefaultProperties
 defaultProperties =
     { top =
@@ -137,7 +150,10 @@ defaultProperties =
             [ ( "exclude", PBool False )
             , ( "documentation", POptional PSString Nothing )
             ]
-    , fields = L1.defineProperties [] []
+    , fields =
+        L1.defineProperties
+            [ ( "location", PSEnum locationEnum ) ]
+            []
     , unit = L1.defineProperties [] []
     , basic = L1.defineProperties [] []
     , named = L1.defineProperties [] []
@@ -583,17 +599,37 @@ requestFnResponse name response =
 --== Types and Codecs
 
 
-typeDeclarations : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+typeDeclarations :
+    PropertiesAPI pos
+    -> L3 pos
+    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
 typeDeclarations propertiesAPI model =
-    declarationsSkipExcluded propertiesAPI typeDeclaration model
+    declarationsSkipExcluded propertiesAPI (typeDeclaration propertiesAPI) model
+        |> ResultME.map ResultME.combineList
+        |> ResultME.flatten
         |> ResultME.map combineDeclarations
 
 
-typeDeclaration : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
-typeDeclaration name decl =
+typeDeclaration :
+    PropertiesAPI pos
+    -> String
+    -> L1.Declarable pos L2.RefChecked
+    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+typeDeclaration propertiesAPI name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
+                |> Ok
+
+        DAlias declPos declProps (TProduct prodPos prodProps fields) ->
+            let
+                doc =
+                    CG.emptyDocComment
+                        |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
+            in
+            productForBodyFields propertiesAPI prodPos prodProps fields
+                |> ResultME.map (DAlias declPos declProps)
+                |> ResultME.map (Templates.Elm.typeDecl name doc)
 
         _ ->
             let
@@ -602,6 +638,7 @@ typeDeclaration name decl =
                         |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
             in
             Templates.Elm.typeDecl name doc decl
+                |> Ok
 
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
@@ -619,6 +656,69 @@ jsonCodec name decl =
         _ ->
             Templates.Elm.codec name decl
                 |> Tuple.mapFirst List.singleton
+
+
+{-| Given a product type, filters its fields to get just the ones that occur
+in the body location. These are used to construct a product type with just those
+fields.
+
+Note that if all fields are not in the body, a `TEmptyProduct` will be returned.
+
+-}
+productForBodyFields :
+    PropertiesAPI pos
+    -> pos
+    -> Properties
+    -> Nonempty ( String, Type pos L2.RefChecked, Properties )
+    -> ResultME PropCheckError (Type pos L2.RefChecked)
+productForBodyFields propertiesApi pos props fields =
+    let
+        fieldsToProductOrEmpty filtered =
+            case filtered of
+                [] ->
+                    TEmptyProduct pos props
+
+                f :: fs ->
+                    Nonempty f fs |> TProduct pos props
+    in
+    filterFieldsByLocation propertiesApi isInBody fields
+        |> ResultME.map fieldsToProductOrEmpty
+
+
+isInBody : String -> Bool
+isInBody loc =
+    case loc of
+        "body" ->
+            True
+
+        _ ->
+            False
+
+
+filterFieldsByLocation :
+    PropertiesAPI pos
+    -> (String -> Bool)
+    -> Nonempty ( String, Type pos ref, Properties )
+    -> ResultME PropCheckError (List ( String, Type pos ref, Properties ))
+filterFieldsByLocation propertiesApi filterFn fields =
+    let
+        filterByLocationProp ( name, type_, props ) acc =
+            case (propertiesApi.field props).getEnumProperty locationEnum "location" of
+                Ok location ->
+                    if isInBody location then
+                        (( name, type_, props ) |> Ok) :: acc
+
+                    else
+                        acc
+
+                Err err ->
+                    --Err err :: acc
+                    (( name, type_, props ) |> Ok) :: acc
+    in
+    List.foldl filterByLocationProp
+        []
+        (Nonempty.toList fields)
+        |> ResultME.combineList
 
 
 

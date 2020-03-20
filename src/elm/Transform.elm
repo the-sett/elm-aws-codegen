@@ -1,7 +1,7 @@
 module Transform exposing (transform)
 
 import AWS.Core.Service exposing (Protocol(..), Signer(..))
-import AWSService exposing (AWSService, AWSType(..), Operation, Shape, ShapeRef)
+import AWSService exposing (AWSService, AWSType(..), Location(..), Operation, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
 import Enum exposing (Enum)
@@ -382,25 +382,43 @@ modelStructure shape name =
             let
                 type_ =
                     shapeRefToL1Type shapeRef
-            in
-            case shape.required of
-                Nothing ->
+
+                optionalField =
                     ( memberName
                     , type_ |> COptional |> TContainer () L1.emptyProperties
                     , L1.emptyProperties
                     )
-                        :: fieldAccum
+
+                requiredField =
+                    ( memberName, type_, L1.emptyProperties )
+
+                fieldProperties =
+                    case shapeRef.location of
+                        Header ->
+                            "header"
+
+                        QueryString ->
+                            "querystring"
+
+                        StatusCode ->
+                            "statuscode"
+
+                        Uri ->
+                            "uri"
+
+                        Body ->
+                            "body"
+            in
+            case shape.required of
+                Nothing ->
+                    optionalField :: fieldAccum
 
                 Just requiredFields ->
                     if List.member memberName requiredFields then
-                        ( memberName, type_, L1.emptyProperties ) :: fieldAccum
+                        requiredField :: fieldAccum
 
                     else
-                        ( memberName
-                        , type_ |> COptional |> TContainer () L1.emptyProperties
-                        , L1.emptyProperties
-                        )
-                            :: fieldAccum
+                        optionalField :: fieldAccum
     in
     case shape.members of
         Nothing ->

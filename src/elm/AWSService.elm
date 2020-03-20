@@ -3,6 +3,7 @@ module AWSService exposing
     , AWSType(..)
     , AuthorizationStrategy
     , Authorizers
+    , Location(..)
     , MetaData
     , Operation
     , Shape
