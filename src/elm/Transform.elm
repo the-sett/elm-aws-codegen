@@ -135,8 +135,8 @@ transform posFn service =
         errorMapFn =
             errorBuilder posFn
 
-        mappingsResult : ResultME Error (L1 ())
-        mappingsResult =
+        shapesResult : ResultME Error (L1 ())
+        shapesResult =
             modelShapes service.shapes
                 |> ResultME.mapError errorMapFn
 
@@ -149,8 +149,9 @@ transform posFn service =
             L2.builder posFn Checker.processorImpl
 
         l2Result =
-            Result.map2 List.append mappingsResult operationsResult
+            Result.map2 List.append shapesResult operationsResult
                 |> ResultME.andThen l2Checker.check
+                |> ResultME.map (markTopLevelShapes service.operations)
                 |> ResultME.andThen
                     (\checked ->
                         case service.metaData.protocol of
@@ -479,7 +480,7 @@ modelMap shape name =
 
 
 
---== Operations
+--== Operations - First Pass
 
 
 modelOperations :
@@ -496,7 +497,7 @@ modelOperations operations =
 modelOperation : String -> Operation -> ResultME (TransformError ()) (Declarable () Unchecked)
 modelOperation name operation =
     let
-        paramType opShapeRef errHint =
+        paramType opShapeRef =
             case opShapeRef of
                 Nothing ->
                     TUnit () L1.emptyProperties |> Ok
@@ -505,10 +506,10 @@ modelOperation name operation =
                     TNamed () L1.emptyProperties shapeRef.shape Unchecked |> Ok
 
         requestRes =
-            paramType operation.input "Input"
+            paramType operation.input
 
         responseRes =
-            paramType operation.output "Output"
+            paramType operation.output
     in
     ResultME.map2
         (\request response ->
@@ -532,3 +533,16 @@ modelOperation name operation =
         )
         requestRes
         responseRes
+
+
+
+--== Operations - Second Pass
+-- The second pass over the operations is used to mark parts of the data model
+-- that are the request and response records.
+
+
+{-| Mark declarations in the model that are either requests or responses.
+-}
+markTopLevelShapes : Dict String Operation -> L2 () -> L2 ()
+markTopLevelShapes operations model =
+    model

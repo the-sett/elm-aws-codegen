@@ -618,27 +618,24 @@ typeDeclaration :
 typeDeclaration propertiesAPI name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
-            ( [], CG.emptyLinkage )
-                |> Ok
+            ( [], CG.emptyLinkage ) |> Ok
 
-        DAlias declPos declProps (TProduct prodPos prodProps fields) ->
-            let
-                doc =
-                    CG.emptyDocComment
-                        |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
-            in
-            productForBodyFields propertiesAPI prodPos prodProps fields
-                |> ResultME.map (DAlias declPos declProps)
-                |> ResultME.map (Templates.Elm.typeDecl name doc)
-
+        -- DAlias declPos declProps (TProduct prodPos prodProps fields) ->
+        --     let
+        --         doc =
+        --             CG.emptyDocComment
+        --                 |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
+        --     in
+        --     productForBodyFields propertiesAPI prodPos prodProps fields
+        --         |> ResultME.map (DAlias declPos declProps)
+        --         |> ResultME.map (Templates.Elm.typeDecl name doc)
         _ ->
             let
                 doc =
                     CG.emptyDocComment
                         |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
             in
-            Templates.Elm.typeDecl name doc decl
-                |> Ok
+            Templates.Elm.typeDecl name doc decl |> Ok
 
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
