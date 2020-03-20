@@ -19,6 +19,7 @@ import Dict exposing (Dict)
 import Enum exposing (Enum)
 import HttpMethod exposing (HttpMethod)
 import Json.Decode as Decode
+import Json.Encode as Encode
 
 
 type alias AWSService =
@@ -214,7 +215,7 @@ type alias ShapeRef =
     , flattened : Maybe Bool
     , idempotencyToken : Maybe String
     , jsonvalue : Maybe Bool
-    , location : Maybe Location
+    , location : Location
     , locationName : Maybe String
     , queryName : Maybe String
     , resultWrapper : Maybe String
@@ -230,7 +231,27 @@ timestampFormatCodec =
 
 
 shapeRefCodec =
-    Codec.object ShapeRef
+    Codec.object
+        (\shape box deprecated deprecatedMessage documentation eventpayload flattened idempotencyToken jsonvalue location locationName queryName resultWrapper streaming timestampFormat xmlAttribute xmlNamespace ->
+            { shape = shape
+            , box = box
+            , deprecated = deprecated
+            , deprecatedMessage = deprecatedMessage
+            , documentation = documentation
+            , eventpayload = eventpayload
+            , flattened = flattened
+            , idempotencyToken = idempotencyToken
+            , jsonvalue = jsonvalue
+            , location = location |> Maybe.withDefault Body
+            , locationName = locationName
+            , queryName = queryName
+            , resultWrapper = resultWrapper
+            , streaming = streaming
+            , timestampFormat = timestampFormat
+            , xmlAttribute = xmlAttribute
+            , xmlNamespace = xmlNamespace
+            }
+        )
         |> Codec.field "shape" .shape Codec.string
         |> Codec.optionalField "box" .box Codec.bool
         |> Codec.optionalField "deprecated" .deprecated Codec.bool
@@ -240,7 +261,7 @@ shapeRefCodec =
         |> Codec.optionalField "flattened" .flattened Codec.bool
         |> Codec.optionalField "idempotencyToken" .idempotencyToken Codec.string
         |> Codec.optionalField "jsonvalue" .jsonvalue Codec.bool
-        |> Codec.optionalField "location" .location locationCodec
+        |> Codec.optionalField "location" (.location >> Just) locationCodec
         |> Codec.optionalField "locationName" .locationName Codec.string
         |> Codec.optionalField "queryName" .queryName Codec.string
         |> Codec.optionalField "resultWrapper" .resultWrapper Codec.string
@@ -321,35 +342,29 @@ type Location
     | QueryString
     | StatusCode
     | Uri
-
-
-locationEnum : Enum Location
-locationEnum =
-    Enum.define
-        [ Header
-        , QueryString
-        , StatusCode
-        , Uri
-        ]
-        (\location ->
-            case location of
-                Header ->
-                    "header"
-
-                QueryString ->
-                    "querystring"
-
-                StatusCode ->
-                    "statusCode"
-
-                Uri ->
-                    "uri"
-        )
+    | Body
 
 
 locationCodec : Codec Location
 locationCodec =
     let
+        locationEncoder loc =
+            case loc of
+                Header ->
+                    Encode.string "header"
+
+                QueryString ->
+                    Encode.string "querystring"
+
+                StatusCode ->
+                    Encode.string "statusCode"
+
+                Uri ->
+                    Encode.string "uri"
+
+                Body ->
+                    Encode.string "body"
+
         locationDecoder =
             Decode.string
                 |> Decode.andThen
@@ -374,7 +389,7 @@ locationCodec =
                                 Decode.fail <| "Could not decode value to enum: " ++ val
                     )
     in
-    Codec.build (Enum.encoder locationEnum) locationDecoder
+    Codec.build locationEncoder locationDecoder
 
 
 
