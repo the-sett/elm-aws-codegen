@@ -373,65 +373,56 @@ modelStructure : Shape -> String -> ResultME (TransformError ()) (Declarable () 
 modelStructure shape name =
     let
         -- shape.required lists names of fields that are required.
-        modelField memberName shapeRef ( errAccum, fieldAccum ) =
+        modelField :
+            String
+            -> ShapeRef
+            -> List ( String, Type () Unchecked, L1.Properties )
+            -> List ( String, Type () Unchecked, L1.Properties )
+        modelField memberName shapeRef fieldAccum =
             let
                 type_ =
                     shapeRefToL1Type shapeRef
             in
             case shape.required of
                 Nothing ->
-                    ( errAccum
-                    , ( memberName
-                      , type_ |> COptional |> TContainer () L1.emptyProperties
-                      , L1.emptyProperties
-                      )
-                        :: fieldAccum
+                    ( memberName
+                    , type_ |> COptional |> TContainer () L1.emptyProperties
+                    , L1.emptyProperties
                     )
+                        :: fieldAccum
 
                 Just requiredFields ->
                     if List.member memberName requiredFields then
-                        ( errAccum
-                        , ( memberName, type_, L1.emptyProperties ) :: fieldAccum
-                        )
+                        ( memberName, type_, L1.emptyProperties ) :: fieldAccum
 
                     else
-                        ( errAccum
-                        , ( memberName
-                          , type_ |> COptional |> TContainer () L1.emptyProperties
-                          , L1.emptyProperties
-                          )
-                            :: fieldAccum
+                        ( memberName
+                        , type_ |> COptional |> TContainer () L1.emptyProperties
+                        , L1.emptyProperties
                         )
+                            :: fieldAccum
     in
     case shape.members of
         Nothing ->
             NoMembers () name |> ResultME.error
 
         Just members ->
-            -- TODO: Rewrite this part as should just combine errors over the
-            -- fields.
             let
-                ( fieldErrors, fields ) =
-                    Dict.foldl modelField ( [], [] ) members
+                fields =
+                    Dict.foldl modelField [] members
             in
-            case fieldErrors of
-                [] ->
-                    case List.Nonempty.fromList fields of
-                        Just nonemptyFields ->
-                            nonemptyFields
-                                |> Naming.sortNonemptyNamed
-                                |> TProduct () L1.emptyProperties
-                                |> DAlias () L1.emptyProperties
-                                |> Ok
+            case List.Nonempty.fromList fields of
+                Just nonemptyFields ->
+                    nonemptyFields
+                        |> Naming.sortNonemptyNamed
+                        |> TProduct () L1.emptyProperties
+                        |> DAlias () L1.emptyProperties
+                        |> Ok
 
-                        Nothing ->
-                            TEmptyProduct () L1.emptyProperties
-                                |> DAlias () L1.emptyProperties
-                                |> Ok
-
-                err :: errs ->
-                    -- ResultME.errors err errs
-                    Debug.todo "Fix error handling"
+                Nothing ->
+                    TEmptyProduct () L1.emptyProperties
+                        |> DAlias () L1.emptyProperties
+                        |> Ok
 
 
 modelList : Shape -> String -> ResultME (TransformError ()) (Declarable () Unchecked)
