@@ -18,6 +18,7 @@ import Codec exposing (Codec)
 import Dict exposing (Dict)
 import Enum exposing (Enum)
 import HttpMethod exposing (HttpMethod)
+import Json.Decode as Decode
 
 
 type alias AWSService =
@@ -213,7 +214,7 @@ type alias ShapeRef =
     , flattened : Maybe Bool
     , idempotencyToken : Maybe String
     , jsonvalue : Maybe Bool
-    , location : Maybe String
+    , location : Maybe Location
     , locationName : Maybe String
     , queryName : Maybe String
     , resultWrapper : Maybe String
@@ -239,7 +240,7 @@ shapeRefCodec =
         |> Codec.optionalField "flattened" .flattened Codec.bool
         |> Codec.optionalField "idempotencyToken" .idempotencyToken Codec.string
         |> Codec.optionalField "jsonvalue" .jsonvalue Codec.bool
-        |> Codec.optionalField "location" .location Codec.string
+        |> Codec.optionalField "location" .location locationCodec
         |> Codec.optionalField "locationName" .locationName Codec.string
         |> Codec.optionalField "queryName" .queryName Codec.string
         |> Codec.optionalField "resultWrapper" .resultWrapper Codec.string
@@ -313,6 +314,71 @@ shapeCodec =
         |> Codec.optionalField "xmlNamespace" .xmlNamespace Codec.string
         |> Codec.optionalField "xmlOrder" .xmlOrder (Codec.list Codec.string)
         |> Codec.buildObject
+
+
+type Location
+    = Header
+    | QueryString
+    | StatusCode
+    | Uri
+
+
+locationEnum : Enum Location
+locationEnum =
+    Enum.define
+        [ Header
+        , QueryString
+        , StatusCode
+        , Uri
+        ]
+        (\location ->
+            case location of
+                Header ->
+                    "header"
+
+                QueryString ->
+                    "querystring"
+
+                StatusCode ->
+                    "statusCode"
+
+                Uri ->
+                    "uri"
+        )
+
+
+locationCodec : Codec Location
+locationCodec =
+    let
+        locationDecoder =
+            Decode.string
+                |> Decode.andThen
+                    (\val ->
+                        case val of
+                            "headers" ->
+                                Decode.succeed Header
+
+                            "header" ->
+                                Decode.succeed Header
+
+                            "querystring" ->
+                                Decode.succeed QueryString
+
+                            "statusCode" ->
+                                Decode.succeed StatusCode
+
+                            "uri" ->
+                                Decode.succeed Uri
+
+                            _ ->
+                                Decode.fail <| "Could not decode value to enum: " ++ val
+                    )
+    in
+    Codec.build (Enum.encoder locationEnum) locationDecoder
+
+
+
+-- "headers"
 
 
 type AWSType
