@@ -148,25 +148,25 @@ transform posFn service =
         l2Checker =
             L2.builder posFn Checker.processorImpl
 
+        checkProtocolSupported checked =
+            case service.metaData.protocol of
+                JSON ->
+                    checked |> Ok
+
+                REST_JSON ->
+                    checked |> Ok
+
+                _ ->
+                    protocolToString service.metaData.protocol
+                        |> UnsupportedProtocol
+                        |> ResultME.error
+                        |> ResultME.mapError errorMapFn
+
         l2Result =
             Result.map2 List.append shapesResult operationsResult
                 |> ResultME.andThen l2Checker.check
                 |> ResultME.map (markTopLevelShapes service.operations)
-                |> ResultME.andThen
-                    (\checked ->
-                        case service.metaData.protocol of
-                            JSON ->
-                                checked |> Ok
-
-                            REST_JSON ->
-                                checked |> Ok
-
-                            _ ->
-                                protocolToString service.metaData.protocol
-                                    |> UnsupportedProtocol
-                                    |> ResultME.error
-                                    |> ResultME.mapError errorMapFn
-                    )
+                |> ResultME.andThen checkProtocolSupported
     in
     ResultME.map
         (\l2 ->
@@ -545,4 +545,23 @@ modelOperation name operation =
 -}
 markTopLevelShapes : Dict String Operation -> L2 () -> L2 ()
 markTopLevelShapes operations model =
-    model
+    Dict.foldl markTopLevelShape
+        model
+        operations
+
+
+markTopLevelShape : String -> Operation -> L2 () -> L2 ()
+markTopLevelShape _ operation l2model =
+    let
+        setTopLevelProp val props =
+            Dict.insert "topLevel" (PEnum AWSStubs.topLevelEnum val) props
+
+        requestRes tlPropVal model =
+            Maybe.map .shape operation.input
+                |> Maybe.andThen (\name -> Dict.get name model |> Maybe.map (\decl -> ( decl, name )))
+                |> Maybe.map (\( decl, name ) -> ( L1.updatePropertiesOfDeclarable (setTopLevelProp tlPropVal) decl, name ))
+                |> Maybe.map (\( decl, name ) -> Dict.insert name decl model)
+    in
+    requestRes "request" l2model
+        |> Maybe.andThen (requestRes "response")
+        |> Maybe.withDefault l2model

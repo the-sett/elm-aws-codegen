@@ -1,9 +1,11 @@
 module Templates.AWSStubs exposing
     ( elmEnumStyleEnum
     , generate
+    , locationEnum
     , processorImpl
     , protocolEnum
     , signerEnum
+    , topLevelEnum
     )
 
 import AWS.Core.Service exposing (Protocol(..), Signer(..))
@@ -109,6 +111,15 @@ locationEnum =
         identity
 
 
+topLevelEnum : Enum String
+topLevelEnum =
+    Enum.define
+        [ "request"
+        , "response"
+        ]
+        identity
+
+
 defaultProperties : DefaultProperties
 defaultProperties =
     { top =
@@ -131,11 +142,13 @@ defaultProperties =
             []
             [ ( "exclude", PBool False )
             , ( "documentation", POptional PSString Nothing )
+            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , sum =
         L1.defineProperties []
             [ ( "exclude", PBool False )
             , ( "documentation", POptional PSString Nothing )
+            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , enum =
         L1.defineProperties
@@ -143,12 +156,14 @@ defaultProperties =
             [ ( "exclude", PBool False )
             , ( "elmEnumStyle", PEnum elmEnumStyleEnum "customType" )
             , ( "documentation", POptional PSString Nothing )
+            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , restricted =
         L1.defineProperties
             []
             [ ( "exclude", PBool False )
             , ( "documentation", POptional PSString Nothing )
+            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , fields =
         L1.defineProperties
