@@ -537,8 +537,8 @@ modelOperation name operation =
 
 
 --== Operations - Second Pass
--- The second pass over the operations is used to mark declarationsthat are the
--- requests and responses.
+-- The second pass over the operations is used to mark declarations that are the
+-- requests and responses of the operations.
 
 
 {-| Mark declarations in the model that are either requests or responses.
