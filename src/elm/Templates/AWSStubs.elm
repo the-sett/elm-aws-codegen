@@ -9,7 +9,7 @@ module Templates.AWSStubs exposing
     )
 
 import AWS.Core.Service exposing (Protocol(..), Signer(..))
-import Dict
+import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Enum exposing (Enum)
@@ -392,7 +392,9 @@ globalService propertiesApi model =
 
 operations : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
 operations propertiesApi model =
-    declarationsSkipExcluded propertiesApi (operation propertiesApi) model
+    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+        |> ResultME.map (Dict.map (operation propertiesApi))
+        |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
         |> ResultME.flatten
         |> ResultME.map combineDeclarations
@@ -618,8 +620,10 @@ typeDeclarations :
     PropertiesAPI pos
     -> L3 pos
     -> ResultME L3.PropCheckError ( List Declaration, Linkage )
-typeDeclarations propertiesAPI model =
-    declarationsSkipExcluded propertiesAPI (typeDeclaration propertiesAPI) model
+typeDeclarations propertiesApi model =
+    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+        |> ResultME.map (Dict.map (typeDeclaration propertiesApi))
+        |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
         |> ResultME.flatten
         |> ResultME.map combineDeclarations
@@ -654,8 +658,10 @@ typeDeclaration propertiesAPI name decl =
 
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
-jsonCodecs propertiesAPI model =
-    declarationsSkipExcluded propertiesAPI jsonCodec model
+jsonCodecs propertiesApi model =
+    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+        |> ResultME.map (Dict.map jsonCodec)
+        |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
 
 
@@ -693,44 +699,160 @@ productForBodyFields propertiesApi pos props fields =
                 f :: fs ->
                     Nonempty f fs |> TProduct pos props
     in
-    filterFieldsByLocation propertiesApi isInBody fields
+    filterNonemptyByProps propertiesApi isInBody fields
         |> ResultME.map fieldsToProductOrEmpty
 
 
-isInBody : String -> Bool
-isInBody loc =
-    case loc of
-        "body" ->
-            True
 
-        _ ->
-            False
+-- Property Filters
 
 
-filterFieldsByLocation :
-    PropertiesAPI pos
-    -> (String -> Bool)
-    -> Nonempty ( String, Type pos ref, Properties )
-    -> ResultME PropCheckError (List ( String, Type pos ref, Properties ))
-filterFieldsByLocation propertiesApi filterFn fields =
-    let
-        filterByLocationProp ( name, type_, props ) acc =
-            case (propertiesApi.field props).getEnumProperty locationEnum "location" of
-                Ok location ->
-                    if isInBody location then
-                        (( name, type_, props ) |> Ok) :: acc
+type alias PropertyFilter pos a =
+    PropertiesAPI pos -> a -> ResultME L3.PropCheckError Bool
+
+
+andPropFilter : PropertyFilter pos a -> PropertyFilter pos a -> PropertyFilter pos a
+andPropFilter filterA filterB =
+    \propertiesAPI val ->
+        filterA propertiesAPI val
+            |> ResultME.andThen
+                (\bool ->
+                    if bool then
+                        filterB propertiesAPI val
 
                     else
-                        acc
+                        Ok False
+                )
 
-                Err err ->
-                    --Err err :: acc
-                    (( name, type_, props ) |> Ok) :: acc
+
+orPropFilter : PropertyFilter pos a -> PropertyFilter pos a -> PropertyFilter pos a
+orPropFilter filterA filterB =
+    \propertiesAPI val ->
+        filterA propertiesAPI val
+            |> ResultME.andThen
+                (\bool ->
+                    if bool then
+                        Ok True
+
+                    else
+                        filterB propertiesAPI val
+                )
+
+
+notPropFilter : PropertyFilter pos a -> PropertyFilter pos a
+notPropFilter filterA =
+    \propertiesAPI val ->
+        filterA propertiesAPI val
+            |> ResultME.andThen
+                (\bool ->
+                    if bool then
+                        Ok False
+
+                    else
+                        Ok True
+                )
+
+
+filterDictByProps :
+    PropertiesAPI pos
+    -> PropertyFilter pos a
+    -> Dict String a
+    -> ResultME PropCheckError (Dict String a)
+filterDictByProps propertiesAPI filter dict =
+    let
+        ( filtered, errors ) =
+            Dict.foldl
+                (\name val ( accum, errAccum ) ->
+                    case filter propertiesAPI val of
+                        Ok False ->
+                            ( accum, errAccum )
+
+                        Ok True ->
+                            ( Dict.insert name val accum, errAccum )
+
+                        Err err ->
+                            ( accum, Nonempty.toList err ++ errAccum )
+                )
+                ( Dict.empty, [] )
+                dict
     in
-    List.foldl filterByLocationProp
-        []
-        (Nonempty.toList fields)
-        |> ResultME.combineList
+    case errors of
+        [] ->
+            Ok filtered
+
+        e :: es ->
+            Err (Nonempty e es)
+
+
+filterListByProps :
+    PropertiesAPI pos
+    -> PropertyFilter pos a
+    -> List a
+    -> ResultME PropCheckError (List a)
+filterListByProps propertiesApi filter vals =
+    let
+        ( filtered, errors ) =
+            List.foldl
+                (\val ( accum, errAccum ) ->
+                    case filter propertiesApi val of
+                        Ok False ->
+                            ( accum, errAccum )
+
+                        Ok True ->
+                            ( val :: accum, errAccum )
+
+                        Err err ->
+                            ( accum, Nonempty.toList err ++ errAccum )
+                )
+                ( [], [] )
+                vals
+    in
+    case errors of
+        [] ->
+            Ok filtered
+
+        e :: es ->
+            Err (Nonempty e es)
+
+
+filterNonemptyByProps :
+    PropertiesAPI pos
+    -> PropertyFilter pos a
+    -> Nonempty a
+    -> ResultME PropCheckError (List a)
+filterNonemptyByProps propertiesApi filter vals =
+    filterListByProps propertiesApi filter (Nonempty.toList vals)
+
+
+isInBody : PropertyFilter pos ( String, Type pos ref, Properties )
+isInBody propertiesApi ( _, _, props ) =
+    case (propertiesApi.field props).getEnumProperty locationEnum "location" of
+        Ok "body" ->
+            Ok True
+
+        Ok _ ->
+            Ok False
+
+        Err err ->
+            Err err
+
+
+isExcluded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+isExcluded propertiesAPI decl =
+    (propertiesAPI.declarable decl).getBoolProperty "exclude"
+
+
+isRequest : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+isRequest propertiesAPI decl =
+    case (propertiesAPI.declarable decl).getEnumProperty topLevelEnum "topLevel" of
+        Ok "request" ->
+            Ok True
+
+        Ok _ ->
+            Ok False
+
+        Err err ->
+            Err err
 
 
 
@@ -761,62 +883,6 @@ combineDeclaration declList =
         )
         ( [], CG.emptyLinkage )
         declList
-
-
-{-| Runs a function to generate from all Declarables in a model, skipping any that
-are marked as 'excluded'. Any errors are accumulated.
--}
-declarationsSkipExcluded :
-    PropertiesAPI pos
-    -> (String -> L1.Declarable pos L2.RefChecked -> a)
-    -> L3 pos
-    -> ResultME L3.PropCheckError (List a)
-declarationsSkipExcluded propertiesAPI declarationsFn model =
-    Dict.foldl
-        (\name decl accum ->
-            case (propertiesAPI.declarable decl).getBoolProperty "exclude" of
-                Ok False ->
-                    (declarationsFn name decl |> Ok) :: accum
-
-                Ok True ->
-                    accum
-
-                Err err ->
-                    Err err :: accum
-        )
-        []
-        model.declarations
-        |> ResultME.combineList
-
-
-
--- signerExpr : Signer -> Expression
--- signerExpr signer =
---     case signer of
---         SignV4 ->
---             CG.fqVal coreServiceMod "SignV4"
---
---         SignS3 ->
---             CG.fqVal coreServiceMod "SignS3"
---
---
--- protocolExpr : Protocol -> Expression
--- protocolExpr protocol =
---     case protocol of
---         EC2 ->
---             CG.fqVal coreServiceMod "EC2"
---
---         JSON ->
---             CG.fqVal coreServiceMod "JSON"
---
---         QUERY ->
---             CG.fqVal coreServiceMod "QUERY"
---
---         REST_JSON ->
---             CG.fqVal coreServiceMod "REST_JSON"
---
---         REST_XML ->
---             CG.fqVal coreServiceMod "REST_XML"
 
 
 decodeMod : List String
