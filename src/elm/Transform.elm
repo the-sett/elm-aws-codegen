@@ -554,7 +554,7 @@ markTopLevelShape : String -> Operation -> L2 () -> L2 ()
 markTopLevelShape _ operation l2model =
     let
         setTopLevelProp val props =
-            Dict.insert "topLevel" (PEnum AWSStubs.topLevelEnum val) props
+            Dict.insert "topLevel" (POptional (PSEnum AWSStubs.topLevelEnum) (PEnum AWSStubs.topLevelEnum val |> Just)) props
 
         markTopLevel tlPropVal model =
             Maybe.map .shape operation.input

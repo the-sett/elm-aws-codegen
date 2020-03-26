@@ -37,7 +37,7 @@ errorCatalogue =
           )
         , ( 302
           , { title = "Property is the Wrong Kind"
-            , body = "The required property []{arg|key=name } was not set."
+            , body = "The required property []{arg|key=name } is the wrong kind."
             }
           )
         ]
@@ -639,15 +639,6 @@ typeDeclaration propertiesAPI name decl =
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage ) |> Ok
 
-        -- DAlias declPos declProps (TProduct prodPos prodProps fields) ->
-        --     let
-        --         doc =
-        --             CG.emptyDocComment
-        --                 |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
-        --     in
-        --     productForBodyFields propertiesAPI prodPos prodProps fields
-        --         |> ResultME.map (DAlias declPos declProps)
-        --         |> ResultME.map (Templates.Elm.typeDecl name doc)
         _ ->
             let
                 doc =
@@ -659,7 +650,7 @@ typeDeclaration propertiesAPI name decl =
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
-    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+    filterDictByProps propertiesApi (notPropFilter (orPropFilter isRequest isExcluded)) model.declarations
         |> ResultME.map (Dict.map jsonCodec)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
@@ -758,12 +749,12 @@ filterDictByProps :
     -> PropertyFilter pos a
     -> Dict String a
     -> ResultME PropCheckError (Dict String a)
-filterDictByProps propertiesAPI filter dict =
+filterDictByProps propertiesApi filter dict =
     let
         ( filtered, errors ) =
             Dict.foldl
                 (\name val ( accum, errAccum ) ->
-                    case filter propertiesAPI val of
+                    case filter propertiesApi val of
                         Ok False ->
                             ( accum, errAccum )
 
@@ -844,11 +835,11 @@ isExcluded propertiesAPI decl =
 
 isRequest : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
 isRequest propertiesAPI decl =
-    case (propertiesAPI.declarable decl).getEnumProperty topLevelEnum "topLevel" of
-        Ok "request" ->
+    case (propertiesAPI.declarable decl).getOptionalEnumProperty topLevelEnum "topLevel" of
+        Ok (Just "request") ->
             Ok True
 
-        Ok _ ->
+        Ok blah ->
             Ok False
 
         Err err ->
