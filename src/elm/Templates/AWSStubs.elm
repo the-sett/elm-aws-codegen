@@ -393,7 +393,7 @@ globalService propertiesApi model =
 operations : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
 operations propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
-        |> ResultME.map (Dict.map (operation propertiesApi))
+        |> ResultME.map (Dict.map (operation propertiesApi model))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
         |> ResultME.flatten
@@ -402,13 +402,15 @@ operations propertiesApi model =
 
 operation :
     PropertiesAPI pos
+    -> L3 pos
     -> String
     -> L1.Declarable pos L2.RefChecked
     -> ResultME L3.PropCheckError ( List Declaration, Linkage )
-operation propertiesApi name decl =
+operation propertiesApi model name decl =
     case decl of
         DAlias pos _ (TFunction funpos props request response) ->
             requestFn
+                model
                 (propertiesApi.declarable decl)
                 (propertiesApi.type_ (TFunction funpos props request response))
                 name
@@ -421,17 +423,18 @@ operation propertiesApi name decl =
 
 
 requestFn :
-    L3.PropertyGet
+    L3 pos
+    -> L3.PropertyGet
     -> L3.PropertyGet
     -> String
     -> pos
     -> L1.Type pos L2.RefChecked
     -> L1.Type pos L2.RefChecked
     -> ResultME L3.PropCheckError ( List Declaration, Linkage )
-requestFn declPropertyGet funPropertyGet name pos request response =
+requestFn model declPropertyGet funPropertyGet name pos request response =
     let
-        { maybeRequestType, argPatterns, jsonBody, requestLinkage } =
-            requestFnRequest name request
+        { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } =
+            requestFnRequest model name request
 
         ( responseType, responseDecoder, responseLinkage ) =
             requestFnResponse name response
@@ -460,7 +463,8 @@ requestFn declPropertyGet funPropertyGet name pos request response =
                         , CG.val "decoder"
                         ]
                         |> CG.letExpr
-                            [ jsonBody |> CG.letVal "jsonBody"
+                            [ encoder |> CG.letVal "encoder"
+                            , jsonBody |> CG.letVal "jsonBody"
                             , responseDecoder |> CG.letVal "decoder"
                             ]
 
@@ -498,20 +502,29 @@ and an empty JSON body expression will be given.
 The output of this is the optional request type alias, a list of patterns for the
 request functions arguments, the json body and any linkage that needs to be rolled up.
 
+-- encoder for body fields
+-- add header fields
+-- add url params
+
 -}
 requestFnRequest :
-    String
+    L3 pos
+    -> String
     -> L1.Type pos L2.RefChecked
     ->
         { maybeRequestType : Maybe TypeAnnotation
         , argPatterns : List Pattern
+        , encoder : Expression
         , jsonBody : Expression
         , requestLinkage : Linkage
         }
-requestFnRequest name request =
+requestFnRequest model name request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             let
+                requestTypeDefRes =
+                    Dict.get requestTypeName model.declarations
+
                 ( loweredType, loweredLinkage ) =
                     Templates.Elm.lowerType l1RequestType
 
@@ -530,9 +543,13 @@ requestFnRequest name request =
                             ]
                         , CG.fqVal coreHttpMod "jsonBody"
                         ]
+
+                encoder =
+                    Templates.Elm.codecNamedType name l1RequestType
             in
             { maybeRequestType = Just loweredType
             , argPatterns = [ CG.varPattern "req" ]
+            , encoder = encoder
             , jsonBody = jsonBody
             , requestLinkage = linkage
             }
@@ -548,6 +565,7 @@ requestFnRequest name request =
             { maybeRequestType = Nothing
             , argPatterns = []
             , jsonBody = emptyJsonBody
+            , encoder = emptyJsonBody
             , requestLinkage = linkage
             }
 
