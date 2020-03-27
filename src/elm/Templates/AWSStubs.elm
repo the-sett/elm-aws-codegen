@@ -443,27 +443,23 @@ requestFn :
     -> L1.Type pos L2.RefChecked
     -> ResultME L3.L3Error ( List Declaration, Linkage )
 requestFn model declPropertyGet funPropertyGet name pos request response =
-    let
-        { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } =
-            requestFnRequest model name request
-
-        ( responseType, responseDecoder, responseLinkage ) =
-            requestFnResponse name response
-
-        wrappedResponseType =
-            CG.fqTyped coreHttpMod "Request" [ responseType ]
-
-        requestSig =
-            case maybeRequestType of
-                Just requestType ->
-                    CG.funAnn requestType wrappedResponseType
-
-                Nothing ->
-                    wrappedResponseType
-    in
-    ResultME.map3
-        (\url httpMethod documentation ->
+    ResultME.map4
+        (\url httpMethod documentation { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } ->
             let
+                ( responseType, responseDecoder, responseLinkage ) =
+                    requestFnResponse name response
+
+                wrappedResponseType =
+                    CG.fqTyped coreHttpMod "Request" [ responseType ]
+
+                requestSig =
+                    case maybeRequestType of
+                        Just requestType ->
+                            CG.funAnn requestType wrappedResponseType
+
+                        Nothing ->
+                            CG.fqTyped coreHttpMod "Request" [ responseType ]
+
                 requestImpl =
                     CG.apply
                         [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
@@ -474,10 +470,12 @@ requestFn model declPropertyGet funPropertyGet name pos request response =
                         , CG.val "decoder"
                         ]
                         |> CG.letExpr
-                            [ encoder |> CG.letVal "encoder"
-                            , jsonBody |> CG.letVal "jsonBody"
-                            , responseDecoder |> CG.letVal "decoder"
-                            ]
+                            (Maybe.Extra.values
+                                [ encoder
+                                , jsonBody |> CG.letVal "jsonBody" |> Just
+                                , responseDecoder |> CG.letVal "decoder" |> Just
+                                ]
+                            )
 
                 doc =
                     documentation
@@ -503,6 +501,7 @@ requestFn model declPropertyGet funPropertyGet name pos request response =
         (funPropertyGet.getStringProperty "url")
         (funPropertyGet.getStringProperty "httpMethod")
         (declPropertyGet.getOptionalStringProperty "documentation")
+        (requestFnRequest model name request)
 
 
 {-| Figures out what the request type for the endpoint will be.
@@ -523,47 +522,50 @@ requestFnRequest :
     -> String
     -> L1.Type pos L2.RefChecked
     ->
-        { maybeRequestType : Maybe TypeAnnotation
-        , argPatterns : List Pattern
-        , encoder : Expression
-        , jsonBody : Expression
-        , requestLinkage : Linkage
-        }
+        ResultME L3Error
+            { maybeRequestType : Maybe TypeAnnotation
+            , argPatterns : List Pattern
+            , encoder : Maybe LetDeclaration
+            , jsonBody : Expression
+            , requestLinkage : Linkage
+            }
 requestFnRequest model name request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
-            let
-                requestTypeDefRes =
-                    Dict.get requestTypeName model.declarations
+            ResultME.map
+                (\requestTypeDecl ->
+                    let
+                        ( loweredType, loweredLinkage ) =
+                            Templates.Elm.lowerType l1RequestType
 
-                ( loweredType, loweredLinkage ) =
-                    Templates.Elm.lowerType l1RequestType
+                        jsonBody =
+                            CG.pipe (CG.val "req")
+                                [ CG.apply
+                                    [ CG.fqFun codecMod "encoder"
+                                    , CG.val (Naming.safeCCL requestTypeName ++ "Codec")
+                                    ]
+                                , CG.fqVal coreHttpMod "jsonBody"
+                                ]
 
-                linkage =
-                    CG.combineLinkage
-                        [ CG.emptyLinkage
-                            |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
-                        , loweredLinkage
-                        ]
+                        ( encoder, encoderLinkage ) =
+                            Templates.Elm.codecAsLetDecl name requestTypeDecl
 
-                jsonBody =
-                    CG.pipe (CG.val "req")
-                        [ CG.apply
-                            [ CG.fqFun codecMod "encoder"
-                            , CG.val (Naming.safeCCL requestTypeName ++ "Codec")
-                            ]
-                        , CG.fqVal coreHttpMod "jsonBody"
-                        ]
-
-                encoder =
-                    Templates.Elm.codecNamedType name l1RequestType
-            in
-            { maybeRequestType = Just loweredType
-            , argPatterns = [ CG.varPattern "req" ]
-            , encoder = encoder
-            , jsonBody = jsonBody
-            , requestLinkage = linkage
-            }
+                        linkage =
+                            CG.combineLinkage
+                                [ CG.emptyLinkage
+                                    |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                                , loweredLinkage
+                                , encoderLinkage
+                                ]
+                    in
+                    { maybeRequestType = Just loweredType
+                    , argPatterns = [ CG.varPattern "req" ]
+                    , encoder = Just encoder
+                    , jsonBody = jsonBody
+                    , requestLinkage = linkage
+                    }
+                )
+                (L3.deref requestTypeName model)
 
         _ ->
             let
@@ -576,9 +578,10 @@ requestFnRequest model name request =
             { maybeRequestType = Nothing
             , argPatterns = []
             , jsonBody = emptyJsonBody
-            , encoder = emptyJsonBody
+            , encoder = Nothing
             , requestLinkage = linkage
             }
+                |> Ok
 
 
 {-| Figures out what response type for the endpoint will be.
