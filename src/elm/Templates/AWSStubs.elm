@@ -40,6 +40,11 @@ errorCatalogue =
             , body = "The required property []{arg|key=name } is the wrong kind."
             }
           )
+        , ( 303
+          , { title = "Name Type Alias Could Not Be Found"
+            , body = "The type alias []{arg|key=name } could not be found."
+            }
+          )
         ]
 
 
@@ -55,6 +60,12 @@ errorBuilder posFn err =
         CheckedPropertyWrongKind name propSpec ->
             Errors.lookupError errorCatalogue
                 302
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+        DerefDeclMissing name ->
+            Errors.lookupError errorCatalogue
+                303
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
