@@ -17,7 +17,7 @@ import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
-import L3 exposing (DefaultProperties, L3, ProcessorImpl, PropCheckError(..), PropertiesAPI)
+import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, PropertiesAPI)
 import List.Nonempty as Nonempty exposing (Nonempty(..))
 import Maybe.Extra
 import Naming
@@ -43,7 +43,7 @@ errorCatalogue =
         ]
 
 
-errorBuilder : ErrorBuilder pos PropCheckError
+errorBuilder : ErrorBuilder pos L3Error
 errorBuilder posFn err =
     case err of
         CheckedPropertyMissing name propSpec ->
@@ -59,7 +59,7 @@ errorBuilder posFn err =
                 []
 
 
-processorImpl : ProcessorImpl pos L3.PropCheckError
+processorImpl : ProcessorImpl pos L3.L3Error
 processorImpl =
     { name = "AWSStubs"
     , defaults = defaultProperties
@@ -236,7 +236,7 @@ generate posFn propertiesApi model =
 --== Module Specification (with exposing).
 
 
-module_ : PropertiesAPI pos -> L3 pos -> List TopLevelExpose -> ResultME L3.PropCheckError Module
+module_ : PropertiesAPI pos -> L3 pos -> List TopLevelExpose -> ResultME L3.L3Error Module
 module_ propertiesApi model exposings =
     propertiesApi.top.getQNameProperty "name"
         |> ResultME.map (\path -> CG.normalModule path exposings)
@@ -246,7 +246,7 @@ module_ propertiesApi model exposings =
 --== Service Definition
 
 
-service : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( Declaration, Linkage )
+service : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( Declaration, Linkage )
 service propertiesApi model =
     propertiesApi.top.getBoolProperty "isRegional"
         |> ResultME.andThen
@@ -259,7 +259,7 @@ service propertiesApi model =
             )
 
 
-optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError LetDeclaration
+optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error LetDeclaration
 optionsFn propertiesApi model =
     ResultME.map4
         (\jsonVersion signingName targetPrefix xmlNamespace ->
@@ -302,7 +302,7 @@ optionsFn propertiesApi model =
         (propertiesApi.top.getOptionalStringProperty "xmlNamespace")
 
 
-regionalService : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( Declaration, Linkage )
+regionalService : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( Declaration, Linkage )
 regionalService propertiesApi model =
     ResultME.map5
         (\endpointPrefix apiVersion protocol signer options ->
@@ -345,7 +345,7 @@ regionalService propertiesApi model =
         (optionsFn propertiesApi model)
 
 
-globalService : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( Declaration, Linkage )
+globalService : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( Declaration, Linkage )
 globalService propertiesApi model =
     ResultME.map5
         (\endpointPrefix apiVersion protocol signer options ->
@@ -390,7 +390,7 @@ globalService propertiesApi model =
 --== Operations
 
 
-operations : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+operations : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( List Declaration, Linkage )
 operations propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
         |> ResultME.map (Dict.map (operation propertiesApi model))
@@ -405,7 +405,7 @@ operation :
     -> L3 pos
     -> String
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+    -> ResultME L3.L3Error ( List Declaration, Linkage )
 operation propertiesApi model name decl =
     case decl of
         DAlias pos _ (TFunction funpos props request response) ->
@@ -430,7 +430,7 @@ requestFn :
     -> pos
     -> L1.Type pos L2.RefChecked
     -> L1.Type pos L2.RefChecked
-    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+    -> ResultME L3.L3Error ( List Declaration, Linkage )
 requestFn model declPropertyGet funPropertyGet name pos request response =
     let
         { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } =
@@ -637,7 +637,7 @@ requestFnResponse name response =
 typeDeclarations :
     PropertiesAPI pos
     -> L3 pos
-    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+    -> ResultME L3.L3Error ( List Declaration, Linkage )
 typeDeclarations propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
         |> ResultME.map (Dict.map (typeDeclaration propertiesApi))
@@ -651,7 +651,7 @@ typeDeclaration :
     PropertiesAPI pos
     -> String
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+    -> ResultME L3.L3Error ( List Declaration, Linkage )
 typeDeclaration propertiesAPI name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
@@ -666,7 +666,7 @@ typeDeclaration propertiesAPI name decl =
             Templates.Elm.typeDecl name doc decl |> Ok
 
 
-jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.PropCheckError ( List Declaration, Linkage )
+jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter (orPropFilter isRequest isExcluded)) model.declarations
         |> ResultME.map (Dict.map jsonCodec)
@@ -697,7 +697,7 @@ productForBodyFields :
     -> pos
     -> Properties
     -> Nonempty ( String, Type pos L2.RefChecked, Properties )
-    -> ResultME PropCheckError (Type pos L2.RefChecked)
+    -> ResultME L3Error (Type pos L2.RefChecked)
 productForBodyFields propertiesApi pos props fields =
     let
         fieldsToProductOrEmpty filtered =
@@ -717,7 +717,7 @@ productForBodyFields propertiesApi pos props fields =
 
 
 type alias PropertyFilter pos a =
-    PropertiesAPI pos -> a -> ResultME L3.PropCheckError Bool
+    PropertiesAPI pos -> a -> ResultME L3.L3Error Bool
 
 
 andPropFilter : PropertyFilter pos a -> PropertyFilter pos a -> PropertyFilter pos a
@@ -766,7 +766,7 @@ filterDictByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> Dict String a
-    -> ResultME PropCheckError (Dict String a)
+    -> ResultME L3Error (Dict String a)
 filterDictByProps propertiesApi filter dict =
     let
         ( filtered, errors ) =
@@ -797,7 +797,7 @@ filterListByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> List a
-    -> ResultME PropCheckError (List a)
+    -> ResultME L3Error (List a)
 filterListByProps propertiesApi filter vals =
     let
         ( filtered, errors ) =
@@ -828,7 +828,7 @@ filterNonemptyByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> Nonempty a
-    -> ResultME PropCheckError (List a)
+    -> ResultME L3Error (List a)
 filterNonemptyByProps propertiesApi filter vals =
     filterListByProps propertiesApi filter (Nonempty.toList vals)
 
