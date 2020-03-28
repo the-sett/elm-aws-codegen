@@ -421,6 +421,7 @@ operation propertiesApi model name decl =
     case decl of
         DAlias pos _ (TFunction funpos props request response) ->
             requestFn
+                propertiesApi
                 model
                 (propertiesApi.declarable decl)
                 (propertiesApi.type_ (TFunction funpos props request response))
@@ -434,7 +435,8 @@ operation propertiesApi model name decl =
 
 
 requestFn :
-    L3 pos
+    PropertiesAPI pos
+    -> L3 pos
     -> L3.PropertyGet
     -> L3.PropertyGet
     -> String
@@ -442,7 +444,7 @@ requestFn :
     -> L1.Type pos L2.RefChecked
     -> L1.Type pos L2.RefChecked
     -> ResultME L3.L3Error ( List Declaration, Linkage )
-requestFn model declPropertyGet funPropertyGet name pos request response =
+requestFn propertiesApi model declPropertyGet funPropertyGet name pos request response =
     ResultME.map4
         (\url httpMethod documentation { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } ->
             let
@@ -501,7 +503,7 @@ requestFn model declPropertyGet funPropertyGet name pos request response =
         (funPropertyGet.getStringProperty "url")
         (funPropertyGet.getStringProperty "httpMethod")
         (declPropertyGet.getOptionalStringProperty "documentation")
-        (requestFnRequest model name request)
+        (requestFnRequest propertiesApi model name request)
 
 
 {-| Figures out what the request type for the endpoint will be.
@@ -518,7 +520,8 @@ request functions arguments, the json body and any linkage that needs to be roll
 
 -}
 requestFnRequest :
-    L3 pos
+    PropertiesAPI pos
+    -> L3 pos
     -> String
     -> L1.Type pos L2.RefChecked
     ->
@@ -529,14 +532,17 @@ requestFnRequest :
             , jsonBody : Expression
             , requestLinkage : Linkage
             }
-requestFnRequest model name request =
+requestFnRequest propertiesApi model name request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map
-                (\requestTypeDecl ->
+                (\bodyFieldsTypeDecl ->
                     let
                         ( loweredType, loweredLinkage ) =
                             Templates.Elm.lowerType l1RequestType
+
+                        ( encoder, encoderLinkage ) =
+                            Templates.Elm.codecAsLetDecl "body" bodyFieldsTypeDecl
 
                         jsonBody =
                             CG.pipe (CG.val "req")
@@ -546,9 +552,6 @@ requestFnRequest model name request =
                                     ]
                                 , CG.fqVal coreHttpMod "jsonBody"
                                 ]
-
-                        ( encoder, encoderLinkage ) =
-                            Templates.Elm.codecAsLetDecl name requestTypeDecl
 
                         linkage =
                             CG.combineLinkage
@@ -565,7 +568,9 @@ requestFnRequest model name request =
                     , requestLinkage = linkage
                     }
                 )
-                (L3.deref requestTypeName model)
+                (L3.deref requestTypeName model
+                    |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
+                )
 
         _ ->
             let
@@ -582,6 +587,37 @@ requestFnRequest model name request =
             , requestLinkage = linkage
             }
                 |> Ok
+
+
+{-| Given a product declaration as a type alias, filters its fields to get just
+the ones that match the specified filter.
+
+Note that if not fields pass the filter, a `TEmptyProduct` will be returned.
+
+-}
+filterProductDecl :
+    PropertiesAPI pos
+    -> PropertyFilter pos ( String, Type pos L2.RefChecked, Properties )
+    -> L1.Declarable pos L2.RefChecked
+    -> ResultME L3Error (L1.Declarable pos L2.RefChecked)
+filterProductDecl propertiesApi filter decl =
+    let
+        fieldsToProductOrEmpty pos props filtered =
+            case filtered of
+                [] ->
+                    TEmptyProduct pos props
+
+                f :: fs ->
+                    Nonempty f fs |> TProduct pos props
+    in
+    case decl of
+        DAlias dpos dprops (TProduct tpos tprops fields) ->
+            filterNonemptyByProps propertiesApi filter fields
+                |> ResultME.map (fieldsToProductOrEmpty tpos tprops)
+                |> ResultME.map (DAlias dpos dprops)
+
+        _ ->
+            decl |> Ok
 
 
 {-| Figures out what response type for the endpoint will be.
@@ -697,33 +733,6 @@ jsonCodec name decl =
         _ ->
             Templates.Elm.codec name decl
                 |> Tuple.mapFirst List.singleton
-
-
-{-| Given a product type, filters its fields to get just the ones that occur
-in the body location. These are used to construct a product type with just those
-fields.
-
-Note that if all fields are not in the body, a `TEmptyProduct` will be returned.
-
--}
-productForBodyFields :
-    PropertiesAPI pos
-    -> pos
-    -> Properties
-    -> Nonempty ( String, Type pos L2.RefChecked, Properties )
-    -> ResultME L3Error (Type pos L2.RefChecked)
-productForBodyFields propertiesApi pos props fields =
-    let
-        fieldsToProductOrEmpty filtered =
-            case filtered of
-                [] ->
-                    TEmptyProduct pos props
-
-                f :: fs ->
-                    Nonempty f fs |> TProduct pos props
-    in
-    filterNonemptyByProps propertiesApi isInBody fields
-        |> ResultME.map fieldsToProductOrEmpty
 
 
 
