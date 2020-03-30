@@ -12,6 +12,8 @@ import AWS.Core.Service exposing (Protocol(..), Signer(..))
 import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
+import Elm.Codec
+import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod)
@@ -23,7 +25,6 @@ import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
-import Templates.Elm
 
 
 {-| The error catalogue for this processor.
@@ -539,10 +540,10 @@ requestFnRequest propertiesApi model name request =
                 (\bodyFieldsTypeDecl ->
                     let
                         ( loweredType, loweredLinkage ) =
-                            Templates.Elm.lowerType l1RequestType
+                            Elm.Lang.lowerType l1RequestType
 
                         ( encoder, encoderLinkage ) =
-                            Templates.Elm.codecAsLetDecl requestTypeName bodyFieldsTypeDecl
+                            Elm.Codec.codecAsLetDecl requestTypeName bodyFieldsTypeDecl
 
                         jsonBody =
                             CG.pipe (CG.val "req")
@@ -641,7 +642,7 @@ requestFnResponse name response =
         (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
             let
                 ( loweredType, loweredLinkage ) =
-                    Templates.Elm.lowerType l1ResponseType
+                    Elm.Lang.lowerType l1ResponseType
 
                 responseType =
                     loweredType
@@ -714,7 +715,7 @@ typeDeclaration propertiesAPI name decl =
                     CG.emptyDocComment
                         |> CG.markdown ("The " ++ Naming.safeCCU name ++ " data model.")
             in
-            Templates.Elm.typeDecl name doc decl |> Ok
+            Elm.Lang.typeDecl name doc decl |> Ok
 
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( List Declaration, Linkage )
@@ -732,7 +733,7 @@ jsonCodec name decl =
             ( [], CG.emptyLinkage )
 
         _ ->
-            Templates.Elm.codec name decl
+            Elm.Codec.codec name decl
                 |> Tuple.mapFirst List.singleton
 
 
