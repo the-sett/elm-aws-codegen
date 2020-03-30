@@ -542,7 +542,7 @@ requestFnRequest propertiesApi model name request =
                             Templates.Elm.lowerType l1RequestType
 
                         ( encoder, encoderLinkage ) =
-                            Templates.Elm.codecAsLetDecl "body" bodyFieldsTypeDecl
+                            Templates.Elm.codecAsLetDecl requestTypeName bodyFieldsTypeDecl
 
                         jsonBody =
                             CG.pipe (CG.val "req")
@@ -615,6 +615,7 @@ filterProductDecl propertiesApi filter decl =
             filterNonemptyByProps propertiesApi filter fields
                 |> ResultME.map (fieldsToProductOrEmpty tpos tprops)
                 |> ResultME.map (DAlias dpos dprops)
+                |> ResultME.mapError (Debug.log "error")
 
         _ ->
             decl |> Ok

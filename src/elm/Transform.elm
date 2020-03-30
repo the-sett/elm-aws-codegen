@@ -384,31 +384,35 @@ modelStructure shape name =
                 type_ =
                     shapeRefToL1Type shapeRef
 
+                fieldProperties =
+                    let
+                        loc =
+                            case shapeRef.location of
+                                Header ->
+                                    "header"
+
+                                QueryString ->
+                                    "querystring"
+
+                                StatusCode ->
+                                    "statuscode"
+
+                                Uri ->
+                                    "uri"
+
+                                Body ->
+                                    "body"
+                    in
+                    Dict.insert "location" (PEnum AWSStubs.locationEnum loc) Dict.empty
+
                 optionalField =
                     ( memberName
                     , type_ |> COptional |> TContainer () L1.emptyProperties
-                    , L1.emptyProperties
+                    , fieldProperties
                     )
 
                 requiredField =
-                    ( memberName, type_, L1.emptyProperties )
-
-                fieldProperties =
-                    case shapeRef.location of
-                        Header ->
-                            "header"
-
-                        QueryString ->
-                            "querystring"
-
-                        StatusCode ->
-                            "statuscode"
-
-                        Uri ->
-                            "uri"
-
-                        Body ->
-                            "body"
+                    ( memberName, type_, fieldProperties )
             in
             case shape.required of
                 Nothing ->
