@@ -13,6 +13,7 @@ import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.Codec
+import Elm.Encode
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
@@ -543,7 +544,7 @@ requestFnRequest propertiesApi model name request =
                             Elm.Lang.lowerType l1RequestType
 
                         ( encoder, encoderLinkage ) =
-                            Elm.Codec.codecAsLetDecl requestTypeName bodyFieldsTypeDecl
+                            Elm.Encode.encoderAsLetDecl requestTypeName bodyFieldsTypeDecl
 
                         jsonBody =
                             CG.pipe (CG.val "req")
