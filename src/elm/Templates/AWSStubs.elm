@@ -475,7 +475,7 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                         ]
                         |> CG.letExpr
                             (Maybe.Extra.values
-                                [ encoder
+                                [ encoder |> Maybe.map (CG.letVal "bodyEncoder")
                                 , jsonBody |> CG.letVal "jsonBody" |> Just
                                 , responseDecoder |> CG.letVal "decoder" |> Just
                                 ]
@@ -530,7 +530,7 @@ requestFnRequest :
         ResultME L3Error
             { maybeRequestType : Maybe TypeAnnotation
             , argPatterns : List Pattern
-            , encoder : Maybe LetDeclaration
+            , encoder : Maybe Expression
             , jsonBody : Expression
             , requestLinkage : Linkage
             }
@@ -544,7 +544,7 @@ requestFnRequest propertiesApi model name request =
                             Elm.Lang.lowerType l1RequestType
 
                         ( encoder, encoderLinkage ) =
-                            Elm.Encode.encoderAsLetDecl requestTypeName bodyFieldsTypeDecl
+                            Elm.Encode.encoderAsExpression requestTypeName bodyFieldsTypeDecl
 
                         jsonBody =
                             CG.pipe (CG.val "req")
