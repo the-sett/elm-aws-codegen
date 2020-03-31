@@ -537,8 +537,8 @@ requestFnRequest :
 requestFnRequest propertiesApi model name request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
-            ResultME.map
-                (\bodyFieldsTypeDecl ->
+            ResultME.map4
+                (\headerFieldsTypeDecl queryStringFieldsTypeDecl uriFieldTypeDecl bodyFieldsTypeDecl ->
                     let
                         ( loweredType, loweredLinkage ) =
                             Elm.Lang.lowerType l1RequestType
@@ -569,6 +569,15 @@ requestFnRequest propertiesApi model name request =
                     , jsonBody = jsonBody
                     , requestLinkage = linkage
                     }
+                )
+                (L3.deref requestTypeName model
+                    |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+                )
+                (L3.deref requestTypeName model
+                    |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
+                )
+                (L3.deref requestTypeName model
+                    |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
                 )
                 (L3.deref requestTypeName model
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
@@ -859,14 +868,31 @@ filterNonemptyByProps propertiesApi filter vals =
     filterListByProps propertiesApi filter (Nonempty.toList vals)
 
 
-isInBody : PropertyFilter pos ( String, Type pos ref, Properties )
-isInBody propertiesApi ( _, _, props ) =
-    case (propertiesApi.field props).getEnumProperty locationEnum "location" of
-        Ok "body" ->
-            Ok True
+isInHeader : PropertyFilter pos ( String, Type pos ref, Properties )
+isInHeader =
+    isInLocation "header"
 
-        Ok _ ->
-            Ok False
+
+isInQueryString : PropertyFilter pos ( String, Type pos ref, Properties )
+isInQueryString =
+    isInLocation "queryString"
+
+
+isInUri : PropertyFilter pos ( String, Type pos ref, Properties )
+isInUri =
+    isInLocation "uri"
+
+
+isInBody : PropertyFilter pos ( String, Type pos ref, Properties )
+isInBody =
+    isInLocation "body"
+
+
+isInLocation : String -> PropertyFilter pos ( String, Type pos ref, Properties )
+isInLocation location propertiesApi ( _, _, props ) =
+    case (propertiesApi.field props).getEnumProperty locationEnum "location" of
+        Ok val ->
+            location == val |> Ok
 
         Err err ->
             Err err
