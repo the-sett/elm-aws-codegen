@@ -546,6 +546,16 @@ requestFnRequest propertiesApi model name request =
                         ( encoder, encoderLinkage ) =
                             Elm.Encode.encoderAsExpression requestTypeName bodyFieldsTypeDecl
 
+                        -- url =
+                        --   parseUrl "/2015-03-31/functions/{FunctionName}/code"
+                        --   |> setParam Param.string "FunctionName" val.FunctionName
+                        --   |> Param.encodedURl
+                        -- Error if param not set.
+                        --
+                        -- headers obj req  =
+                        --   setHeader req "Blah" obj.blah
+                        --   |> setHeader req "Blah" obj.blah
+                        --
                         jsonBody =
                             CG.pipe (CG.val "req")
                                 [ CG.apply
