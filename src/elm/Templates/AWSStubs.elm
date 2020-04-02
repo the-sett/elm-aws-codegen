@@ -535,7 +535,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                         [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
                         , CG.string (Naming.safeCCU name)
                         , CG.fqVal coreHttpMod httpMethod
-                        , CG.string url
+                        , CG.val "url"
                         , CG.val "jsonBody"
                         , CG.val "decoder"
                         ]
@@ -543,6 +543,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             (Maybe.Extra.values
                                 [ encoder
                                 , jsonBody |> Just
+                                , CG.letVal "url" url |> Just
                                 , responseDecoder |> Just
                                 ]
                             )
@@ -597,58 +598,56 @@ requestFnRequest :
             , encoder : Maybe LetDeclaration
             , jsonBody : LetDeclaration
             , requestLinkage : Linkage
-            , url : String
+            , url : Expression
             }
 requestFnRequest propertiesApi model name urlSpec request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map4
                 (\headerFieldsTypeDecl queryStringFieldsTypeDecl uriFieldTypeDecl bodyFieldsTypeDecl ->
-                    let
-                        ( loweredType, loweredLinkage ) =
-                            Elm.Lang.lowerType l1RequestType
+                    ResultME.map
+                        (\urlWithParams ->
+                            let
+                                ( loweredType, loweredLinkage ) =
+                                    Elm.Lang.lowerType l1RequestType
 
-                        ( encoder, encoderLinkage ) =
-                            Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
-                                |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
+                                ( encoder, encoderLinkage ) =
+                                    Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
+                                        |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
 
-                        urlWithParams =
-                            UrlParser.parseUrlParams urlSpec
-                                |> ResultME.fromResult
-                                |> ResultME.map (buildUrlFromParams uriFieldTypeDecl)
-                                |> ResultME.mapError UrlDidNotParse
-                                |> Result.withDefault "/default/url"
+                                --
+                                -- headers obj req  =
+                                --   setHeader req "Blah" obj.blah
+                                --   |> setHeader req "Blah" obj.blah
+                                --
+                                jsonBody =
+                                    CG.pipe (CG.val "req")
+                                        [ CG.val "encoder"
+                                        , CG.fqVal coreHttpMod "jsonBody"
+                                        ]
+                                        |> CG.letVal "jsonBody"
 
-                        --
-                        -- headers obj req  =
-                        --   setHeader req "Blah" obj.blah
-                        --   |> setHeader req "Blah" obj.blah
-                        --
-                        jsonBody =
-                            CG.pipe (CG.val "req")
-                                [ CG.apply
-                                    [ CG.fqFun codecMod "encoder"
-                                    , CG.val (Naming.safeCCL requestTypeName ++ "Codec")
-                                    ]
-                                , CG.fqVal coreHttpMod "jsonBody"
-                                ]
-                                |> CG.letVal "jsonBody"
-
-                        linkage =
-                            CG.combineLinkage
-                                [ CG.emptyLinkage
-                                    |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
-                                , loweredLinkage
-                                , encoderLinkage
-                                ]
-                    in
-                    { maybeRequestType = Just loweredType
-                    , argPatterns = [ CG.varPattern "req" ]
-                    , encoder = Just encoder
-                    , jsonBody = jsonBody
-                    , requestLinkage = linkage
-                    , url = urlWithParams
-                    }
+                                linkage =
+                                    CG.combineLinkage
+                                        [ CG.emptyLinkage
+                                            |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                                        , loweredLinkage
+                                        , encoderLinkage
+                                        ]
+                            in
+                            { maybeRequestType = Just loweredType
+                            , argPatterns = [ CG.varPattern "req" ]
+                            , encoder = Just encoder
+                            , jsonBody = jsonBody
+                            , requestLinkage = linkage
+                            , url = urlWithParams
+                            }
+                        )
+                        (UrlParser.parseUrlParams urlSpec
+                            |> ResultME.fromResult
+                            |> ResultME.mapError UrlDidNotParse
+                            |> ResultME.andThen (buildUrlFromParams model uriFieldTypeDecl)
+                        )
                 )
                 (L3.deref requestTypeName model
                     |> ResultME.mapError l3ToAwsStubsError
@@ -666,6 +665,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                     |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
                 )
+                |> ResultME.flatten
 
         _ ->
             let
@@ -681,13 +681,17 @@ requestFnRequest propertiesApi model name urlSpec request =
             , jsonBody = emptyJsonBody
             , encoder = Nothing
             , requestLinkage = linkage
-            , url = ""
+            , url = CG.unit
             }
                 |> Ok
 
 
-buildUrlFromParams : L1.Declarable pos L2.RefChecked -> List UrlPart -> String
-buildUrlFromParams uriFieldTypeDecl urlParts =
+buildUrlFromParams :
+    L3 pos
+    -> L1.Declarable pos L2.RefChecked
+    -> List UrlPart
+    -> ResultME AWSStubsError Expression
+buildUrlFromParams model uriFieldTypeDecl urlParts =
     -- Generated code needs to look like:
     -- url =
     --     "/2015-03-31/functions/"
@@ -695,19 +699,34 @@ buildUrlFromParams uriFieldTypeDecl urlParts =
     --         ++ "/aliases/"
     --         ++ val.name
     -- Error if param not set.
-    List.foldl
-        (\part acc ->
-            case part of
-                PathLiteral lit ->
-                    lit :: acc
+    let
+        ( parts, errors ) =
+            List.foldl
+                (\part ( acc, errAcc ) ->
+                    case part of
+                        PathLiteral lit ->
+                            ( CG.string lit :: acc, errAcc )
 
-                Param name ->
-                    name :: acc
-        )
-        []
-        urlParts
-        |> List.reverse
-        |> String.concat
+                        Param name ->
+                            ( CG.string name :: acc, errAcc )
+                )
+                ( [], [] )
+                urlParts
+    in
+    case errors of
+        [] ->
+            case List.reverse parts of
+                [] ->
+                    CG.string "" |> Ok
+
+                [ part ] ->
+                    CG.binOpChain part CG.append [] |> Ok
+
+                part :: ps ->
+                    CG.binOpChain part CG.append ps |> Ok
+
+        e :: es ->
+            ResultME.errors e es
 
 
 {-| Given a product declaration as a type alias, filters its fields to get just
