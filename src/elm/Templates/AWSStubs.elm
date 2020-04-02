@@ -646,7 +646,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                         (UrlParser.parseUrlParams urlSpec
                             |> ResultME.fromResult
                             |> ResultME.mapError UrlDidNotParse
-                            |> ResultME.andThen (buildUrlFromParams model uriFieldTypeDecl)
+                            |> ResultME.andThen (buildUrlFromParams uriFieldTypeDecl)
                         )
                 )
                 (L3.deref requestTypeName model
@@ -687,19 +687,31 @@ requestFnRequest propertiesApi model name urlSpec request =
 
 
 buildUrlFromParams :
-    L3 pos
-    -> L1.Declarable pos L2.RefChecked
+    L1.Declarable pos L2.RefChecked
     -> List UrlPart
     -> ResultME AWSStubsError Expression
-buildUrlFromParams model uriFieldTypeDecl urlParts =
-    -- Generated code needs to look like:
-    -- url =
-    --     "/2015-03-31/functions/"
-    --         ++ val.functionName
-    --         ++ "/aliases/"
-    --         ++ val.name
-    -- Error if param not set.
+buildUrlFromParams uriFieldTypeDecl urlParts =
     let
+        lookupField name =
+            case uriFieldTypeDecl of
+                DAlias dpos dprops (TProduct tpos tprops fields) ->
+                    let
+                        match =
+                            Nonempty.toList fields
+                                |> List.filter (\( fname, ftype, fprops ) -> name == fname)
+                                |> List.head
+                    in
+                    case match of
+                        Nothing ->
+                            --UrlDidNotParse "Blah" |> Err
+                            Ok "noMatch"
+
+                        Just ( val, _, _ ) ->
+                            Ok val
+
+                _ ->
+                    UrlDidNotParse "Blah" |> Err
+
         ( parts, errors ) =
             List.foldl
                 (\part ( acc, errAcc ) ->
@@ -708,7 +720,13 @@ buildUrlFromParams model uriFieldTypeDecl urlParts =
                             ( CG.string lit :: acc, errAcc )
 
                         Param name ->
-                            ( CG.string name :: acc, errAcc )
+                            case lookupField name of
+                                -- Ok ( fname, ftype, fprops ) ->
+                                Ok fname ->
+                                    ( CG.access (CG.val "req") (Naming.safeCCL fname) :: acc, errAcc )
+
+                                Err err ->
+                                    ( acc, err :: errAcc )
                 )
                 ( [], [] )
                 urlParts
