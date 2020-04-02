@@ -477,8 +477,8 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                         |> CG.letExpr
                             (Maybe.Extra.values
                                 [ encoder
-                                , jsonBody |> CG.letVal "jsonBody" |> Just
-                                , responseDecoder |> CG.letVal "decoder" |> Just
+                                , jsonBody |> Just
+                                , responseDecoder |> Just
                                 ]
                             )
 
@@ -532,7 +532,7 @@ requestFnRequest :
             { maybeRequestType : Maybe TypeAnnotation
             , argPatterns : List Pattern
             , encoder : Maybe LetDeclaration
-            , jsonBody : Expression
+            , jsonBody : LetDeclaration
             , requestLinkage : Linkage
             }
 requestFnRequest propertiesApi model name request =
@@ -566,6 +566,7 @@ requestFnRequest propertiesApi model name request =
                                     ]
                                 , CG.fqVal coreHttpMod "jsonBody"
                                 ]
+                                |> CG.letVal "jsonBody"
 
                         linkage =
                             CG.combineLinkage
@@ -599,6 +600,7 @@ requestFnRequest propertiesApi model name request =
             let
                 emptyJsonBody =
                     CG.fqVal coreHttpMod "emptyBody"
+                        |> CG.letVal "jsonBody"
 
                 linkage =
                     CG.emptyLinkage |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
@@ -658,7 +660,7 @@ When there is no response shape, the decoder will be `(AWS.Core.Decode.FixedResu
 requestFnResponse :
     String
     -> L1.Type pos L2.RefChecked
-    -> ( TypeAnnotation, Expression, Linkage )
+    -> ( TypeAnnotation, LetDeclaration, Linkage )
 requestFnResponse name response =
     case response of
         (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
@@ -682,6 +684,7 @@ requestFnResponse name response =
                         , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
                         ]
                         |> CG.parens
+                        |> CG.letVal "decoder"
             in
             ( responseType, decoder, linkage )
 
@@ -697,6 +700,7 @@ requestFnResponse name response =
                         [ CG.fqVal decodeMod "succeed"
                         , CG.unit
                         ]
+                        |> CG.letVal "decoder"
 
                 responseType =
                     CG.unitAnn
