@@ -14,7 +14,7 @@ import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.Codec
 import Elm.Encode
-import Elm.FunDecl as FunDecl
+import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
@@ -546,7 +546,7 @@ requestFnRequest propertiesApi model name request =
 
                         ( encoder, encoderLinkage ) =
                             Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
-                                |> FunDecl.asLetDecl FunDecl.defaultOptions
+                                |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
 
                         -- url =
                         --   parseUrl "/2015-03-31/functions/{FunctionName}/code"
