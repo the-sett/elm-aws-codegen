@@ -14,6 +14,7 @@ import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.Codec
 import Elm.Encode
+import Elm.FunDecl as FunDecl
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
@@ -475,7 +476,7 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                         ]
                         |> CG.letExpr
                             (Maybe.Extra.values
-                                [ encoder |> Maybe.map (CG.letVal "bodyEncoder")
+                                [ encoder
                                 , jsonBody |> CG.letVal "jsonBody" |> Just
                                 , responseDecoder |> CG.letVal "decoder" |> Just
                                 ]
@@ -530,7 +531,7 @@ requestFnRequest :
         ResultME L3Error
             { maybeRequestType : Maybe TypeAnnotation
             , argPatterns : List Pattern
-            , encoder : Maybe Expression
+            , encoder : Maybe LetDeclaration
             , jsonBody : Expression
             , requestLinkage : Linkage
             }
@@ -544,7 +545,8 @@ requestFnRequest propertiesApi model name request =
                             Elm.Lang.lowerType l1RequestType
 
                         ( encoder, encoderLinkage ) =
-                            Elm.Encode.encoderAsExpression requestTypeName bodyFieldsTypeDecl
+                            Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
+                                |> FunDecl.asLetDecl FunDecl.defaultOptions
 
                         -- url =
                         --   parseUrl "/2015-03-31/functions/{FunctionName}/code"
@@ -754,6 +756,7 @@ jsonCodec name decl =
 
         _ ->
             Elm.Codec.codec name decl
+                |> FunDecl.asTopLevel FunDecl.defaultOptions
                 |> Tuple.mapFirst List.singleton
 
 
