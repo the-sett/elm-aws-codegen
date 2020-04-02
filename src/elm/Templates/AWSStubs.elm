@@ -27,7 +27,7 @@ import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
-import UrlParser
+import UrlParser exposing (UrlPart(..))
 
 
 type AWSStubsError
@@ -67,6 +67,11 @@ errorCatalogue =
         , ( 303
           , { title = "Name Type Alias Could Not Be Found"
             , body = "The type alias []{arg|key=name } could not be found."
+            }
+          )
+        , ( 304
+          , { title = "Unable to Parse URL Spec"
+            , body = "Parsing the URL specification gave this error: []{arg|key=errMsg }."
             }
           )
         ]
@@ -483,8 +488,33 @@ requestFn :
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFn propertiesApi model declPropertyGet funPropertyGet name pos request response =
-    ResultME.map4
-        (\url httpMethod documentation { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } ->
+    ResultME.map3
+        (requestFnFromParams propertiesApi model name request response)
+        (funPropertyGet.getStringProperty "url"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
+        (funPropertyGet.getStringProperty "httpMethod"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
+        (declPropertyGet.getOptionalStringProperty "documentation"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
+        |> ResultME.flatten
+
+
+requestFnFromParams :
+    PropertiesAPI pos
+    -> L3 pos
+    -> String
+    -> L1.Type pos L2.RefChecked
+    -> L1.Type pos L2.RefChecked
+    -> String
+    -> String
+    -> Maybe String
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
+requestFnFromParams propertiesApi model name request response urlSpec httpMethod documentation =
+    ResultME.map
+        (\{ maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage, url } ->
             let
                 ( responseType, responseDecoder, responseLinkage ) =
                     requestFnResponse name response
@@ -505,7 +535,7 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                         [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
                         , CG.string (Naming.safeCCU name)
                         , CG.fqVal coreHttpMod httpMethod
-                        , CG.string "reconstituted/url/goes/here"
+                        , CG.string url
                         , CG.val "jsonBody"
                         , CG.val "decoder"
                         ]
@@ -538,22 +568,7 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                 ]
             )
         )
-        (funPropertyGet.getStringProperty "url"
-            |> ResultME.mapError l3ToAwsStubsError
-            |> ResultME.andThen
-                (\url ->
-                    UrlParser.parseUrlParams url
-                        |> ResultME.fromResult
-                        |> ResultME.mapError UrlDidNotParse
-                )
-        )
-        (funPropertyGet.getStringProperty "httpMethod"
-            |> ResultME.mapError l3ToAwsStubsError
-        )
-        (declPropertyGet.getOptionalStringProperty "documentation"
-            |> ResultME.mapError l3ToAwsStubsError
-        )
-        (requestFnRequest propertiesApi model name request)
+        (requestFnRequest propertiesApi model name urlSpec request)
 
 
 {-| Figures out what the request type for the endpoint will be.
@@ -573,6 +588,7 @@ requestFnRequest :
     PropertiesAPI pos
     -> L3 pos
     -> String
+    -> String
     -> L1.Type pos L2.RefChecked
     ->
         ResultME AWSStubsError
@@ -581,8 +597,9 @@ requestFnRequest :
             , encoder : Maybe LetDeclaration
             , jsonBody : LetDeclaration
             , requestLinkage : Linkage
+            , url : String
             }
-requestFnRequest propertiesApi model name request =
+requestFnRequest propertiesApi model name urlSpec request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map4
@@ -595,11 +612,13 @@ requestFnRequest propertiesApi model name request =
                             Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
                                 |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
 
-                        -- url =
-                        --   parseUrl "/2015-03-31/functions/{FunctionName}/code"
-                        --   |> setParam Param.string "FunctionName" val.FunctionName
-                        --   |> Param.encodedURl
-                        -- Error if param not set.
+                        urlWithParams =
+                            UrlParser.parseUrlParams urlSpec
+                                |> ResultME.fromResult
+                                |> ResultME.map (buildUrlFromParams uriFieldTypeDecl)
+                                |> ResultME.mapError UrlDidNotParse
+                                |> Result.withDefault "/default/url"
+
                         --
                         -- headers obj req  =
                         --   setHeader req "Blah" obj.blah
@@ -628,6 +647,7 @@ requestFnRequest propertiesApi model name request =
                     , encoder = Just encoder
                     , jsonBody = jsonBody
                     , requestLinkage = linkage
+                    , url = urlWithParams
                     }
                 )
                 (L3.deref requestTypeName model
@@ -661,8 +681,33 @@ requestFnRequest propertiesApi model name request =
             , jsonBody = emptyJsonBody
             , encoder = Nothing
             , requestLinkage = linkage
+            , url = ""
             }
                 |> Ok
+
+
+buildUrlFromParams : L1.Declarable pos L2.RefChecked -> List UrlPart -> String
+buildUrlFromParams uriFieldTypeDecl urlParts =
+    -- Generated code needs to look like:
+    -- url =
+    --     "/2015-03-31/functions/"
+    --         ++ val.functionName
+    --         ++ "/aliases/"
+    --         ++ val.name
+    -- Error if param not set.
+    List.foldl
+        (\part acc ->
+            case part of
+                PathLiteral lit ->
+                    lit :: acc
+
+                Param name ->
+                    name :: acc
+        )
+        []
+        urlParts
+        |> List.reverse
+        |> String.concat
 
 
 {-| Given a product declaration as a type alias, filters its fields to get just

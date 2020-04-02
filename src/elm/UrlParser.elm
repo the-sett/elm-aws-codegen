@@ -1,4 +1,4 @@
-module UrlParser exposing (UrlPart, parseUrlParams)
+module UrlParser exposing (UrlPart(..), parseUrlParams)
 
 {-| Provides a URL decoder for REST style URLs.
 
@@ -51,14 +51,14 @@ pathLiteralParser : Parser UrlPart
 pathLiteralParser =
     let
         allowed c =
-            Char.isAlpha c || c == '-' || c == '/'
+            Char.isAlphaNum c || c == '-' || c == '/'
     in
     variable
         { start = allowed
         , inner = allowed
         , reserved = Set.empty
         }
-        |> Parser.map Param
+        |> Parser.map PathLiteral
 
 
 paramParser : Parser UrlPart
