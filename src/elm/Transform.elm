@@ -28,7 +28,6 @@ import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
 import String.Case as Case
 import Templates.AWSStubs as AWSStubs
-import UrlParser
 
 
 type TransformError pos

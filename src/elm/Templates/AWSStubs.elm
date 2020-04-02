@@ -27,6 +27,27 @@ import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
+import UrlParser
+
+
+type AWSStubsError
+    = CheckedPropertyMissing String PropSpec
+    | CheckedPropertyWrongKind String PropSpec
+    | DerefDeclMissing String
+    | UrlDidNotParse String
+
+
+l3ToAwsStubsError : L3.L3Error -> AWSStubsError
+l3ToAwsStubsError err =
+    case err of
+        L3.CheckedPropertyMissing name propSpec ->
+            CheckedPropertyMissing name propSpec
+
+        L3.CheckedPropertyWrongKind name propSpec ->
+            CheckedPropertyWrongKind name propSpec
+
+        L3.DerefDeclMissing name ->
+            DerefDeclMissing name
 
 
 {-| The error catalogue for this processor.
@@ -51,7 +72,7 @@ errorCatalogue =
         ]
 
 
-errorBuilder : ErrorBuilder pos L3Error
+errorBuilder : ErrorBuilder pos AWSStubsError
 errorBuilder posFn err =
     case err of
         CheckedPropertyMissing name propSpec ->
@@ -72,8 +93,17 @@ errorBuilder posFn err =
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
+        UrlDidNotParse errMsg ->
+            Errors.lookupError errorCatalogue
+                304
+                (Dict.fromList
+                    [ ( "errMsg", errMsg )
+                    ]
+                )
+                []
 
-processorImpl : ProcessorImpl pos L3.L3Error
+
+processorImpl : ProcessorImpl pos AWSStubsError
 processorImpl =
     { name = "AWSStubs"
     , defaults = defaultProperties
@@ -241,7 +271,9 @@ generate posFn propertiesApi model =
         (operations propertiesApi model)
         (typeDeclarations propertiesApi model)
         (jsonCodecs propertiesApi model)
-        (propertiesApi.top.getOptionalStringProperty "documentation")
+        (propertiesApi.top.getOptionalStringProperty "documentation"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
         |> ResultME.flatten
         |> ResultME.mapError (errorBuilder posFn)
 
@@ -250,17 +282,18 @@ generate posFn propertiesApi model =
 --== Module Specification (with exposing).
 
 
-module_ : PropertiesAPI pos -> L3 pos -> List TopLevelExpose -> ResultME L3.L3Error Module
+module_ : PropertiesAPI pos -> L3 pos -> List TopLevelExpose -> ResultME AWSStubsError Module
 module_ propertiesApi model exposings =
     propertiesApi.top.getQNameProperty "name"
         |> ResultME.map (\path -> CG.normalModule path exposings)
+        |> ResultME.mapError l3ToAwsStubsError
 
 
 
 --== Service Definition
 
 
-service : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( Declaration, Linkage )
+service : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( Declaration, Linkage )
 service propertiesApi model =
     propertiesApi.top.getBoolProperty "isRegional"
         |> ResultME.andThen
@@ -271,6 +304,7 @@ service propertiesApi model =
                 else
                     globalService propertiesApi model
             )
+        |> ResultME.mapError l3ToAwsStubsError
 
 
 optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error LetDeclaration
@@ -404,12 +438,13 @@ globalService propertiesApi model =
 --== Operations
 
 
-operations : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( List Declaration, Linkage )
+operations : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 operations propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
         |> ResultME.map (Dict.map (operation propertiesApi model))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
+        |> ResultME.mapError l3ToAwsStubsError
         |> ResultME.flatten
         |> ResultME.map combineDeclarations
 
@@ -419,7 +454,7 @@ operation :
     -> L3 pos
     -> String
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3.L3Error ( List Declaration, Linkage )
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
 operation propertiesApi model name decl =
     case decl of
         DAlias pos _ (TFunction funpos props request response) ->
@@ -446,7 +481,7 @@ requestFn :
     -> pos
     -> L1.Type pos L2.RefChecked
     -> L1.Type pos L2.RefChecked
-    -> ResultME L3.L3Error ( List Declaration, Linkage )
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFn propertiesApi model declPropertyGet funPropertyGet name pos request response =
     ResultME.map4
         (\url httpMethod documentation { maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage } ->
@@ -470,7 +505,7 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                         [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
                         , CG.string (Naming.safeCCU name)
                         , CG.fqVal coreHttpMod httpMethod
-                        , CG.string url
+                        , CG.string "reconstituted/url/goes/here"
                         , CG.val "jsonBody"
                         , CG.val "decoder"
                         ]
@@ -503,9 +538,21 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
                 ]
             )
         )
-        (funPropertyGet.getStringProperty "url")
-        (funPropertyGet.getStringProperty "httpMethod")
-        (declPropertyGet.getOptionalStringProperty "documentation")
+        (funPropertyGet.getStringProperty "url"
+            |> ResultME.mapError l3ToAwsStubsError
+            |> ResultME.andThen
+                (\url ->
+                    UrlParser.parseUrlParams url
+                        |> ResultME.fromResult
+                        |> ResultME.mapError UrlDidNotParse
+                )
+        )
+        (funPropertyGet.getStringProperty "httpMethod"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
+        (declPropertyGet.getOptionalStringProperty "documentation"
+            |> ResultME.mapError l3ToAwsStubsError
+        )
         (requestFnRequest propertiesApi model name request)
 
 
@@ -528,7 +575,7 @@ requestFnRequest :
     -> String
     -> L1.Type pos L2.RefChecked
     ->
-        ResultME L3Error
+        ResultME AWSStubsError
             { maybeRequestType : Maybe TypeAnnotation
             , argPatterns : List Pattern
             , encoder : Maybe LetDeclaration
@@ -584,15 +631,19 @@ requestFnRequest propertiesApi model name request =
                     }
                 )
                 (L3.deref requestTypeName model
+                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
                 )
                 (L3.deref requestTypeName model
+                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
                 )
                 (L3.deref requestTypeName model
+                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
                 )
                 (L3.deref requestTypeName model
+                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
                 )
 
@@ -624,7 +675,7 @@ filterProductDecl :
     PropertiesAPI pos
     -> PropertyFilter pos ( String, Type pos L2.RefChecked, Properties )
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3Error (L1.Declarable pos L2.RefChecked)
+    -> ResultME AWSStubsError (L1.Declarable pos L2.RefChecked)
 filterProductDecl propertiesApi filter decl =
     let
         fieldsToProductOrEmpty pos props filtered =
@@ -640,7 +691,7 @@ filterProductDecl propertiesApi filter decl =
             filterNonemptyByProps propertiesApi filter fields
                 |> ResultME.map (fieldsToProductOrEmpty tpos tprops)
                 |> ResultME.map (DAlias dpos dprops)
-                |> ResultME.mapError (Debug.log "error")
+                |> ResultME.mapError l3ToAwsStubsError
 
         _ ->
             decl |> Ok
@@ -715,9 +766,10 @@ requestFnResponse name response =
 typeDeclarations :
     PropertiesAPI pos
     -> L3 pos
-    -> ResultME L3.L3Error ( List Declaration, Linkage )
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
 typeDeclarations propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+        |> ResultME.mapError l3ToAwsStubsError
         |> ResultME.map (Dict.map (typeDeclaration propertiesApi))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
@@ -729,7 +781,7 @@ typeDeclaration :
     PropertiesAPI pos
     -> String
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3.L3Error ( List Declaration, Linkage )
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
 typeDeclaration propertiesAPI name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
@@ -744,12 +796,13 @@ typeDeclaration propertiesAPI name decl =
             Elm.Lang.typeDecl name doc decl |> Ok
 
 
-jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error ( List Declaration, Linkage )
+jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
     filterDictByProps propertiesApi (notPropFilter (orPropFilter isRequest isExcluded)) model.declarations
         |> ResultME.map (Dict.map jsonCodec)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
+        |> ResultME.mapError l3ToAwsStubsError
 
 
 jsonCodec : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
@@ -818,7 +871,7 @@ filterDictByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> Dict String a
-    -> ResultME L3Error (Dict String a)
+    -> ResultME L3.L3Error (Dict String a)
 filterDictByProps propertiesApi filter dict =
     let
         ( filtered, errors ) =
@@ -849,7 +902,7 @@ filterListByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> List a
-    -> ResultME L3Error (List a)
+    -> ResultME L3.L3Error (List a)
 filterListByProps propertiesApi filter vals =
     let
         ( filtered, errors ) =
@@ -880,7 +933,7 @@ filterNonemptyByProps :
     PropertiesAPI pos
     -> PropertyFilter pos a
     -> Nonempty a
-    -> ResultME L3Error (List a)
+    -> ResultME L3.L3Error (List a)
 filterNonemptyByProps propertiesApi filter vals =
     filterListByProps propertiesApi filter (Nonempty.toList vals)
 
