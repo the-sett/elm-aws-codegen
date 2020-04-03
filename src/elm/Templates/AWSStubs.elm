@@ -228,7 +228,7 @@ defaultProperties =
     , fields =
         L1.defineProperties
             [ ( "location", PSEnum locationEnum ) ]
-            []
+            [ ( "locationName", POptional PSString Nothing ) ]
     , unit = L1.defineProperties [] []
     , basic = L1.defineProperties [] []
     , named = L1.defineProperties [] []
@@ -657,7 +657,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                         (UrlParser.parseUrlParams urlSpec
                             |> ResultME.fromResult
                             |> ResultME.mapError UrlDidNotParse
-                            |> ResultME.andThen (buildUrlFromParams uriFieldTypeDecl)
+                            |> ResultME.andThen (buildUrlFromParams propertiesApi uriFieldTypeDecl)
                         )
                 )
                 (L3.deref requestTypeName model
@@ -698,63 +698,99 @@ requestFnRequest propertiesApi model name urlSpec request =
 
 
 buildUrlFromParams :
-    L1.Declarable pos L2.RefChecked
+    PropertiesAPI pos
+    -> L1.Declarable pos L2.RefChecked
     -> List UrlPart
     -> ResultME AWSStubsError Expression
-buildUrlFromParams uriFieldTypeDecl urlParts =
+buildUrlFromParams propertiesApi uriFieldTypeDecl urlParts =
     let
+        match :
+            String
+            -> List ( String, L1.Type pos L2.RefChecked, Properties )
+            -> ResultME AWSStubsError (Maybe ( String, L1.Type pos L2.RefChecked, Properties ))
+        match name fields =
+            case fields of
+                [] ->
+                    Ok Nothing
+
+                f :: fs ->
+                    ResultME.map
+                        (\isMatch ->
+                            if isMatch then
+                                Just f |> Ok
+
+                            else
+                                match name fs
+                        )
+                        (matchFieldToParam name f)
+                        |> ResultME.flatten
+
+        matchFieldToParam :
+            String
+            -> ( String, L1.Type pos L2.RefChecked, Properties )
+            -> ResultME AWSStubsError Bool
+        matchFieldToParam name ( fname, ftype, fprops ) =
+            ResultME.map
+                (\maybeLocName ->
+                    case maybeLocName of
+                        Nothing ->
+                            name == fname
+
+                        Just locName ->
+                            name == locName
+                )
+                ((propertiesApi.field fprops).getOptionalStringProperty "locationName"
+                    |> ResultME.mapError l3ToAwsStubsError
+                )
+
+        lookupField : String -> ResultME AWSStubsError String
         lookupField name =
             case uriFieldTypeDecl of
                 DAlias dpos dprops (TProduct tpos tprops fields) ->
-                    let
-                        match =
-                            Nonempty.toList fields
-                                |> List.filter (\( fname, ftype, fprops ) -> name == fname)
-                                |> List.head
-                    in
-                    case match of
-                        Nothing ->
-                            UnmatchedUrlParam name |> Err
+                    ResultME.map
+                        (\maybeMatch ->
+                            case maybeMatch of
+                                Nothing ->
+                                    UnmatchedUrlParam name |> ResultME.error
 
-                        Just ( val, _, _ ) ->
-                            Ok val
+                                Just ( val, _, _ ) ->
+                                    Ok val
+                        )
+                        (match name (Nonempty.toList fields))
+                        |> ResultME.flatten
 
                 _ ->
-                    UnmatchedUrlParam name |> Err
+                    Debug.log "Not Product" (UnmatchedUrlParam name) |> ResultME.error
 
-        ( parts, errors ) =
-            List.foldl
-                (\part ( acc, errAcc ) ->
+        generatedParts : ResultME AWSStubsError (List Expression)
+        generatedParts =
+            List.map
+                (\part ->
                     case part of
                         PathLiteral lit ->
-                            ( CG.string lit :: acc, errAcc )
+                            CG.string lit |> Ok
 
                         Param name ->
                             case lookupField name of
-                                -- Ok ( fname, ftype, fprops ) ->
                                 Ok fname ->
-                                    ( CG.access (CG.val "req") (Naming.safeCCL fname) :: acc, errAcc )
+                                    CG.access (CG.val "req") (Naming.safeCCL fname) |> Ok
 
                                 Err err ->
-                                    ( acc, err :: errAcc )
+                                    Err err
                 )
-                ( [], [] )
                 urlParts
-    in
-    case errors of
-        [] ->
+                |> ResultME.combineList
+
+        appendParts parts =
             case List.reverse parts of
                 [] ->
-                    CG.string "" |> Ok
-
-                [ part ] ->
-                    CG.binOpChain part CG.append [] |> Ok
+                    CG.string ""
 
                 part :: ps ->
-                    CG.binOpChain part CG.append ps |> Ok
-
-        e :: es ->
-            ResultME.errors e es
+                    CG.binOpChain part CG.append ps
+    in
+    ResultME.map appendParts
+        generatedParts
 
 
 {-| Given a product declaration as a type alias, filters its fields to get just

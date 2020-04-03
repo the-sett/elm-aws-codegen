@@ -401,8 +401,12 @@ modelStructure shape name =
 
                                 Body ->
                                     "body"
+
+                        locationName =
+                            shapeRef.locationName
                     in
-                    Dict.insert "location" (PEnum AWSStubs.locationEnum loc) Dict.empty
+                    Dict.insert "locationName" (Maybe.map PString locationName |> POptional PSString) Dict.empty
+                        |> Dict.insert "location" (PEnum AWSStubs.locationEnum loc)
 
                 optionalField =
                     ( memberName
