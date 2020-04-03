@@ -35,6 +35,7 @@ type AWSStubsError
     | CheckedPropertyWrongKind String PropSpec
     | DerefDeclMissing String
     | UrlDidNotParse String
+    | UnmatchedUrlParam String
 
 
 l3ToAwsStubsError : L3.L3Error -> AWSStubsError
@@ -74,6 +75,13 @@ errorCatalogue =
             , body = "Parsing the URL specification gave this error: []{arg|key=errMsg }."
             }
           )
+        , ( 305
+          , { title = "Unmatched URL Parameter"
+            , body = """
+The parameter named []{arg|key=name } did not match a parameter in the URL specification.
+"""
+            }
+          )
         ]
 
 
@@ -101,10 +109,13 @@ errorBuilder posFn err =
         UrlDidNotParse errMsg ->
             Errors.lookupError errorCatalogue
                 304
-                (Dict.fromList
-                    [ ( "errMsg", errMsg )
-                    ]
-                )
+                (Dict.fromList [ ( "errMsg", errMsg ) ])
+                []
+
+        UnmatchedUrlParam name ->
+            Errors.lookupError errorCatalogue
+                305
+                (Dict.fromList [ ( "name", name ) ])
                 []
 
 
@@ -703,14 +714,13 @@ buildUrlFromParams uriFieldTypeDecl urlParts =
                     in
                     case match of
                         Nothing ->
-                            --UrlDidNotParse "Blah" |> Err
-                            Ok "noMatch"
+                            UnmatchedUrlParam name |> Err
 
                         Just ( val, _, _ ) ->
                             Ok val
 
                 _ ->
-                    UrlDidNotParse "Blah" |> Err
+                    UnmatchedUrlParam name |> Err
 
         ( parts, errors ) =
             List.foldl
