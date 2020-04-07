@@ -27,6 +27,7 @@ import Maybe.Extra
 import Naming
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
+import Templates.Query as Query exposing (PropertyFilter)
 import UrlParser exposing (UrlPart(..))
 
 
@@ -456,7 +457,7 @@ globalService propertiesApi model =
 
 operations : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 operations propertiesApi model =
-    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+    Query.filterDictByProps propertiesApi (Query.notPropFilter isExcluded) model.declarations
         |> ResultME.map (Dict.map (operation propertiesApi model))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
@@ -816,7 +817,7 @@ filterProductDecl propertiesApi filter decl =
     in
     case decl of
         DAlias dpos dprops (TProduct tpos tprops fields) ->
-            filterNonemptyByProps propertiesApi filter fields
+            Query.filterNonemptyByProps propertiesApi filter fields
                 |> ResultME.map (fieldsToProductOrEmpty tpos tprops)
                 |> ResultME.map (DAlias dpos dprops)
                 |> ResultME.mapError l3ToAwsStubsError
@@ -896,7 +897,7 @@ typeDeclarations :
     -> L3 pos
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 typeDeclarations propertiesApi model =
-    filterDictByProps propertiesApi (notPropFilter isExcluded) model.declarations
+    Query.filterDictByProps propertiesApi (Query.notPropFilter isExcluded) model.declarations
         |> ResultME.mapError l3ToAwsStubsError
         |> ResultME.map (Dict.map (typeDeclaration propertiesApi))
         |> ResultME.map Dict.values
@@ -926,7 +927,7 @@ typeDeclaration propertiesAPI name decl =
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
-    filterDictByProps propertiesApi (notPropFilter (orPropFilter isRequest isExcluded)) model.declarations
+    Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
         |> ResultME.map (Dict.map jsonCodec)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
@@ -947,123 +948,6 @@ jsonCodec name decl =
 
 
 -- Property Filters
-
-
-type alias PropertyFilter pos a =
-    PropertiesAPI pos -> a -> ResultME L3.L3Error Bool
-
-
-andPropFilter : PropertyFilter pos a -> PropertyFilter pos a -> PropertyFilter pos a
-andPropFilter filterA filterB =
-    \propertiesAPI val ->
-        filterA propertiesAPI val
-            |> ResultME.andThen
-                (\bool ->
-                    if bool then
-                        filterB propertiesAPI val
-
-                    else
-                        Ok False
-                )
-
-
-orPropFilter : PropertyFilter pos a -> PropertyFilter pos a -> PropertyFilter pos a
-orPropFilter filterA filterB =
-    \propertiesAPI val ->
-        filterA propertiesAPI val
-            |> ResultME.andThen
-                (\bool ->
-                    if bool then
-                        Ok True
-
-                    else
-                        filterB propertiesAPI val
-                )
-
-
-notPropFilter : PropertyFilter pos a -> PropertyFilter pos a
-notPropFilter filterA =
-    \propertiesAPI val ->
-        filterA propertiesAPI val
-            |> ResultME.andThen
-                (\bool ->
-                    if bool then
-                        Ok False
-
-                    else
-                        Ok True
-                )
-
-
-filterDictByProps :
-    PropertiesAPI pos
-    -> PropertyFilter pos a
-    -> Dict String a
-    -> ResultME L3.L3Error (Dict String a)
-filterDictByProps propertiesApi filter dict =
-    let
-        ( filtered, errors ) =
-            Dict.foldl
-                (\name val ( accum, errAccum ) ->
-                    case filter propertiesApi val of
-                        Ok False ->
-                            ( accum, errAccum )
-
-                        Ok True ->
-                            ( Dict.insert name val accum, errAccum )
-
-                        Err err ->
-                            ( accum, Nonempty.toList err ++ errAccum )
-                )
-                ( Dict.empty, [] )
-                dict
-    in
-    case errors of
-        [] ->
-            Ok filtered
-
-        e :: es ->
-            Err (Nonempty e es)
-
-
-filterListByProps :
-    PropertiesAPI pos
-    -> PropertyFilter pos a
-    -> List a
-    -> ResultME L3.L3Error (List a)
-filterListByProps propertiesApi filter vals =
-    let
-        ( filtered, errors ) =
-            List.foldl
-                (\val ( accum, errAccum ) ->
-                    case filter propertiesApi val of
-                        Ok False ->
-                            ( accum, errAccum )
-
-                        Ok True ->
-                            ( val :: accum, errAccum )
-
-                        Err err ->
-                            ( accum, Nonempty.toList err ++ errAccum )
-                )
-                ( [], [] )
-                vals
-    in
-    case errors of
-        [] ->
-            Ok filtered
-
-        e :: es ->
-            Err (Nonempty e es)
-
-
-filterNonemptyByProps :
-    PropertiesAPI pos
-    -> PropertyFilter pos a
-    -> Nonempty a
-    -> ResultME L3.L3Error (List a)
-filterNonemptyByProps propertiesApi filter vals =
-    filterListByProps propertiesApi filter (Nonempty.toList vals)
 
 
 isInHeader : PropertyFilter pos ( String, Type pos ref, Properties )
