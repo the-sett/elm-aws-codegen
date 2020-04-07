@@ -797,7 +797,7 @@ buildUrlFromParams propertiesApi uriFieldTypeDecl urlParts =
 {-| Given a product declaration as a type alias, filters its fields to get just
 the ones that match the specified filter.
 
-Note that if not fields pass the filter, a `TEmptyProduct` will be returned.
+Note that if no fields pass the filter, a `TEmptyProduct` will be returned.
 
 -}
 filterProductDecl :
