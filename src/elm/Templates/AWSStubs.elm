@@ -35,6 +35,7 @@ type AWSStubsError
     = CheckedPropertyMissing String PropSpec
     | CheckedPropertyWrongKind String PropSpec
     | DerefDeclMissing String
+    | NotExpectedKind String String
     | UrlDidNotParse String
     | UnmatchedUrlParam String
 
@@ -50,6 +51,9 @@ l3ToAwsStubsError err =
 
         L3.DerefDeclMissing name ->
             DerefDeclMissing name
+
+        L3.NotExpectedKind expected actual ->
+            NotExpectedKind expected actual
 
 
 {-| The error catalogue for this processor.
@@ -71,12 +75,12 @@ errorCatalogue =
             , body = "The type alias []{arg|key=name } could not be found."
             }
           )
-        , ( 304
+        , ( 401
           , { title = "Unable to Parse URL Spec"
             , body = "Parsing the URL specification gave this error: []{arg|key=errMsg }."
             }
           )
-        , ( 305
+        , ( 402
           , { title = "Unmatched URL Parameter"
             , body = """
 The parameter named []{arg|key=name } did not match a parameter in the URL specification.
@@ -107,15 +111,25 @@ errorBuilder posFn err =
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
-        UrlDidNotParse errMsg ->
+        NotExpectedKind expected actual ->
             Errors.lookupError errorCatalogue
                 304
+                (Dict.fromList
+                    [ ( "expected", expected )
+                    , ( "actual", actual )
+                    ]
+                )
+                []
+
+        UrlDidNotParse errMsg ->
+            Errors.lookupError errorCatalogue
+                401
                 (Dict.fromList [ ( "errMsg", errMsg ) ])
                 []
 
         UnmatchedUrlParam name ->
             Errors.lookupError errorCatalogue
-                305
+                402
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
