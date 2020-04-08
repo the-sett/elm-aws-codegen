@@ -617,9 +617,7 @@ and an empty JSON body expression will be given.
 The output of this is the optional request type alias, a list of patterns for the
 request functions arguments, the json body and any linkage that needs to be rolled up.
 
--- encoder for body fields
 -- add header fields
--- add url params
 
 -}
 requestFnRequest :
@@ -730,61 +728,7 @@ buildUrlFromParams :
     -> ResultME AWSStubsError Expression
 buildUrlFromParams propertiesApi uriFields urlParts =
     let
-        match :
-            String
-            -> List ( String, L1.Type pos L2.RefChecked, Properties )
-            -> ResultME AWSStubsError (Maybe ( String, L1.Type pos L2.RefChecked, Properties ))
-        match name fields =
-            case fields of
-                [] ->
-                    Ok Nothing
-
-                f :: fs ->
-                    ResultME.map
-                        (\isMatch ->
-                            if isMatch then
-                                Just f |> Ok
-
-                            else
-                                match name fs
-                        )
-                        (matchFieldToParam name f)
-                        |> ResultME.flatten
-
-        matchFieldToParam :
-            String
-            -> ( String, L1.Type pos L2.RefChecked, Properties )
-            -> ResultME AWSStubsError Bool
-        matchFieldToParam name ( fname, ftype, fprops ) =
-            ResultME.map
-                (\maybeLocName ->
-                    case maybeLocName of
-                        Nothing ->
-                            name == fname
-
-                        Just locName ->
-                            name == locName
-                )
-                ((propertiesApi.field fprops).getOptionalStringProperty "locationName"
-                    |> ResultME.mapError l3ToAwsStubsError
-                )
-
-        lookupField : String -> ResultME AWSStubsError String
-        lookupField name =
-            ResultME.map
-                (\maybeMatch ->
-                    case maybeMatch of
-                        Nothing ->
-                            UnmatchedUrlParam name |> ResultME.error
-
-                        Just ( val, _, _ ) ->
-                            Ok val
-                )
-                (match name uriFields)
-                |> ResultME.flatten
-
-        generatedParts : ResultME AWSStubsError (List Expression)
-        generatedParts =
+        parts =
             List.map
                 (\part ->
                     case part of
@@ -792,26 +736,28 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                             CG.string lit |> Ok
 
                         Param name ->
-                            case lookupField name of
-                                Ok fname ->
+                            case Query.filterListByProps propertiesApi (withLocationName name) uriFields of
+                                Ok (( fname, _, _ ) :: _) ->
                                     CG.access (CG.val "req") (Naming.safeCCL fname) |> Ok
 
+                                Ok [] ->
+                                    UnmatchedUrlParam name |> ResultME.error
+
                                 Err err ->
-                                    Err err
+                                    Err err |> ResultME.mapError l3ToAwsStubsError
                 )
                 urlParts
                 |> ResultME.combineList
 
-        appendParts parts =
-            case List.reverse parts of
+        appendParts vals =
+            case List.reverse vals of
                 [] ->
                     CG.string ""
 
                 part :: ps ->
                     CG.binOpChain part CG.append ps
     in
-    ResultME.map appendParts
-        generatedParts
+    parts |> ResultME.map appendParts
 
 
 {-| Given a product declaration as a type alias of a product type, filters its
@@ -985,6 +931,13 @@ isInLocation location propertiesApi ( _, _, props ) =
 
         Err err ->
             Err err
+
+
+withLocationName : String -> PropertyFilter pos (Field pos ref)
+withLocationName name propertiesApi ( _, _, props ) =
+    ResultME.map
+        (Maybe.map ((==) name) >> Maybe.withDefault False)
+        ((propertiesApi.field props).getOptionalStringProperty "locationName")
 
 
 isExcluded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
