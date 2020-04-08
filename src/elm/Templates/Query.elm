@@ -1,9 +1,16 @@
 module Templates.Query exposing (..)
 
+{-| Functions for querying Salix models.
+-}
+
 import Dict exposing (Dict)
 import L3 exposing (L3Error(..), PropertiesAPI)
 import List.Nonempty as Nonempty exposing (Nonempty(..))
 import ResultME exposing (ResultME)
+
+
+
+-- Filtering by properties.
 
 
 type alias PropertyFilter pos a =
