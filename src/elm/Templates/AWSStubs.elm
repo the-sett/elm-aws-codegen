@@ -551,7 +551,7 @@ requestFnFromParams :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFnFromParams propertiesApi model name request response urlSpec httpMethod documentation =
     ResultME.map
-        (\{ maybeRequestType, argPatterns, encoder, jsonBody, requestLinkage, url } ->
+        (\{ maybeRequestType, argPatterns, encoder, setHeaders, jsonBody, requestLinkage, url } ->
             let
                 ( responseType, responseDecoder, responseLinkage ) =
                     requestFnResponse name response
@@ -579,6 +579,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                         |> CG.letExpr
                             (Maybe.Extra.values
                                 [ encoder
+                                , setHeaders
                                 , jsonBody |> Just
                                 , CG.letVal "url" url |> Just
                                 , responseDecoder |> Just
@@ -631,6 +632,7 @@ requestFnRequest :
             { maybeRequestType : Maybe TypeAnnotation
             , argPatterns : List Pattern
             , encoder : Maybe LetDeclaration
+            , setHeaders : Maybe LetDeclaration
             , jsonBody : LetDeclaration
             , requestLinkage : Linkage
             , url : Expression
@@ -640,8 +642,8 @@ requestFnRequest propertiesApi model name urlSpec request =
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
-                    ResultME.map
-                        (\urlWithParams ->
+                    ResultME.map2
+                        (\urlWithParams headersFnImpl ->
                             let
                                 ( loweredType, loweredLinkage ) =
                                     Elm.Lang.lowerType l1RequestType
@@ -650,11 +652,6 @@ requestFnRequest propertiesApi model name urlSpec request =
                                     Elm.Encode.partialEncoder requestTypeName bodyFields
                                         |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
 
-                                --
-                                -- headers obj req  =
-                                --   setHeader req "Blah" obj.blah
-                                --   |> setHeader req "Blah" obj.blah
-                                --
                                 jsonBody =
                                     CG.pipe (CG.val "req")
                                         [ CG.val "encoder"
@@ -673,6 +670,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                             { maybeRequestType = Just loweredType
                             , argPatterns = [ CG.varPattern "req" ]
                             , encoder = Just encoder
+                            , setHeaders = Just headersFnImpl
                             , jsonBody = jsonBody
                             , requestLinkage = linkage
                             , url = urlWithParams
@@ -683,6 +681,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                             |> ResultME.mapError UrlDidNotParse
                             |> ResultME.andThen (buildUrlFromParams propertiesApi uriFields)
                         )
+                        (headersFn propertiesApi headerFields)
                 )
                 (Query.deref requestTypeName model
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
@@ -715,10 +714,47 @@ requestFnRequest propertiesApi model name urlSpec request =
             , argPatterns = []
             , jsonBody = emptyJsonBody
             , encoder = Nothing
+            , setHeaders = Nothing
             , requestLinkage = linkage
             , url = CG.unit
             }
                 |> Ok
+
+
+headersFn :
+    PropertiesAPI pos
+    -> List (Field pos L2.RefChecked)
+    -> ResultME AWSStubsError LetDeclaration
+headersFn propertiesApi fields =
+    let
+        nameValuePairs =
+            List.foldr
+                (\( fname, ftype, fprops ) accum ->
+                    ResultME.map
+                        (\lname ->
+                            CG.tuple
+                                [ CG.string lname
+                                , CG.access (CG.val "req") (Naming.safeCCL fname)
+                                ]
+                        )
+                        ((propertiesApi.field fprops).getStringProperty "locationName")
+                        :: accum
+                )
+                []
+                fields
+                |> ResultME.combineList
+                |> ResultME.map
+                    (\nvp ->
+                        CG.apply
+                            [ CG.fqVal coreHttpMod "addHeaders"
+                            , CG.list nvp
+                            , CG.val "request"
+                            ]
+                    )
+    in
+    nameValuePairs
+        |> ResultME.map (\nvp -> CG.letFunction "setHeaders" [ CG.varPattern "request" ] nvp)
+        |> ResultME.mapError l3ToAwsStubsError
 
 
 buildUrlFromParams :
