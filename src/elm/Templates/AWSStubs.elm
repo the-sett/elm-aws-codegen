@@ -666,19 +666,19 @@ requestFnRequest propertiesApi model name urlSpec request =
                             |> ResultME.andThen (buildUrlFromParams propertiesApi uriFieldTypeDecl)
                         )
                 )
-                (L3.deref requestTypeName model
+                (Query.deref requestTypeName model
                     |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
                 )
-                (L3.deref requestTypeName model
+                (Query.deref requestTypeName model
                     |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
                 )
-                (L3.deref requestTypeName model
+                (Query.deref requestTypeName model
                     |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
                 )
-                (L3.deref requestTypeName model
+                (Query.deref requestTypeName model
                     |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
                 )
