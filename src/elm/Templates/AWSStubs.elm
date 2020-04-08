@@ -25,9 +25,9 @@ import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, Propertie
 import List.Nonempty as Nonempty exposing (Nonempty(..))
 import Maybe.Extra
 import Naming
+import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
-import Templates.Query as Query exposing (PropertyFilter)
 import UrlParser exposing (UrlPart(..))
 
 
