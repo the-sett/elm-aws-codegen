@@ -190,46 +190,51 @@ defaultProperties =
             , ( "apiVersion", PSString )
             , ( "protocol", PSEnum protocolEnum )
             , ( "signer", PSEnum signerEnum )
+            , ( "xmlNamespace", PSOptional PSString )
+            , ( "targetPrefix", PSOptional PSString )
+            , ( "signingName", PSOptional PSString )
+            , ( "jsonVersion", PSOptional PSString )
+            , ( "documentation", PSOptional PSString )
             ]
             [ ( "isRegional", PBool False )
-            , ( "xmlNamespace", POptional PSString Nothing )
-            , ( "targetPrefix", POptional PSString Nothing )
-            , ( "signingName", POptional PSString Nothing )
-            , ( "jsonVersion", POptional PSString Nothing )
-            , ( "documentation", POptional PSString Nothing )
             ]
     , alias =
         L1.defineProperties
-            []
+            [ ( "documentation", PSOptional PSString )
+            , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            ]
             [ ( "exclude", PBool False )
-            , ( "documentation", POptional PSString Nothing )
-            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , sum =
-        L1.defineProperties []
+        L1.defineProperties
+            [ ( "documentation", PSOptional PSString )
+            , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            ]
             [ ( "exclude", PBool False )
-            , ( "documentation", POptional PSString Nothing )
-            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , enum =
         L1.defineProperties
-            []
+            [ ( "documentation", PSOptional PSString )
+            , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            ]
             [ ( "exclude", PBool False )
             , ( "elmEnumStyle", PEnum elmEnumStyleEnum "customType" )
-            , ( "documentation", POptional PSString Nothing )
-            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , restricted =
         L1.defineProperties
-            []
+            [ ( "documentation", PSOptional PSString )
+            , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            ]
             [ ( "exclude", PBool False )
-            , ( "documentation", POptional PSString Nothing )
-            , ( "topLevel", POptional (PSEnum topLevelEnum) Nothing )
             ]
     , fields =
         L1.defineProperties
-            [ ( "location", PSEnum locationEnum ) ]
-            [ ( "locationName", POptional PSString Nothing ) ]
+            [ ( "location", PSEnum locationEnum )
+            , ( "locationName", PSOptional PSString )
+            , ( "documentation", PSOptional PSString )
+            , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            ]
+            []
     , unit = L1.defineProperties [] []
     , basic = L1.defineProperties [] []
     , named = L1.defineProperties [] []

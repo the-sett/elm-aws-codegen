@@ -185,26 +185,11 @@ transform posFn service =
                             |> signerToString
                             |> PEnum AWSStubs.signerEnum
                         )
-                    |> Dict.insert "xmlNamespace"
-                        (Maybe.map PString service.metaData.xmlNamespace
-                            |> POptional PSString
-                        )
-                    |> Dict.insert "targetPrefix"
-                        (Maybe.map PString service.metaData.targetPrefix
-                            |> POptional PSString
-                        )
-                    |> Dict.insert "signingName"
-                        (Maybe.map PString service.metaData.signingName
-                            |> POptional PSString
-                        )
-                    |> Dict.insert "jsonVersion"
-                        (Maybe.map PString service.metaData.jsonVersion
-                            |> POptional PSString
-                        )
-                    |> Dict.insert "documentation"
-                        (Maybe.map PString service.documentation
-                            |> POptional PSString
-                        )
+                    |> Dict.update "xmlNamespace" (always (Maybe.map PString service.metaData.xmlNamespace))
+                    |> Dict.update "targetPrefix" (always (Maybe.map PString service.metaData.targetPrefix))
+                    |> Dict.update "signingName" (always (Maybe.map PString service.metaData.signingName))
+                    |> Dict.update "jsonVersion" (always (Maybe.map PString service.metaData.jsonVersion))
+                    |> Dict.update "documentation" (always (Maybe.map PString service.documentation))
             , declarations = l2
             }
         )
@@ -405,7 +390,8 @@ modelStructure shape name =
                         locationName =
                             shapeRef.locationName
                     in
-                    Dict.insert "locationName" (Maybe.map PString locationName |> POptional PSString) Dict.empty
+                    Dict.empty
+                        |> Dict.update "locationName" (always (Maybe.map PString locationName))
                         |> Dict.insert "location" (PEnum AWSStubs.locationEnum loc)
 
                 optionalField =
@@ -523,10 +509,7 @@ modelOperation name operation =
             let
                 declProps =
                     Dict.empty
-                        |> Dict.insert "documentation"
-                            (Maybe.map PString operation.documentation
-                                |> POptional PSString
-                            )
+                        |> Dict.update "documentation" (always (Maybe.map PString operation.documentation))
 
                 funProps =
                     Dict.empty
@@ -561,7 +544,7 @@ markTopLevelShape : String -> Operation -> L2 () -> L2 ()
 markTopLevelShape _ operation l2model =
     let
         setTopLevelProp val props =
-            Dict.insert "topLevel" (POptional (PSEnum AWSStubs.topLevelEnum) (PEnum AWSStubs.topLevelEnum val |> Just)) props
+            Dict.insert "topLevel" (PEnum AWSStubs.topLevelEnum val) props
 
         markTopLevel tlPropVal opSide model =
             Maybe.map .shape opSide
