@@ -19,7 +19,7 @@ import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod)
-import L1 exposing (Declarable(..), PropSpec(..), Properties, Property(..), Type(..))
+import L1 exposing (Declarable(..), Field, PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
 import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, PropertiesAPI)
 import List.Nonempty as Nonempty exposing (Nonempty(..))
@@ -28,6 +28,7 @@ import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
+import Tuple3
 import UrlParser exposing (UrlPart(..))
 
 
@@ -73,6 +74,11 @@ errorCatalogue =
         , ( 303
           , { title = "Name Type Alias Could Not Be Found"
             , body = "The type alias []{arg|key=name } could not be found."
+            }
+          )
+        , ( 304
+          , { title = "Not The Expected Kind"
+            , body = "Was expecting something to be []{arg|key=expected } but found something that is []{arg|key=actual }."
             }
           )
         , ( 401
@@ -635,7 +641,7 @@ requestFnRequest propertiesApi model name urlSpec request =
     case request of
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map4
-                (\headerFieldsTypeDecl queryStringFieldsTypeDecl uriFieldTypeDecl bodyFieldsTypeDecl ->
+                (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map
                         (\urlWithParams ->
                             let
@@ -643,7 +649,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                     Elm.Lang.lowerType l1RequestType
 
                                 ( encoder, encoderLinkage ) =
-                                    Elm.Encode.encoder requestTypeName bodyFieldsTypeDecl
+                                    Elm.Encode.partialEncoder requestTypeName bodyFields
                                         |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
 
                                 --
@@ -677,24 +683,24 @@ requestFnRequest propertiesApi model name urlSpec request =
                         (UrlParser.parseUrlParams urlSpec
                             |> ResultME.fromResult
                             |> ResultME.mapError UrlDidNotParse
-                            |> ResultME.andThen (buildUrlFromParams propertiesApi uriFieldTypeDecl)
+                            |> ResultME.andThen (buildUrlFromParams propertiesApi uriFields)
                         )
                 )
                 (Query.deref requestTypeName model
-                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+                    |> ResultME.mapError l3ToAwsStubsError
                 )
                 (Query.deref requestTypeName model
-                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
+                    |> ResultME.mapError l3ToAwsStubsError
                 )
                 (Query.deref requestTypeName model
-                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
+                    |> ResultME.mapError l3ToAwsStubsError
                 )
                 (Query.deref requestTypeName model
-                    |> ResultME.mapError l3ToAwsStubsError
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
+                    |> ResultME.mapError l3ToAwsStubsError
                 )
                 |> ResultME.flatten
 
@@ -719,10 +725,10 @@ requestFnRequest propertiesApi model name urlSpec request =
 
 buildUrlFromParams :
     PropertiesAPI pos
-    -> L1.Declarable pos L2.RefChecked
+    -> List (Field pos L2.RefChecked)
     -> List UrlPart
     -> ResultME AWSStubsError Expression
-buildUrlFromParams propertiesApi uriFieldTypeDecl urlParts =
+buildUrlFromParams propertiesApi uriFields urlParts =
     let
         match :
             String
@@ -765,22 +771,17 @@ buildUrlFromParams propertiesApi uriFieldTypeDecl urlParts =
 
         lookupField : String -> ResultME AWSStubsError String
         lookupField name =
-            case uriFieldTypeDecl of
-                DAlias dpos dprops (TProduct tpos tprops fields) ->
-                    ResultME.map
-                        (\maybeMatch ->
-                            case maybeMatch of
-                                Nothing ->
-                                    UnmatchedUrlParam name |> ResultME.error
+            ResultME.map
+                (\maybeMatch ->
+                    case maybeMatch of
+                        Nothing ->
+                            UnmatchedUrlParam name |> ResultME.error
 
-                                Just ( val, _, _ ) ->
-                                    Ok val
-                        )
-                        (match name (Nonempty.toList fields))
-                        |> ResultME.flatten
-
-                _ ->
-                    Debug.log "Not Product" (UnmatchedUrlParam name) |> ResultME.error
+                        Just ( val, _, _ ) ->
+                            Ok val
+                )
+                (match name uriFields)
+                |> ResultME.flatten
 
         generatedParts : ResultME AWSStubsError (List Expression)
         generatedParts =
@@ -813,36 +814,23 @@ buildUrlFromParams propertiesApi uriFieldTypeDecl urlParts =
         generatedParts
 
 
-{-| Given a product declaration as a type alias, filters its fields to get just
-the ones that match the specified filter.
+{-| Given a product declaration as a type alias of a product type, filters its
+fields to get just the ones that match the specified filter.
 
-Note that if no fields pass the filter, a `TEmptyProduct` will be returned.
+Note that if no fields pass the filter, an empty list will be returned.
 
 -}
 filterProductDecl :
     PropertiesAPI pos
-    -> PropertyFilter pos ( String, Type pos L2.RefChecked, Properties )
+    -> PropertyFilter pos (Field pos L2.RefChecked)
     -> L1.Declarable pos L2.RefChecked
-    -> ResultME AWSStubsError (L1.Declarable pos L2.RefChecked)
+    -> ResultME L3.L3Error (List (Field pos L2.RefChecked))
 filterProductDecl propertiesApi filter decl =
-    let
-        fieldsToProductOrEmpty pos props filtered =
-            case filtered of
-                [] ->
-                    TEmptyProduct pos props
-
-                f :: fs ->
-                    Nonempty f fs |> TProduct pos props
-    in
-    case decl of
-        DAlias dpos dprops (TProduct tpos tprops fields) ->
-            Query.filterNonemptyByProps propertiesApi filter fields
-                |> ResultME.map (fieldsToProductOrEmpty tpos tprops)
-                |> ResultME.map (DAlias dpos dprops)
-                |> ResultME.mapError l3ToAwsStubsError
-
-        _ ->
-            decl |> Ok
+    Query.expectAlias decl
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen Query.expectProductOrEmpty
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen (Query.filterListByProps propertiesApi filter)
 
 
 {-| Figures out what response type for the endpoint will be.
