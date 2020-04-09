@@ -184,7 +184,7 @@ locationEnum : Enum String
 locationEnum =
     Enum.define
         [ "header"
-        , "queryString"
+        , "querystring"
         , "statusCode"
         , "uri"
         , "body"
@@ -551,7 +551,7 @@ requestFnFromParams :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFnFromParams propertiesApi model name request response urlSpec httpMethod documentation =
     ResultME.map
-        (\{ maybeRequestType, argPatterns, encoder, setHeaders, jsonBody, requestLinkage, url } ->
+        (\{ maybeRequestType, argPatterns, encoder, setHeaders, setQueryParams, jsonBody, requestLinkage, url } ->
             let
                 ( responseType, responseDecoder, responseLinkage ) =
                     requestFnResponse name response
@@ -580,6 +580,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             (Maybe.Extra.values
                                 [ encoder
                                 , setHeaders
+                                , setQueryParams
                                 , jsonBody |> Just
                                 , CG.letVal "url" url |> Just
                                 , responseDecoder |> Just
@@ -633,6 +634,7 @@ requestFnRequest :
             , argPatterns : List Pattern
             , encoder : Maybe LetDeclaration
             , setHeaders : Maybe LetDeclaration
+            , setQueryParams : Maybe LetDeclaration
             , jsonBody : LetDeclaration
             , requestLinkage : Linkage
             , url : Expression
@@ -642,8 +644,8 @@ requestFnRequest propertiesApi model name urlSpec request =
         (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
-                    ResultME.map2
-                        (\urlWithParams headersFnImpl ->
+                    ResultME.map3
+                        (\urlWithParams headersFnImpl queryFnImpl ->
                             let
                                 ( loweredType, loweredLinkage ) =
                                     Elm.Lang.lowerType l1RequestType
@@ -671,6 +673,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                             , argPatterns = [ CG.varPattern "req" ]
                             , encoder = Just encoder
                             , setHeaders = Just headersFnImpl
+                            , setQueryParams = Just queryFnImpl
                             , jsonBody = jsonBody
                             , requestLinkage = linkage
                             , url = urlWithParams
@@ -682,6 +685,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                             |> ResultME.andThen (buildUrlFromParams propertiesApi uriFields)
                         )
                         (headersFn propertiesApi headerFields)
+                        (queryFn propertiesApi queryStringFields)
                 )
                 (Query.deref requestTypeName model
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
@@ -715,6 +719,7 @@ requestFnRequest propertiesApi model name urlSpec request =
             , jsonBody = emptyJsonBody
             , encoder = Nothing
             , setHeaders = Nothing
+            , setQueryParams = Nothing
             , requestLinkage = linkage
             , url = CG.unit
             }
@@ -757,6 +762,42 @@ headersFn propertiesApi fields =
         |> ResultME.mapError l3ToAwsStubsError
 
 
+queryFn :
+    PropertiesAPI pos
+    -> List (Field pos L2.RefChecked)
+    -> ResultME AWSStubsError LetDeclaration
+queryFn propertiesApi fields =
+    let
+        nameValuePairs =
+            List.foldr
+                (\( fname, ftype, fprops ) accum ->
+                    ResultME.map
+                        (\lname ->
+                            CG.tuple
+                                [ CG.string lname
+                                , CG.access (CG.val "req") (Naming.safeCCL fname)
+                                ]
+                        )
+                        ((propertiesApi.field fprops).getStringProperty "locationName")
+                        :: accum
+                )
+                []
+                fields
+                |> ResultME.combineList
+                |> ResultME.map
+                    (\nvp ->
+                        CG.apply
+                            [ CG.fqVal coreHttpMod "addQuery"
+                            , CG.list nvp
+                            , CG.val "request"
+                            ]
+                    )
+    in
+    nameValuePairs
+        |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp)
+        |> ResultME.mapError l3ToAwsStubsError
+
+
 buildUrlFromParams :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
@@ -764,7 +805,7 @@ buildUrlFromParams :
     -> ResultME AWSStubsError Expression
 buildUrlFromParams propertiesApi uriFields urlParts =
     let
-        parts =
+        pathParts =
             List.map
                 (\part ->
                     case part of
@@ -793,7 +834,7 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                 part :: ps ->
                     CG.binOpChain part CG.append ps
     in
-    parts |> ResultME.map appendParts
+    pathParts |> ResultME.map appendParts
 
 
 {-| Given a product declaration as a type alias of a product type, filters its
@@ -946,7 +987,7 @@ isInHeader =
 
 isInQueryString : PropertyFilter pos ( String, Type pos ref, Properties )
 isInQueryString =
-    isInLocation "queryString"
+    isInLocation "querystring"
 
 
 isInUri : PropertyFilter pos ( String, Type pos ref, Properties )
