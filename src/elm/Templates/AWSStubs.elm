@@ -567,7 +567,15 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                         Nothing ->
                             CG.fqTyped coreHttpMod "Request" [ responseType ]
 
-                requestImpl =
+                maybeAddHeaders reqImpl =
+                    Maybe.map (\_ -> CG.applyBinOp reqImpl CG.piper (CG.val "setHeaders")) setHeaders
+                        |> Maybe.withDefault reqImpl
+
+                maybeAddQuery reqImpl =
+                    Maybe.map (\_ -> CG.applyBinOp reqImpl CG.piper (CG.val "setQueryParams")) setQueryParams
+                        |> Maybe.withDefault reqImpl
+
+                baseRequestImpl =
                     CG.apply
                         [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
                         , CG.string (Naming.safeCCU name)
@@ -576,13 +584,18 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                         , CG.val "jsonBody"
                         , CG.val "decoder"
                         ]
+
+                requestImpl =
+                    baseRequestImpl
+                        |> maybeAddHeaders
+                        |> maybeAddQuery
                         |> CG.letExpr
                             (Maybe.Extra.values
                                 [ encoder
                                 , setHeaders
                                 , setQueryParams
                                 , jsonBody |> Just
-                                , CG.letVal "url" url |> Just
+                                , url |> Just
                                 , responseDecoder |> Just
                                 ]
                             )
@@ -637,7 +650,7 @@ requestFnRequest :
             , setQueryParams : Maybe LetDeclaration
             , jsonBody : LetDeclaration
             , requestLinkage : Linkage
-            , url : Expression
+            , url : LetDeclaration
             }
 requestFnRequest propertiesApi model name urlSpec request =
     case request of
@@ -672,8 +685,8 @@ requestFnRequest propertiesApi model name urlSpec request =
                             { maybeRequestType = Just loweredType
                             , argPatterns = [ CG.varPattern "req" ]
                             , encoder = Just encoder
-                            , setHeaders = Just headersFnImpl
-                            , setQueryParams = Just queryFnImpl
+                            , setHeaders = headersFnImpl
+                            , setQueryParams = queryFnImpl
                             , jsonBody = jsonBody
                             , requestLinkage = linkage
                             , url = urlWithParams
@@ -721,15 +734,34 @@ requestFnRequest propertiesApi model name urlSpec request =
             , setHeaders = Nothing
             , setQueryParams = Nothing
             , requestLinkage = linkage
-            , url = CG.unit
+            , url = CG.letVal "url" CG.unit
             }
                 |> Ok
+
+
+{-| Given a product declaration as a type alias of a product type, filters its
+fields to get just the ones that match the specified filter.
+
+Note that if no fields pass the filter, an empty list will be returned.
+
+-}
+filterProductDecl :
+    PropertiesAPI pos
+    -> PropertyFilter pos (Field pos L2.RefChecked)
+    -> L1.Declarable pos L2.RefChecked
+    -> ResultME L3.L3Error (List (Field pos L2.RefChecked))
+filterProductDecl propertiesApi filter decl =
+    Query.expectAlias decl
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen Query.expectProductOrEmpty
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen (Query.filterListByProps propertiesApi filter)
 
 
 headersFn :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
-    -> ResultME AWSStubsError LetDeclaration
+    -> ResultME AWSStubsError (Maybe LetDeclaration)
 headersFn propertiesApi fields =
     let
         nameValuePairs =
@@ -757,15 +789,20 @@ headersFn propertiesApi fields =
                             ]
                     )
     in
-    nameValuePairs
-        |> ResultME.map (\nvp -> CG.letFunction "setHeaders" [ CG.varPattern "request" ] nvp)
-        |> ResultME.mapError l3ToAwsStubsError
+    case fields of
+        [] ->
+            Ok Nothing
+
+        _ ->
+            nameValuePairs
+                |> ResultME.map (\nvp -> CG.letFunction "setHeaders" [ CG.varPattern "request" ] nvp |> Just)
+                |> ResultME.mapError l3ToAwsStubsError
 
 
 queryFn :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
-    -> ResultME AWSStubsError LetDeclaration
+    -> ResultME AWSStubsError (Maybe LetDeclaration)
 queryFn propertiesApi fields =
     let
         nameValuePairs =
@@ -793,16 +830,21 @@ queryFn propertiesApi fields =
                             ]
                     )
     in
-    nameValuePairs
-        |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp)
-        |> ResultME.mapError l3ToAwsStubsError
+    case fields of
+        [] ->
+            Ok Nothing
+
+        _ ->
+            nameValuePairs
+                |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp |> Just)
+                |> ResultME.mapError l3ToAwsStubsError
 
 
 buildUrlFromParams :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
     -> List UrlPart
-    -> ResultME AWSStubsError Expression
+    -> ResultME AWSStubsError LetDeclaration
 buildUrlFromParams propertiesApi uriFields urlParts =
     let
         pathParts =
@@ -834,26 +876,9 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                 part :: ps ->
                     CG.binOpChain part CG.append ps
     in
-    pathParts |> ResultME.map appendParts
-
-
-{-| Given a product declaration as a type alias of a product type, filters its
-fields to get just the ones that match the specified filter.
-
-Note that if no fields pass the filter, an empty list will be returned.
-
--}
-filterProductDecl :
-    PropertiesAPI pos
-    -> PropertyFilter pos (Field pos L2.RefChecked)
-    -> L1.Declarable pos L2.RefChecked
-    -> ResultME L3.L3Error (List (Field pos L2.RefChecked))
-filterProductDecl propertiesApi filter decl =
-    Query.expectAlias decl
-        |> ResultME.map Tuple3.third
-        |> ResultME.andThen Query.expectProductOrEmpty
-        |> ResultME.map Tuple3.third
-        |> ResultME.andThen (Query.filterListByProps propertiesApi filter)
+    pathParts
+        |> ResultME.map appendParts
+        |> ResultME.map (CG.letVal "url")
 
 
 {-| Figures out what response type for the endpoint will be.
