@@ -664,27 +664,42 @@ requestFnRequest propertiesApi model name urlSpec request =
                                     Elm.Lang.lowerType l1RequestType
 
                                 ( encoder, encoderLinkage ) =
-                                    Elm.Encode.partialEncoder requestTypeName bodyFields
-                                        |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
+                                    case bodyFields of
+                                        [] ->
+                                            ( Nothing, Nothing )
+
+                                        _ ->
+                                            Elm.Encode.partialEncoder requestTypeName bodyFields
+                                                |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
+                                                |> Tuple.mapBoth Just Just
 
                                 jsonBody =
-                                    CG.pipe (CG.val "req")
-                                        [ CG.val "encoder"
-                                        , CG.fqVal coreHttpMod "jsonBody"
-                                        ]
-                                        |> CG.letVal "jsonBody"
+                                    case bodyFields of
+                                        [] ->
+                                            CG.fqVal coreHttpMod "emptyBody"
+                                                |> CG.letVal "jsonBody"
+
+                                        _ ->
+                                            CG.pipe (CG.val "req")
+                                                [ CG.val "encoder"
+                                                , CG.fqVal coreHttpMod "jsonBody"
+                                                ]
+                                                |> CG.letVal "jsonBody"
 
                                 linkage =
                                     CG.combineLinkage
-                                        [ CG.emptyLinkage
-                                            |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
-                                        , loweredLinkage
-                                        , encoderLinkage
-                                        ]
+                                        (Maybe.Extra.values
+                                            [ CG.emptyLinkage
+                                                |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                                                |> Just
+                                            , loweredLinkage |> Just
+                                            , encoderLinkage
+                                            ]
+                                        )
                             in
                             { maybeRequestType = Just loweredType
                             , argPatterns = [ CG.varPattern "req" ]
-                            , encoder = Just encoder
+                            , encoder = encoder
                             , setHeaders = headersFnImpl
                             , setQueryParams = queryFnImpl
                             , jsonBody = jsonBody
