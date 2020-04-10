@@ -13,7 +13,7 @@ import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.Codec
-import Elm.Encode
+import Elm.Encode exposing (defaultEncoderOptions)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Lang
 import Enum exposing (Enum)
@@ -669,7 +669,10 @@ requestFnRequest propertiesApi model name urlSpec request =
                                             ( Nothing, Nothing )
 
                                         _ ->
-                                            Elm.Encode.partialEncoder requestTypeName bodyFields
+                                            Elm.Encode.partialEncoder
+                                                { defaultEncoderOptions | namedTypeEncoder = Elm.Encode.AssumeCodec }
+                                                requestTypeName
+                                                bodyFields
                                                 |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
                                                 |> Tuple.mapBoth Just Just
 
