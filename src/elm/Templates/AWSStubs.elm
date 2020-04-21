@@ -28,6 +28,7 @@ import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
+import Templates.QueryArgs
 import Tuple3
 import UrlParser exposing (UrlPart(..))
 
