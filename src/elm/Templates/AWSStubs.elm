@@ -719,19 +719,19 @@ requestFnRequest propertiesApi model name urlSpec request =
                         (headersFn propertiesApi headerFields)
                         (queryFn propertiesApi queryStringFields)
                 )
-                (Query.deref requestTypeName model
+                (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
                     |> ResultME.mapError l3ToAwsStubsError
                 )
-                (Query.deref requestTypeName model
+                (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
                     |> ResultME.mapError l3ToAwsStubsError
                 )
-                (Query.deref requestTypeName model
+                (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
                     |> ResultME.mapError l3ToAwsStubsError
                 )
-                (Query.deref requestTypeName model
+                (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
                     |> ResultME.mapError l3ToAwsStubsError
                 )
