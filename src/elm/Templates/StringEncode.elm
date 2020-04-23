@@ -1,4 +1,4 @@
-module Templates.QueryArgs exposing (encoder)
+module Templates.StringEncode exposing (encoder)
 
 {-| Encoders to AWS Style Query Arguments.
 
