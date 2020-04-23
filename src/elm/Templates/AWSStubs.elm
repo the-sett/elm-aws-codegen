@@ -875,8 +875,8 @@ buildUrlFromParams propertiesApi uriFields urlParts =
 
                         Param name ->
                             case Query.filterListByProps propertiesApi (withLocationName name) uriFields of
-                                Ok (( fname, _, _ ) :: _) ->
-                                    CG.access (CG.val "req") (Naming.safeCCL fname) |> Ok
+                                Ok (field :: _) ->
+                                    fieldAsString field |> Ok
 
                                 Ok [] ->
                                     UnmatchedUrlParam name |> ResultME.error
@@ -898,6 +898,28 @@ buildUrlFromParams propertiesApi uriFields urlParts =
     pathParts
         |> ResultME.map appendParts
         |> ResultME.map (CG.letVal "url")
+
+
+fieldAsString : Field pos L2.RefChecked -> Expression
+fieldAsString ( fname, l1type, _ ) =
+    case l1type of
+        TNamed pos props name ref ->
+            case ref of
+                L2.RcTBasic ->
+                    CG.access (CG.val "req") (Naming.safeCCL fname)
+
+                L2.RcRestricted basic ->
+                    CG.apply
+                        [ CG.fqFun refinedMod "unbox"
+                        , Naming.safeCCL name |> CG.val
+                        , CG.access (CG.val "req") (Naming.safeCCL fname)
+                        ]
+
+                _ ->
+                    CG.unit
+
+        _ ->
+            CG.unit
 
 
 {-| Figures out what response type for the endpoint will be.
@@ -1132,6 +1154,11 @@ coreDecodeMod =
 coreServiceMod : List String
 coreServiceMod =
     [ "AWS", "Core", "Service" ]
+
+
+refinedMod : List String
+refinedMod =
+    [ "Refined" ]
 
 
 decodeImport : Import
