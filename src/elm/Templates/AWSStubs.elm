@@ -900,6 +900,14 @@ buildUrlFromParams propertiesApi uriFields urlParts =
         |> ResultME.map (CG.letVal "url")
 
 
+{-|
+
+  - TODO: Deref the field, then build its toString.
+  - TODO: Deal with Bool.
+  - TODO: Generate toString encoder functions, these should be generated for the transitive closure of all
+    url, header and query params.
+
+-}
 fieldAsString : Field pos L2.RefChecked -> Expression
 fieldAsString ( fname, l1type, _ ) =
     let
