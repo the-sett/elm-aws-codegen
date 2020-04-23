@@ -902,11 +902,33 @@ buildUrlFromParams propertiesApi uriFields urlParts =
 
 fieldAsString : Field pos L2.RefChecked -> Expression
 fieldAsString ( fname, l1type, _ ) =
+    let
+        basicToString basic expr =
+            case basic of
+                L1.BBool ->
+                    CG.unit
+
+                L1.BInt ->
+                    CG.apply
+                        [ CG.fqFun stringMod "fromInt"
+                        , expr
+                        ]
+
+                L1.BReal ->
+                    CG.apply
+                        [ CG.fqFun stringMod "fromFloat"
+                        , expr
+                        ]
+
+                L1.BString ->
+                    expr
+    in
     case l1type of
         TNamed pos props name ref ->
             case ref of
-                L2.RcTBasic ->
+                L2.RcTBasic basic ->
                     CG.access (CG.val "req") (Naming.safeCCL fname)
+                        |> basicToString basic
 
                 L2.RcRestricted basic ->
                     CG.apply
@@ -914,6 +936,7 @@ fieldAsString ( fname, l1type, _ ) =
                         , Naming.safeCCL name |> CG.val
                         , CG.access (CG.val "req") (Naming.safeCCL fname)
                         ]
+                        |> basicToString basic
 
                 _ ->
                     CG.unit
@@ -1159,6 +1182,11 @@ coreServiceMod =
 refinedMod : List String
 refinedMod =
     [ "Refined" ]
+
+
+stringMod : List String
+stringMod =
+    [ "String" ]
 
 
 decodeImport : Import
