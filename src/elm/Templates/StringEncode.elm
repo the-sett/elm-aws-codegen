@@ -1,9 +1,7 @@
-module Templates.StringEncode exposing (encoder)
+module Templates.StringEncode exposing (..)
 
-{-| Encoders to AWS Style Query Arguments.
-
-@docs encoder
-
+{-| Code generators for URL paths, query arguments or header fields in formats acceptable
+to AWS services.
 -}
 
 import Elm.CodeGen as CG exposing (Comment, Declaration, DocComment, Expression, Import, LetDeclaration, Linkage, Pattern, TypeAnnotation)
@@ -18,28 +16,7 @@ import Set exposing (Set)
 
 
 
--- An example encoder to the query format - list of string tuples.
---
--- type alias CreateInstanceProfileRequest =
---     { instanceProfileName : String
---     , path : Maybe String
---     }
---
--- createInstanceProfileRequestEncoder : CreateInstanceProfileRequest -> List ( String, String )
--- createInstanceProfileRequestEncoder data =
---     []
---         |> AWS.Core.Encode.addOneToQueryArgs identity "InstanceProfileName" data.instanceProfileName
---         |> (case data.path of
---                 Just value ->
---                     AWS.Core.Encode.addOneToQueryArgs identity "Path" value
---
---                 Nothing ->
---                     AWS.Core.Encode.unchangedQueryArgs
---            )
---
---
--- An encoder to string format:
---
+--  Conversion of simple types to strings as Elm expressions.
 
 
 basicToString : Basic -> Expression -> ( Expression, Linkage )
@@ -77,11 +54,13 @@ basicToString basic expr =
 typeToString : Type pos L2.RefChecked -> Expression -> ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
+        TBasic _ _ basic ->
+            basicToString basic expr
+
         TNamed _ _ refName ref ->
             case ref of
                 L2.RcTBasic basic ->
-                    expr
-                        |> basicToString basic
+                    basicToString basic expr
 
                 L2.RcRestricted basic ->
                     CG.apply
@@ -97,6 +76,29 @@ typeToString l2type expr =
 
         _ ->
             ( CG.unit, CG.emptyLinkage )
+
+
+
+-- An example encoder to the query format - list of string tuples.
+--
+-- type alias CreateInstanceProfileRequest =
+--     { instanceProfileName : String
+--     , path : Maybe String
+--     }
+--
+-- createInstanceProfileRequestEncoder : CreateInstanceProfileRequest -> List ( String, String )
+-- createInstanceProfileRequestEncoder data =
+--     []
+--         |> AWS.Core.Encode.addOneToQueryArgs identity "InstanceProfileName" data.instanceProfileName
+--         |> (case data.path of
+--                 Just value ->
+--                     AWS.Core.Encode.addOneToQueryArgs identity "Path" value
+--
+--                 Nothing ->
+--                     AWS.Core.Encode.unchangedQueryArgs
+--            )
+--
+--
 
 
 encoder : String -> Declarable pos RefChecked -> FunGen

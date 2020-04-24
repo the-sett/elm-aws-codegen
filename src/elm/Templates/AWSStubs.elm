@@ -28,7 +28,7 @@ import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
-import Templates.StringEncode
+import Templates.StringEncode as StringEncode
 import Tuple3
 import UrlParser exposing (UrlPart(..))
 
@@ -902,55 +902,16 @@ buildUrlFromParams propertiesApi uriFields urlParts =
 
 {-|
 
-  - TODO: Deref the field, then build its toString.
-  - TODO: Deal with Bool.
   - TODO: Generate toString encoder functions, these should be generated for the transitive closure of all
     url, header and query params.
+  - TODO: Pass up the linkage.
 
 -}
 fieldAsString : Field pos L2.RefChecked -> Expression
-fieldAsString ( fname, l1type, _ ) =
-    let
-        basicToString basic expr =
-            case basic of
-                L1.BBool ->
-                    CG.unit
-
-                L1.BInt ->
-                    CG.apply
-                        [ CG.fqFun stringMod "fromInt"
-                        , expr
-                        ]
-
-                L1.BReal ->
-                    CG.apply
-                        [ CG.fqFun stringMod "fromFloat"
-                        , expr
-                        ]
-
-                L1.BString ->
-                    expr
-    in
-    case l1type of
-        TNamed pos props name ref ->
-            case ref of
-                L2.RcTBasic basic ->
-                    CG.access (CG.val "req") (Naming.safeCCL fname)
-                        |> basicToString basic
-
-                L2.RcRestricted basic ->
-                    CG.apply
-                        [ CG.fqFun refinedMod "unbox"
-                        , Naming.safeCCL name |> CG.val
-                        , CG.access (CG.val "req") (Naming.safeCCL fname)
-                        ]
-                        |> basicToString basic
-
-                _ ->
-                    CG.unit
-
-        _ ->
-            CG.unit
+fieldAsString ( fname, l2type, _ ) =
+    StringEncode.typeToString l2type
+        (CG.access (CG.val "req") (Naming.safeCCL fname))
+        |> Tuple.first
 
 
 {-| Figures out what response type for the endpoint will be.
