@@ -51,6 +51,9 @@ basicToString basic expr =
             ( expr, CG.emptyLinkage )
 
 
+{-| TODO: Make the result Maybe? Don't want to add in an error type definition
+here.
+-}
 typeToString : Type pos L2.RefChecked -> Expression -> ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
