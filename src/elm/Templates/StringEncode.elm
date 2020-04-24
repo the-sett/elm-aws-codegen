@@ -42,54 +42,61 @@ import Set exposing (Set)
 --
 
 
-{-|
-
-  - TODO: Deal with Bool.
-
--}
+basicToString : Basic -> Expression -> ( Expression, Linkage )
 basicToString basic expr =
     case basic of
         L1.BBool ->
-            CG.unit
+            ( CG.apply
+                [ CG.fqFun awsCoreEncodeMod "bool"
+                , expr
+                ]
+            , CG.emptyLinkage
+                |> CG.addImport awsCoreEncodeImport
+            )
 
         L1.BInt ->
-            CG.apply
+            ( CG.apply
                 [ CG.fqFun stringMod "fromInt"
                 , expr
                 ]
+            , CG.emptyLinkage
+            )
 
         L1.BReal ->
-            CG.apply
+            ( CG.apply
                 [ CG.fqFun stringMod "fromFloat"
                 , expr
                 ]
+            , CG.emptyLinkage
+            )
 
         L1.BString ->
-            expr
+            ( expr, CG.emptyLinkage )
 
 
-typeToString : String -> Type pos L2.RefChecked -> Expression
-typeToString name l2type =
+typeToString : Type pos L2.RefChecked -> Expression -> ( Expression, Linkage )
+typeToString l2type expr =
     case l2type of
         TNamed _ _ refName ref ->
             case ref of
                 L2.RcTBasic basic ->
-                    CG.val name
+                    expr
                         |> basicToString basic
 
                 L2.RcRestricted basic ->
                     CG.apply
                         [ CG.fqFun refinedMod "unbox"
                         , Naming.safeCCL refName |> CG.val
-                        , CG.val name
+                        , expr
                         ]
                         |> basicToString basic
+                        |> Tuple.mapSecond (CG.addImport refinedImport)
 
                 _ ->
-                    CG.unit
+                    ( CG.unit, CG.emptyLinkage )
 
         _ ->
-            CG.unit
+            ( CG.unit, CG.emptyLinkage )
 
 
 encoder : String -> Declarable pos RefChecked -> FunGen
@@ -584,6 +591,11 @@ dummyFn name =
     ( CG.funDecl Nothing Nothing name [] CG.unit, CG.emptyLinkage )
 
 
+awsCoreEncodeMod : List String
+awsCoreEncodeMod =
+    [ "AWS", "Core", "Encode" ]
+
+
 codecMod : List String
 codecMod =
     [ "Codec" ]
@@ -637,6 +649,11 @@ stringMod =
 codecFn : String -> Expression
 codecFn =
     CG.fqFun codecMod
+
+
+awsCoreEncodeImport : Import
+awsCoreEncodeImport =
+    CG.importStmt awsCoreEncodeMod Nothing Nothing
 
 
 codecImport : Import
