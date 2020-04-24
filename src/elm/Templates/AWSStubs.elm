@@ -909,9 +909,17 @@ buildUrlFromParams propertiesApi uriFields urlParts =
 -}
 fieldAsString : Field pos L2.RefChecked -> Expression
 fieldAsString ( fname, l2type, _ ) =
-    StringEncode.typeToString l2type
-        (CG.access (CG.val "req") (Naming.safeCCL fname))
-        |> Tuple.first
+    let
+        maybeToString =
+            StringEncode.typeToString l2type
+                (CG.access (CG.val "req") (Naming.safeCCL fname))
+    in
+    case maybeToString of
+        Nothing ->
+            CG.unit
+
+        Just ( expr, linkage ) ->
+            expr
 
 
 {-| Figures out what response type for the endpoint will be.

@@ -51,19 +51,28 @@ basicToString basic expr =
             ( expr, CG.emptyLinkage )
 
 
-{-| TODO: Make the result Maybe? Don't want to add in an error type definition
-here.
+{-| Converts a value of a simple type to a string.
+
+The value is given as an expression and the to-string logic is applied to that
+expression.
+
+Only simple types can be handled by this function, which is why its result is a
+`Maybe`. Compound types such as sums or products or containers are not supported
+and will produce `Nothing`.
+
 -}
-typeToString : Type pos L2.RefChecked -> Expression -> ( Expression, Linkage )
+typeToString : Type pos L2.RefChecked -> Expression -> Maybe ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
         TBasic _ _ basic ->
             basicToString basic expr
+                |> Just
 
         TNamed _ _ refName ref ->
             case ref of
                 L2.RcTBasic basic ->
                     basicToString basic expr
+                        |> Just
 
                 L2.RcRestricted basic ->
                     CG.apply
@@ -73,12 +82,13 @@ typeToString l2type expr =
                         ]
                         |> basicToString basic
                         |> Tuple.mapSecond (CG.addImport refinedImport)
+                        |> Just
 
                 _ ->
-                    ( CG.unit, CG.emptyLinkage )
+                    Nothing
 
         _ ->
-            ( CG.unit, CG.emptyLinkage )
+            Nothing
 
 
 
