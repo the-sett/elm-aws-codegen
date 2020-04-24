@@ -9,12 +9,87 @@ module Templates.StringEncode exposing (encoder)
 import Elm.CodeGen as CG exposing (Comment, Declaration, DocComment, Expression, Import, LetDeclaration, Linkage, Pattern, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (FunDecl, FunGen)
 import Elm.Helper as Util
-import L1 exposing (Basic(..), Container(..), Declarable(..), Restricted(..), Type(..))
+import L1 exposing (Basic(..), Container(..), Declarable(..), Field, Restricted(..), Type(..))
 import L2 exposing (RefChecked(..))
 import List.Nonempty
 import Maybe.Extra
 import Naming
 import Set exposing (Set)
+
+
+
+-- An example encoder to the query format - list of string tuples.
+--
+-- type alias CreateInstanceProfileRequest =
+--     { instanceProfileName : String
+--     , path : Maybe String
+--     }
+--
+-- createInstanceProfileRequestEncoder : CreateInstanceProfileRequest -> List ( String, String )
+-- createInstanceProfileRequestEncoder data =
+--     []
+--         |> AWS.Core.Encode.addOneToQueryArgs identity "InstanceProfileName" data.instanceProfileName
+--         |> (case data.path of
+--                 Just value ->
+--                     AWS.Core.Encode.addOneToQueryArgs identity "Path" value
+--
+--                 Nothing ->
+--                     AWS.Core.Encode.unchangedQueryArgs
+--            )
+--
+--
+-- An encoder to string format:
+--
+
+
+{-|
+
+  - TODO: Deal with Bool.
+
+-}
+basicToString basic expr =
+    case basic of
+        L1.BBool ->
+            CG.unit
+
+        L1.BInt ->
+            CG.apply
+                [ CG.fqFun stringMod "fromInt"
+                , expr
+                ]
+
+        L1.BReal ->
+            CG.apply
+                [ CG.fqFun stringMod "fromFloat"
+                , expr
+                ]
+
+        L1.BString ->
+            expr
+
+
+typeToString : String -> Type pos L2.RefChecked -> Expression
+typeToString name l2type =
+    case l2type of
+        TNamed _ _ refName ref ->
+            case ref of
+                L2.RcTBasic basic ->
+                    CG.val name
+                        |> basicToString basic
+
+                L2.RcRestricted basic ->
+                    CG.apply
+                        [ CG.fqFun refinedMod "unbox"
+                        , Naming.safeCCL refName |> CG.val
+                        , CG.val name
+                        ]
+                        |> basicToString basic
+
+                _ ->
+                    CG.unit
+
+        _ ->
+            CG.unit
 
 
 encoder : String -> Declarable pos RefChecked -> FunGen
@@ -552,6 +627,11 @@ refinedMod =
 resultMod : List String
 resultMod =
     [ "Result" ]
+
+
+stringMod : List String
+stringMod =
+    [ "String" ]
 
 
 codecFn : String -> Expression
