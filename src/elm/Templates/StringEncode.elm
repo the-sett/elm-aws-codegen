@@ -30,11 +30,11 @@ basicToString basic expr =
     case basic of
         L1.BBool ->
             ( CG.apply
-                [ CG.fqFun awsCoreEncodeMod "bool"
+                [ CG.fqFun awsCoreKVEncodeMod "bool"
                 , expr
                 ]
             , CG.emptyLinkage
-                |> CG.addImport awsCoreEncodeImport
+                |> CG.addImport awsCoreKVEncodeImport
             )
 
         L1.BInt ->
@@ -401,23 +401,23 @@ codecTypeField : String -> Type pos RefChecked -> Expression
 codecTypeField name l1Type =
     case l1Type of
         TUnit _ _ ->
-            codecUnit |> codecField name
+            codecUnit |> encoderField name
 
         TBasic _ _ basic ->
             codecBasic basic
-                |> codecField name
+                |> encoderField name
 
         TNamed _ _ named _ ->
             codecNamed named
-                |> codecField name
+                |> encoderField name
 
         TProduct _ _ fields ->
             codecProduct (List.Nonempty.toList fields)
-                |> codecField name
+                |> encoderField name
 
         TEmptyProduct _ _ ->
             codecProduct []
-                |> codecField name
+                |> encoderField name
 
         TContainer _ _ container ->
             codecContainerField name container
@@ -535,13 +535,10 @@ codecNamedProduct name fields =
             Naming.safeCCU name
 
         impl =
-            codecFields fields
-                |> CG.pipe
-                    (CG.apply
-                        [ codecFn "object"
-                        , CG.fun typeName
-                        ]
-                    )
+            CG.pipe
+                (encoderFields fields |> CG.list)
+                [ CG.fqFun awsCoreKVEncodeMod "kvlist"
+                ]
     in
     impl
 
@@ -564,57 +561,58 @@ codecContainerField name container =
         CList l1Type ->
             CG.apply [ codecFn "list", codecType l1Type ]
                 |> CG.parens
-                |> codecField name
+                |> encoderField name
 
         CSet l1Type ->
             CG.apply [ codecFn "set", codecType l1Type ]
                 |> CG.parens
-                |> codecField name
+                |> encoderField name
 
         CDict l1keyType l1valType ->
             codecDict l1keyType l1valType
-                |> codecField name
+                |> encoderField name
 
         COptional l1Type ->
             codecType l1Type
-                |> codecOptionalField name
+                |> encoderOptionalField name
 
 
-{-| Outputs codecs for a list of fields and terminates the list with `KVEncoder.buildObject`.
-Helper function useful when building record codecs.
+{-| Outputs encoders for a list of fields and terminates the list with `Encoder.buildObject`.
+Helper function useful when building record encoders.
 -}
-codecFields : List ( String, Type pos RefChecked, L1.Properties ) -> List Expression
-codecFields fields =
+encoderFields : List ( String, Type pos RefChecked, L1.Properties ) -> List Expression
+encoderFields fields =
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
-        [ CG.apply
-            [ codecFn "buildObject"
-            ]
-        ]
+        []
         fields
 
 
-{-| Helper function for building field codecs.
+{-| Helper function for building field encoders.
 -}
-codecField : String -> Expression -> Expression
-codecField name expr =
-    CG.apply
-        [ codecFn "field"
-        , CG.string name
-        , CG.accessFun ("." ++ Naming.safeCCL name)
-        , expr
-        ]
+encoderField : String -> Expression -> Expression
+encoderField name expr =
+    CG.applyBinOp
+        (CG.tuple
+            [ CG.string name
+            , CG.access (CG.val "val") (Naming.safeCCL name)
+            ]
+        )
+        CG.piper
+        (CG.apply [ CG.fqFun awsCoreKVEncodeMod "field", expr ])
 
 
-{-| Helper function for building optional field codecs.
+{-| Helper function for building optional field encoders.
 -}
-codecOptionalField : String -> Expression -> Expression
-codecOptionalField name expr =
-    CG.apply
-        [ codecFn "optionalField"
-        , CG.string name
-        , CG.accessFun ("." ++ Naming.safeCCL name)
-        , expr
-        ]
+encoderOptionalField : String -> Expression -> Expression
+encoderOptionalField name expr =
+    CG.applyBinOp
+        (CG.tuple
+            [ CG.string name
+            , CG.access (CG.val "val") (Naming.safeCCL name)
+            ]
+        )
+        CG.piper
+        (CG.apply [ CG.fqFun awsCoreKVEncodeMod "optional", expr ])
 
 
 
@@ -626,9 +624,9 @@ dummyFn name =
     ( CG.funDecl Nothing Nothing name [] CG.unit, CG.emptyLinkage )
 
 
-awsCoreEncodeMod : List String
-awsCoreEncodeMod =
-    [ "AWS", "Core", "Encode" ]
+awsCoreKVEncodeMod : List String
+awsCoreKVEncodeMod =
+    [ "AWS", "Core", "KVEncode" ]
 
 
 codecMod : List String
@@ -686,9 +684,9 @@ codecFn =
     CG.fqFun codecMod
 
 
-awsCoreEncodeImport : Import
-awsCoreEncodeImport =
-    CG.importStmt awsCoreEncodeMod Nothing Nothing
+awsCoreKVEncodeImport : Import
+awsCoreKVEncodeImport =
+    CG.importStmt awsCoreKVEncodeMod Nothing Nothing
 
 
 codecImport : Import
