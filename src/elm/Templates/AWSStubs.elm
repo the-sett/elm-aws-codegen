@@ -659,7 +659,7 @@ requestFnRequest propertiesApi model name urlSpec request =
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map3
-                        (\urlWithParams headersFnImpl queryFnImpl ->
+                        (\urlWithParams headersFnImpl ( queryFnImpl, queryFnLinkage ) ->
                             let
                                 ( loweredType, loweredLinkage ) =
                                     Elm.Lang.lowerType l1RequestType
@@ -698,6 +698,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                                 |> Just
                                             , loweredLinkage |> Just
                                             , encoderLinkage
+                                            , queryFnLinkage
                                             ]
                                         )
                             in
@@ -821,42 +822,49 @@ headersFn propertiesApi fields =
 queryFn :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
-    -> ResultME AWSStubsError (Maybe LetDeclaration)
+    -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 queryFn propertiesApi fields =
     let
-        nameValuePairs =
-            List.foldr
-                (\( fname, ftype, fprops ) accum ->
-                    ResultME.map
-                        (\lname ->
-                            CG.tuple
-                                [ CG.string lname
-                                , CG.access (CG.val "req") (Naming.safeCCL fname)
-                                ]
-                        )
-                        ((propertiesApi.field fprops).getStringProperty "locationName")
-                        :: accum
-                )
-                []
+        -- nameValuePairs =
+        --     List.foldr
+        --         (\( fname, ftype, fprops ) accum ->
+        --             ResultME.map
+        --                 (\lname ->
+        --                     CG.tuple
+        --                         [ CG.string lname
+        --                         , CG.access (CG.val "req") (Naming.safeCCL fname)
+        --                         ]
+        --                 )
+        --                 ((propertiesApi.field fprops).getStringProperty "locationName")
+        --                 :: accum
+        --         )
+        --         []
+        --         fields
+        --         |> ResultME.combineList
+        --         |> ResultME.map
+        --             (\nvp ->
+        --                 CG.apply
+        --                     [ CG.fqVal coreHttpMod "addQuery"
+        --                     , CG.list nvp
+        --                     , CG.val "request"
+        --                     ]
+        --             )
+        queryEncoderFn =
+            StringEncode.partialKVEncoder
+                "requestTypeName"
                 fields
-                |> ResultME.combineList
-                |> ResultME.map
-                    (\nvp ->
-                        CG.apply
-                            [ CG.fqVal coreHttpMod "addQuery"
-                            , CG.list nvp
-                            , CG.val "request"
-                            ]
-                    )
+                |> FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" }
+                |> Tuple.mapBoth Just Just
     in
     case fields of
         [] ->
-            Ok Nothing
+            Ok ( Nothing, Nothing )
 
         _ ->
-            nameValuePairs
-                |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp |> Just)
-                |> ResultME.mapError l3ToAwsStubsError
+            -- nameValuePairs
+            --     |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp |> Just)
+            --     |> ResultME.mapError l3ToAwsStubsError
+            Ok queryEncoderFn
 
 
 buildUrlFromParams :
