@@ -156,7 +156,7 @@ typeAliasKVEncoder : String -> Type pos RefChecked -> ( FunDecl, Linkage )
 typeAliasKVEncoder name l1Type =
     let
         codecFnName =
-            Naming.safeCCL (name ++ "KVEncoder")
+            Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
             Naming.safeCCU name
@@ -189,7 +189,7 @@ customTypeKVEncoder : String -> List ( String, List ( String, Type pos RefChecke
 customTypeKVEncoder name constructors =
     let
         codecFnName =
-            Naming.safeCCL (name ++ "KVEncoder")
+            Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
             Naming.safeCCU name
@@ -220,7 +220,7 @@ enumKVEncoder : String -> List String -> ( FunDecl, Linkage )
 enumKVEncoder name constructors =
     let
         codecFnName =
-            Naming.safeCCL (name ++ "KVEncoder")
+            Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
             Naming.safeCCU name
@@ -259,7 +259,7 @@ restrictedKVEncoder : String -> Restricted -> ( FunDecl, Linkage )
 restrictedKVEncoder name _ =
     let
         codecFnName =
-            Naming.safeCCL (name ++ "KVEncoder")
+            Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
             Naming.safeCCU name
@@ -457,7 +457,7 @@ codecBasic basic =
 
 
 codecNamed named =
-    CG.fun (Naming.safeCCL (named ++ "KVEncoder"))
+    CG.fun (Naming.safeCCL named ++ "KVEncoder")
 
 
 codecContainer : Container pos RefChecked -> Expression
