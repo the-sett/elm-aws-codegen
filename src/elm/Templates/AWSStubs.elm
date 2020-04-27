@@ -569,11 +569,31 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             CG.fqTyped coreHttpMod "Request" [ responseType ]
 
                 maybeAddHeaders reqImpl =
-                    Maybe.map (\_ -> CG.applyBinOp reqImpl CG.piper (CG.val "setHeaders")) setHeaders
+                    Maybe.map
+                        (\_ ->
+                            CG.applyBinOp reqImpl
+                                CG.piper
+                                (CG.apply
+                                    [ CG.fqVal coreHttpMod "addHeaders"
+                                    , CG.parens (CG.apply [ CG.val "headersEncoder", CG.val "req" ])
+                                    ]
+                                )
+                        )
+                        setHeaders
                         |> Maybe.withDefault reqImpl
 
                 maybeAddQuery reqImpl =
-                    Maybe.map (\_ -> CG.applyBinOp reqImpl CG.piper (CG.val "setQueryParams")) setQueryParams
+                    Maybe.map
+                        (\_ ->
+                            CG.applyBinOp reqImpl
+                                CG.piper
+                                (CG.apply
+                                    [ CG.fqVal coreHttpMod "addQueryParams"
+                                    , CG.parens (CG.apply [ CG.val "queryEncoder", CG.val "req" ])
+                                    ]
+                                )
+                        )
+                        setQueryParams
                         |> Maybe.withDefault reqImpl
 
                 baseRequestImpl =
