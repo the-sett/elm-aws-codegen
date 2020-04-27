@@ -659,7 +659,7 @@ requestFnRequest propertiesApi model name urlSpec request =
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map3
-                        (\urlWithParams headersFnImpl ( queryFnImpl, queryFnLinkage ) ->
+                        (\urlWithParams ( headersFnImpl, headersFnLinkage ) ( queryFnImpl, queryFnLinkage ) ->
                             let
                                 ( loweredType, loweredLinkage ) =
                                     Elm.Lang.lowerType l1RequestType
@@ -699,6 +699,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                             , loweredLinkage |> Just
                                             , encoderLinkage
                                             , queryFnLinkage
+                                            , headersFnLinkage
                                             ]
                                         )
                             in
@@ -781,42 +782,23 @@ filterProductDecl propertiesApi filter decl =
 headersFn :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
-    -> ResultME AWSStubsError (Maybe LetDeclaration)
+    -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 headersFn propertiesApi fields =
     let
-        nameValuePairs =
-            List.foldr
-                (\( fname, ftype, fprops ) accum ->
-                    ResultME.map
-                        (\lname ->
-                            CG.tuple
-                                [ CG.string lname
-                                , CG.access (CG.val "req") (Naming.safeCCL fname)
-                                ]
-                        )
-                        ((propertiesApi.field fprops).getStringProperty "locationName")
-                        :: accum
-                )
-                []
+        --                     ((propertiesApi.field fprops).getStringProperty "locationName")
+        headersEncoderFn =
+            StringEncode.partialKVEncoder
+                "requestTypeName"
                 fields
-                |> ResultME.combineList
-                |> ResultME.map
-                    (\nvp ->
-                        CG.apply
-                            [ CG.fqVal coreHttpMod "addHeaders"
-                            , CG.list nvp
-                            , CG.val "request"
-                            ]
-                    )
+                |> FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" }
+                |> Tuple.mapBoth Just Just
     in
     case fields of
         [] ->
-            Ok Nothing
+            Ok ( Nothing, Nothing )
 
         _ ->
-            nameValuePairs
-                |> ResultME.map (\nvp -> CG.letFunction "setHeaders" [ CG.varPattern "request" ] nvp |> Just)
-                |> ResultME.mapError l3ToAwsStubsError
+            Ok headersEncoderFn
 
 
 queryFn :
@@ -825,30 +807,7 @@ queryFn :
     -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 queryFn propertiesApi fields =
     let
-        -- nameValuePairs =
-        --     List.foldr
-        --         (\( fname, ftype, fprops ) accum ->
-        --             ResultME.map
-        --                 (\lname ->
-        --                     CG.tuple
-        --                         [ CG.string lname
-        --                         , CG.access (CG.val "req") (Naming.safeCCL fname)
-        --                         ]
-        --                 )
         --                 ((propertiesApi.field fprops).getStringProperty "locationName")
-        --                 :: accum
-        --         )
-        --         []
-        --         fields
-        --         |> ResultME.combineList
-        --         |> ResultME.map
-        --             (\nvp ->
-        --                 CG.apply
-        --                     [ CG.fqVal coreHttpMod "addQuery"
-        --                     , CG.list nvp
-        --                     , CG.val "request"
-        --                     ]
-        --             )
         queryEncoderFn =
             StringEncode.partialKVEncoder
                 "requestTypeName"
@@ -861,9 +820,6 @@ queryFn propertiesApi fields =
             Ok ( Nothing, Nothing )
 
         _ ->
-            -- nameValuePairs
-            --     |> ResultME.map (\nvp -> CG.letFunction "setQueryParams" [ CG.varPattern "request" ] nvp |> Just)
-            --     |> ResultME.mapError l3ToAwsStubsError
             Ok queryEncoderFn
 
 
