@@ -279,8 +279,8 @@ check l3 =
 
 generate : (pos -> SourceLines) -> PropertiesAPI pos -> L3 pos -> ResultME Error File
 generate posFn propertiesApi model =
-    ResultME.map5
-        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) documentation ->
+    ResultME.map6
+        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( _, _ ) documentation ->
             let
                 declarations =
                     codecs
@@ -313,6 +313,7 @@ generate posFn propertiesApi model =
         (service propertiesApi model)
         (operations propertiesApi model)
         (typeDeclarations propertiesApi model)
+        (jsonCodecs propertiesApi model)
         (jsonCodecs propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation"
             |> ResultME.mapError l3ToAwsStubsError
