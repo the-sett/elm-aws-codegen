@@ -177,7 +177,7 @@ typeAliasKVEncoder name l1Type =
         (Just doc)
         (Just sig)
         codecFnName
-        []
+        [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
         |> CG.addImport codecImport
@@ -212,7 +212,7 @@ customTypeKVEncoder name constructors =
         (Just doc)
         (Just sig)
         codecFnName
-        []
+        [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
         |> CG.addImport codecImport
@@ -252,7 +252,7 @@ enumKVEncoder name constructors =
         (Just doc)
         (Just sig)
         codecFnName
-        []
+        [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
         |> CG.addImport codecImport
@@ -293,7 +293,7 @@ restrictedKVEncoder name _ =
         (Just doc)
         (Just sig)
         codecFnName
-        []
+        [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
         |> CG.addImport codecImport
