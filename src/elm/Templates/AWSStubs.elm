@@ -1054,7 +1054,7 @@ kvEncoder name decl =
             ( [], CG.emptyLinkage )
 
         _ ->
-            Elm.Codec.codec name decl
+            StringEncode.kvEncoder name decl
                 |> FunDecl.asTopLevel FunDecl.defaultOptions
                 |> Tuple.mapFirst List.singleton
 
