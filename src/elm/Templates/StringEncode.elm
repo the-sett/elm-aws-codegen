@@ -145,7 +145,7 @@ partialKVEncoder name fields =
         [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
-        |> CG.addImport encodeImport
+        |> CG.addImport awsCoreKVEncodeImport
         |> CG.addExposing (CG.funExpose encodeFnName)
     )
 
@@ -162,7 +162,9 @@ typeAliasKVEncoder name l1Type =
             Naming.safeCCU name
 
         sig =
-            CG.typed "KVEncoder" [ CG.typed typeName [] ]
+            CG.funAnn
+                (CG.typed typeName [])
+                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
 
         impl =
             codecNamedType name l1Type
@@ -195,7 +197,9 @@ customTypeKVEncoder name constructors =
             Naming.safeCCU name
 
         sig =
-            CG.typed "KVEncoder" [ CG.typed typeName [] ]
+            CG.funAnn
+                (CG.typed typeName [])
+                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
 
         impl =
             codecCustomType constructors
@@ -229,11 +233,13 @@ enumKVEncoder name constructors =
             Naming.safeCCL name
 
         sig =
-            CG.typed "KVEncoder" [ CG.typed typeName [] ]
+            CG.funAnn
+                (CG.typed typeName [])
+                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
 
         impl =
             CG.apply
-                [ CG.fqFun codecMod "build"
+                [ CG.fqFun awsCoreKVEncodeMod "build"
                 , CG.parens (CG.apply [ CG.fqFun enumMod "encoder", CG.val enumName ])
                 , CG.parens (CG.apply [ CG.fqFun enumMod "decoder", CG.val enumName ])
                 ]
@@ -268,11 +274,13 @@ restrictedKVEncoder name _ =
             Naming.safeCCL name
 
         sig =
-            CG.typed "KVEncoder" [ CG.typed typeName [] ]
+            CG.funAnn
+                (CG.typed typeName [])
+                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
 
         impl =
             CG.apply
-                [ CG.fqFun codecMod "build"
+                [ CG.fqFun awsCoreKVEncodeMod "build"
                 , CG.parens (CG.apply [ CG.fqFun refinedMod "encoder", CG.val enumName ])
                 , CG.parens (CG.apply [ CG.fqFun refinedMod "decoder", CG.val enumName ])
                 ]
@@ -302,18 +310,18 @@ codecCustomType constructors =
                 (\( _, l1Type, _ ) accum -> codecType l1Type :: accum)
                 [ Naming.safeCCU name |> CG.fun
                 , Naming.safeCCU name |> CG.string
-                , codecFn ("variant" ++ String.fromInt (List.length args))
+                , awsCoreKVEncodeFn ("variant" ++ String.fromInt (List.length args))
                 ]
                 args
                 |> List.reverse
                 |> CG.apply
     in
     List.foldr (\( name, consArgs ) accum -> codecVariant name consArgs :: accum)
-        [ CG.apply [ codecFn "buildCustom" ] ]
+        [ CG.apply [ awsCoreKVEncodeFn "buildCustom" ] ]
         constructors
         |> CG.pipe
             (CG.apply
-                [ codecFn "custom"
+                [ awsCoreKVEncodeFn "custom"
                 , codecMatchFn constructors
                 ]
             )
@@ -433,7 +441,7 @@ Decodes `()`, and encodes to JSON `null`.
 -}
 codecUnit =
     CG.apply
-        [ codecFn "constant"
+        [ awsCoreKVEncodeFn "constant"
         , CG.unit
         ]
 
@@ -444,16 +452,16 @@ codecBasic : Basic -> Expression
 codecBasic basic =
     case basic of
         BBool ->
-            codecFn "bool"
+            awsCoreKVEncodeFn "bool"
 
         BInt ->
-            codecFn "int"
+            awsCoreKVEncodeFn "int"
 
         BReal ->
-            codecFn "float"
+            awsCoreKVEncodeFn "float"
 
         BString ->
-            codecFn "string"
+            awsCoreKVEncodeFn "string"
 
 
 codecNamed named =
@@ -464,18 +472,18 @@ codecContainer : Container pos RefChecked -> Expression
 codecContainer container =
     case container of
         CList l1Type ->
-            CG.apply [ codecFn "list", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "list", codecType l1Type ]
                 |> CG.parens
 
         CSet l1Type ->
-            CG.apply [ codecFn "set", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "set", codecType l1Type ]
                 |> CG.parens
 
         CDict l1keyType l1valType ->
             codecDict l1keyType l1valType
 
         COptional l1Type ->
-            CG.apply [ codecFn "maybe", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "maybe", codecType l1Type ]
                 |> CG.parens
 
 
@@ -484,18 +492,18 @@ codecDict l1keyType l1valType =
     case l1keyType of
         TNamed _ _ name (RcRestricted basic) ->
             CG.apply
-                [ codecFn "build"
+                [ awsCoreKVEncodeFn "build"
                 , CG.apply
                     [ CG.fqFun refinedMod "dictEncoder"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ codecFn "encoder", codecType l1valType ]
+                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
                         |> CG.parens
                     ]
                     |> CG.parens
                 , CG.apply
                     [ CG.fqFun refinedMod "dictDecoder"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ codecFn "decoder", codecType l1valType ]
+                    , CG.apply [ awsCoreKVEncodeFn "decoder", codecType l1valType ]
                         |> CG.parens
                     ]
                     |> CG.parens
@@ -503,25 +511,25 @@ codecDict l1keyType l1valType =
 
         TNamed _ _ name RcEnum ->
             CG.apply
-                [ codecFn "build"
+                [ awsCoreKVEncodeFn "build"
                 , CG.apply
                     [ CG.fqFun enumMod "dictEncoder"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ codecFn "encoder", codecType l1valType ]
+                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
                         |> CG.parens
                     ]
                     |> CG.parens
                 , CG.apply
                     [ CG.fqFun enumMod "dictDecoder"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ codecFn "decoder", codecType l1valType ]
+                    , CG.apply [ awsCoreKVEncodeFn "decoder", codecType l1valType ]
                         |> CG.parens
                     ]
                     |> CG.parens
                 ]
 
         _ ->
-            CG.apply [ codecFn "dict", codecType l1valType ]
+            CG.apply [ awsCoreKVEncodeFn "dict", codecType l1valType ]
                 |> CG.parens
 
 
@@ -559,12 +567,12 @@ codecContainerField : String -> Container pos RefChecked -> Expression
 codecContainerField name container =
     case container of
         CList l1Type ->
-            CG.apply [ codecFn "list", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "list", codecType l1Type ]
                 |> CG.parens
                 |> encoderField name
 
         CSet l1Type ->
-            CG.apply [ codecFn "set", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "set", codecType l1Type ]
                 |> CG.parens
                 |> encoderField name
 
@@ -629,21 +637,6 @@ awsCoreKVEncodeMod =
     [ "AWS", "Core", "KVEncode" ]
 
 
-codecMod : List String
-codecMod =
-    [ "KVEncoder" ]
-
-
-decodeMod : List String
-decodeMod =
-    [ "Json", "Decode" ]
-
-
-encodeMod : List String
-encodeMod =
-    [ "Json", "Encode" ]
-
-
 dictEnumMod : List String
 dictEnumMod =
     [ "Dict", "Enum" ]
@@ -679,9 +672,9 @@ stringMod =
     [ "String" ]
 
 
-codecFn : String -> Expression
-codecFn =
-    CG.fqFun codecMod
+awsCoreKVEncodeFn : String -> Expression
+awsCoreKVEncodeFn =
+    CG.fqFun awsCoreKVEncodeMod
 
 
 awsCoreKVEncodeImport : Import
@@ -691,17 +684,7 @@ awsCoreKVEncodeImport =
 
 codecImport : Import
 codecImport =
-    CG.importStmt codecMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "KVEncoder" ])
-
-
-decodeImport : Import
-decodeImport =
-    CG.importStmt decodeMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "Decoder" ])
-
-
-encodeImport : Import
-encodeImport =
-    CG.importStmt encodeMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "Value" ])
+    CG.importStmt awsCoreKVEncodeMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "KVPairs" ])
 
 
 setImport : Import

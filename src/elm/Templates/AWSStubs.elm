@@ -592,7 +592,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             CG.applyBinOp reqImpl
                                 CG.piper
                                 (CG.apply
-                                    [ CG.fqVal coreHttpMod "addQueryParams"
+                                    [ CG.fqVal coreHttpMod "addQuery"
                                     , CG.parens (CG.apply [ CG.val "queryEncoder", CG.val "req" ])
                                     ]
                                 )
