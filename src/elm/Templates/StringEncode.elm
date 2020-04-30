@@ -15,6 +15,13 @@ import Naming
 import Set exposing (Set)
 
 
+type StringEncodeError
+    = -- | CheckedPropertyMissing String PropSpec
+      -- | CheckedPropertyWrongKind String PropSpec
+      UnsupportedType
+    | UnsupportedDeclaration
+
+
 
 --===  Conversion of simple types to strings as Elm expressions.
 
@@ -67,18 +74,18 @@ Only simple types can be handled by this function, which is why its result is a
 and will produce `Nothing`.
 
 -}
-typeToString : Type pos L2.RefChecked -> Expression -> Maybe ( Expression, Linkage )
+typeToString : Type pos L2.RefChecked -> Expression -> Result StringEncodeError ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
         TBasic _ _ basic ->
             basicToString basic expr
-                |> Just
+                |> Ok
 
         TNamed _ _ refName ref ->
             case ref of
                 L2.RcTBasic basic ->
                     basicToString basic expr
-                        |> Just
+                        |> Ok
 
                 L2.RcRestricted basic ->
                     CG.apply
@@ -88,7 +95,7 @@ typeToString l2type expr =
                         ]
                         |> basicToString basic
                         |> Tuple.mapSecond (CG.addImport refinedImport)
-                        |> Just
+                        |> Ok
 
                 _ ->
                     Nothing
