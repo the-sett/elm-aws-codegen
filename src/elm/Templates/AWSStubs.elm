@@ -280,16 +280,17 @@ check l3 =
 generate : (pos -> SourceLines) -> PropertiesAPI pos -> L3 pos -> ResultME Error File
 generate posFn propertiesApi model =
     ResultME.map6
-        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( _, _ ) documentation ->
+        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( kvStringEncoders, kvStringEncodersLinkage ) documentation ->
             let
                 declarations =
-                    codecs
+                    kvStringEncoders
+                        |> List.append codecs
                         |> List.append types
                         |> List.append endpoints
                         |> (::) serviceFn
 
                 linkages =
-                    [ serviceLinkage, operationsLinkage, typeDeclLinkage, codecsLinkage ]
+                    [ serviceLinkage, operationsLinkage, typeDeclLinkage, codecsLinkage, kvStringEncodersLinkage ]
 
                 ( imports, exposings ) =
                     CG.combineLinkage linkages
@@ -304,8 +305,10 @@ generate posFn propertiesApi model =
                         |> CG.docTagsFromExposings (Tuple.second operationsLinkage)
                         |> CG.markdown "# API data model."
                         |> CG.docTagsFromExposings (Tuple.second typeDeclLinkage)
-                        |> CG.markdown "# Codecs for the data model."
+                        |> CG.markdown "# JSON Codecs for the data model."
                         |> CG.docTagsFromExposings (Tuple.second codecsLinkage)
+                        |> CG.markdown "# Key-Value String encoders for the data model."
+                        |> CG.docTagsFromExposings (Tuple.second kvStringEncodersLinkage)
             in
             module_ propertiesApi model exposings
                 |> ResultME.map (\moduleSpec -> CG.file moduleSpec imports declarations (Just doc))
@@ -314,7 +317,7 @@ generate posFn propertiesApi model =
         (operations propertiesApi model)
         (typeDeclarations propertiesApi model)
         (jsonCodecs propertiesApi model)
-        (jsonCodecs propertiesApi model)
+        (kvEncoders propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation"
             |> ResultME.mapError l3ToAwsStubsError
         )
@@ -970,7 +973,7 @@ requestFnResponse name response =
 
 
 
---== Types and Codecs
+--== Types Declarations
 
 
 typeDeclarations :
@@ -1006,6 +1009,10 @@ typeDeclaration propertiesAPI name decl =
             Elm.Lang.typeDecl name doc decl |> Ok
 
 
+
+--== JSON Codecs
+
+
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
     Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
@@ -1017,6 +1024,31 @@ jsonCodecs propertiesApi model =
 
 jsonCodec : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
 jsonCodec name decl =
+    case decl of
+        DAlias _ _ (TFunction _ _ _ _) ->
+            ( [], CG.emptyLinkage )
+
+        _ ->
+            Elm.Codec.codec name decl
+                |> FunDecl.asTopLevel FunDecl.defaultOptions
+                |> Tuple.mapFirst List.singleton
+
+
+
+--== Key-Value String Encoders
+
+
+kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
+kvEncoders propertiesApi model =
+    Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
+        |> ResultME.map (Dict.map kvEncoder)
+        |> ResultME.map Dict.values
+        |> ResultME.map combineDeclarations
+        |> ResultME.mapError l3ToAwsStubsError
+
+
+kvEncoder : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
+kvEncoder name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
