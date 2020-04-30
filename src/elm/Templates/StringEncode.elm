@@ -180,7 +180,7 @@ typeAliasKVEncoder name l1Type =
         [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
-        |> CG.addImport codecImport
+        |> CG.addImport awsCoreKVEncodeImport
         |> CG.addExposing (CG.funExpose codecFnName)
     )
 
@@ -215,7 +215,7 @@ customTypeKVEncoder name constructors =
         [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
-        |> CG.addImport codecImport
+        |> CG.addImport awsCoreKVEncodeImport
         |> CG.addExposing (CG.funExpose codecFnName)
     )
 
@@ -255,7 +255,7 @@ enumKVEncoder name constructors =
         [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
-        |> CG.addImport codecImport
+        |> CG.addImport awsCoreKVEncodeImport
         |> CG.addImport enumImport
         |> CG.addExposing (CG.funExpose codecFnName)
     )
@@ -296,7 +296,7 @@ restrictedKVEncoder name _ =
         [ CG.varPattern "val" ]
         impl
     , CG.emptyLinkage
-        |> CG.addImport codecImport
+        |> CG.addImport awsCoreKVEncodeImport
         |> CG.addImport enumImport
         |> CG.addExposing (CG.funExpose codecFnName)
     )
@@ -679,11 +679,6 @@ awsCoreKVEncodeFn =
 
 awsCoreKVEncodeImport : Import
 awsCoreKVEncodeImport =
-    CG.importStmt awsCoreKVEncodeMod Nothing Nothing
-
-
-codecImport : Import
-codecImport =
     CG.importStmt awsCoreKVEncodeMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "KVPairs" ])
 
 
