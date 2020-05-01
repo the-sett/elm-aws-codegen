@@ -120,23 +120,25 @@ typeToString l2type expr =
 
 {-| Generates a KVEncoder for a type declaration.
 -}
-kvEncoder : String -> Declarable pos RefChecked -> FunGen
+kvEncoder : String -> Declarable pos RefChecked -> Result StringEncodeError FunGen
 kvEncoder name decl =
     case decl of
         DAlias _ _ l1Type ->
-            typeAliasKVEncoder name l1Type
+            typeAliasKVEncoder name l1Type |> Ok
 
-        DSum _ _ constructors ->
-            customTypeKVEncoder name (List.Nonempty.toList constructors)
+        -- DSum _ _ constructors ->
+        --     customTypeKVEncoder name (List.Nonempty.toList constructors)
+        --
+        -- DEnum _ _ labels ->
+        --     enumKVEncoder name (List.Nonempty.toList labels)
+        --
+        -- DRestricted _ _ res ->
+        --     restrictedKVEncoder name res
+        _ ->
+            Err UnsupportedDeclaration
 
-        DEnum _ _ labels ->
-            enumKVEncoder name (List.Nonempty.toList labels)
 
-        DRestricted _ _ res ->
-            restrictedKVEncoder name res
-
-
-partialKVEncoder : String -> List (Field pos RefChecked) -> FunGen
+partialKVEncoder : String -> List (Field pos RefChecked) -> Result StringEncodeError FunGen
 partialKVEncoder name fields =
     let
         encodeFnName =
@@ -165,6 +167,7 @@ partialKVEncoder name fields =
         |> CG.addImport awsCoreKVEncodeImport
         |> CG.addExposing (CG.funExpose encodeFnName)
     )
+        |> Ok
 
 
 {-| Generates a KVEncoder for an L1 type alias.

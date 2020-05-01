@@ -836,18 +836,18 @@ headersFn propertiesApi fields =
     let
         --                     ((propertiesApi.field fprops).getStringProperty "locationName")
         headersEncoderFn =
-            StringEncode.partialKVEncoder
-                "requestTypeName"
-                fields
-                |> FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" }
-                |> Tuple.mapBoth Just Just
+            StringEncode.partialKVEncoder "requestTypeName" fields
+                |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
+                |> Result.map (Tuple.mapBoth Just Just)
+                |> Result.mapError stringEncodeToAwsStubsError
+                |> ResultME.fromResult
     in
     case fields of
         [] ->
             Ok ( Nothing, Nothing )
 
         _ ->
-            Ok headersEncoderFn
+            headersEncoderFn
 
 
 queryFn :
@@ -858,18 +858,18 @@ queryFn propertiesApi fields =
     let
         --                 ((propertiesApi.field fprops).getStringProperty "locationName")
         queryEncoderFn =
-            StringEncode.partialKVEncoder
-                "requestTypeName"
-                fields
-                |> FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" }
-                |> Tuple.mapBoth Just Just
+            StringEncode.partialKVEncoder "requestTypeName" fields
+                |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
+                |> Result.map (Tuple.mapBoth Just Just)
+                |> Result.mapError stringEncodeToAwsStubsError
+                |> ResultME.fromResult
     in
     case fields of
         [] ->
             Ok ( Nothing, Nothing )
 
         _ ->
-            Ok queryEncoderFn
+            queryEncoderFn
 
 
 buildUrlFromParams :
@@ -1060,22 +1060,26 @@ jsonCodec name decl =
 kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoders propertiesApi model =
     Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
+        |> ResultME.mapError l3ToAwsStubsError
         |> ResultME.map (Dict.map kvEncoder)
         |> ResultME.map Dict.values
+        |> ResultME.map ResultME.combineList
+        |> ResultME.flatten
         |> ResultME.map combineDeclarations
-        |> ResultME.mapError l3ToAwsStubsError
 
 
-kvEncoder : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
+kvEncoder : String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoder name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
-            ( [], CG.emptyLinkage )
+            ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
             StringEncode.kvEncoder name decl
-                |> FunDecl.asTopLevel FunDecl.defaultOptions
-                |> Tuple.mapFirst List.singleton
+                |> Result.map (FunDecl.asTopLevel FunDecl.defaultOptions)
+                |> Result.map (Tuple.mapFirst List.singleton)
+                |> Result.mapError stringEncodeToAwsStubsError
+                |> ResultME.fromResult
 
 
 
