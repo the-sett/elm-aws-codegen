@@ -40,6 +40,8 @@ type AWSStubsError
     | NotExpectedKind String String
     | UrlDidNotParse String
     | UnmatchedUrlParam String
+    | StringEncodeUnsupportedType
+    | StringEncodeUnsupportedDecl
 
 
 l3ToAwsStubsError : L3.L3Error -> AWSStubsError
@@ -56,6 +58,16 @@ l3ToAwsStubsError err =
 
         L3.NotExpectedKind expected actual ->
             NotExpectedKind expected actual
+
+
+stringEncodeToAwsStubsError : StringEncode.StringEncodeError -> AWSStubsError
+stringEncodeToAwsStubsError err =
+    case err of
+        StringEncode.UnsupportedType ->
+            StringEncodeUnsupportedType
+
+        StringEncode.UnsupportedDeclaration ->
+            StringEncodeUnsupportedDecl
 
 
 {-| The error catalogue for this processor.
@@ -138,6 +150,18 @@ errorBuilder posFn err =
             Errors.lookupError errorCatalogue
                 402
                 (Dict.fromList [ ( "name", name ) ])
+                []
+
+        StringEncodeUnsupportedType ->
+            Errors.lookupError errorCatalogue
+                305
+                Dict.empty
+                []
+
+        StringEncodeUnsupportedDecl ->
+            Errors.lookupError errorCatalogue
+                306
+                Dict.empty
                 []
 
 
@@ -683,7 +707,7 @@ requestFnRequest propertiesApi model name urlSpec request =
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map3
-                        (\urlWithParams ( headersFnImpl, headersFnLinkage ) ( queryFnImpl, queryFnLinkage ) ->
+                        (\( urlWithParams, urlLinkage ) ( headersFnImpl, headersFnLinkage ) ( queryFnImpl, queryFnLinkage ) ->
                             let
                                 ( loweredType, loweredLinkage ) =
                                     Elm.Lang.lowerType l1RequestType
@@ -724,6 +748,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                             , encoderLinkage
                                             , queryFnLinkage
                                             , headersFnLinkage
+                                            , urlLinkage |> Just
                                             ]
                                         )
                             in
@@ -851,7 +876,7 @@ buildUrlFromParams :
     PropertiesAPI pos
     -> List (Field pos L2.RefChecked)
     -> List UrlPart
-    -> ResultME AWSStubsError LetDeclaration
+    -> ResultME AWSStubsError ( LetDeclaration, Linkage )
 buildUrlFromParams propertiesApi uriFields urlParts =
     let
         pathParts =
@@ -859,12 +884,12 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                 (\part ->
                     case part of
                         PathLiteral lit ->
-                            CG.string lit |> Ok
+                            ( CG.string lit, CG.emptyLinkage ) |> Ok
 
                         Param name ->
                             case Query.filterListByProps propertiesApi (withLocationName name) uriFields of
                                 Ok (field :: _) ->
-                                    fieldAsString field |> Ok
+                                    fieldAsString field
 
                                 Ok [] ->
                                     UnmatchedUrlParam name |> ResultME.error
@@ -884,8 +909,9 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                     CG.binOpChain part CG.append ps
     in
     pathParts
-        |> ResultME.map appendParts
-        |> ResultME.map (CG.letVal "url")
+        |> ResultME.map List.unzip
+        |> ResultME.map (Tuple.mapFirst (appendParts >> CG.letVal "url"))
+        |> ResultME.map (Tuple.mapSecond CG.combineLinkage)
 
 
 {-|
@@ -895,19 +921,12 @@ buildUrlFromParams propertiesApi uriFields urlParts =
   - TODO: Pass up the linkage.
 
 -}
-fieldAsString : Field pos L2.RefChecked -> Expression
+fieldAsString : Field pos L2.RefChecked -> ResultME AWSStubsError ( Expression, Linkage )
 fieldAsString ( fname, l2type, _ ) =
-    let
-        maybeToString =
-            StringEncode.typeToString l2type
-                (CG.access (CG.val "req") (Naming.safeCCL fname))
-    in
-    case maybeToString of
-        Nothing ->
-            CG.unit
-
-        Just ( expr, linkage ) ->
-            expr
+    StringEncode.typeToString l2type
+        (CG.access (CG.val "req") (Naming.safeCCL fname))
+        |> Result.mapError stringEncodeToAwsStubsError
+        |> ResultME.fromResult
 
 
 {-| Figures out what response type for the endpoint will be.

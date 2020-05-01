@@ -97,11 +97,21 @@ typeToString l2type expr =
                         |> Tuple.mapSecond (CG.addImport refinedImport)
                         |> Ok
 
+                L2.RcEnum ->
+                    CG.apply
+                        [ CG.fqFun enumMod "toString"
+                        , Naming.safeCCL refName |> CG.val
+                        , expr
+                        ]
+                        |> basicToString BString
+                        |> Tuple.mapSecond (CG.addImport enumImport)
+                        |> Ok
+
                 _ ->
-                    Nothing
+                    UnsupportedType |> Err
 
         _ ->
-            Nothing
+            UnsupportedType |> Err
 
 
 
