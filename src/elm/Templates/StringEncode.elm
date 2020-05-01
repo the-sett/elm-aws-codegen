@@ -18,8 +18,8 @@ import Set exposing (Set)
 type StringEncodeError
     = -- | CheckedPropertyMissing String PropSpec
       -- | CheckedPropertyWrongKind String PropSpec
-      UnsupportedType
-    | UnsupportedDeclaration
+      UnsupportedType String
+    | UnsupportedDeclaration String
 
 
 
@@ -108,10 +108,14 @@ typeToString l2type expr =
                         |> Ok
 
                 _ ->
-                    UnsupportedType |> Err
+                    L2.refCheckedConsName ref
+                        |> UnsupportedType
+                        |> Err
 
         _ ->
-            UnsupportedType |> Err
+            L1.typeConsName l2type
+                |> UnsupportedType
+                |> Err
 
 
 
@@ -126,16 +130,17 @@ kvEncoder name decl =
         DAlias _ _ l1Type ->
             typeAliasKVEncoder name l1Type |> Ok
 
-        -- DSum _ _ constructors ->
-        --     customTypeKVEncoder name (List.Nonempty.toList constructors)
-        --
-        -- DEnum _ _ labels ->
-        --     enumKVEncoder name (List.Nonempty.toList labels)
-        --
-        -- DRestricted _ _ res ->
-        --     restrictedKVEncoder name res
-        _ ->
-            Err UnsupportedDeclaration
+        DSum _ _ constructors ->
+            -- customTypeKVEncoder name (List.Nonempty.toList constructors)
+            L1.declarableConsName decl
+                |> UnsupportedDeclaration
+                |> Err
+
+        DEnum _ _ labels ->
+            enumKVEncoder name (List.Nonempty.toList labels) |> Ok
+
+        DRestricted _ _ res ->
+            restrictedKVEncoder name res |> Ok
 
 
 partialKVEncoder : String -> List (Field pos RefChecked) -> Result StringEncodeError FunGen
@@ -205,39 +210,38 @@ typeAliasKVEncoder name l1Type =
     )
 
 
-{-| Generates a KVEncoder for an L1 sum type.
--}
-customTypeKVEncoder : String -> List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> ( FunDecl, Linkage )
-customTypeKVEncoder name constructors =
-    let
-        codecFnName =
-            Naming.safeCCL name ++ "KVEncoder"
 
-        typeName =
-            Naming.safeCCU name
-
-        sig =
-            CG.funAnn
-                (CG.typed typeName [])
-                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
-
-        impl =
-            codecCustomType constructors
-
-        doc =
-            CG.emptyDocComment
-                |> CG.markdown ("KVEncoder for " ++ typeName ++ ".")
-    in
-    ( FunDecl
-        (Just doc)
-        (Just sig)
-        codecFnName
-        [ CG.varPattern "val" ]
-        impl
-    , CG.emptyLinkage
-        |> CG.addImport awsCoreKVEncodeImport
-        |> CG.addExposing (CG.funExpose codecFnName)
-    )
+-- customTypeKVEncoder : String -> List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> ( FunDecl, Linkage )
+-- customTypeKVEncoder name constructors =
+--     let
+--         codecFnName =
+--             Naming.safeCCL name ++ "KVEncoder"
+--
+--         typeName =
+--             Naming.safeCCU name
+--
+--         sig =
+--             CG.funAnn
+--                 (CG.typed typeName [])
+--                 (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
+--
+--         impl =
+--             codecCustomType constructors
+--
+--         doc =
+--             CG.emptyDocComment
+--                 |> CG.markdown ("KVEncoder for " ++ typeName ++ ".")
+--     in
+--     ( FunDecl
+--         (Just doc)
+--         (Just sig)
+--         codecFnName
+--         [ CG.varPattern "val" ]
+--         impl
+--     , CG.emptyLinkage
+--         |> CG.addImport awsCoreKVEncodeImport
+--         |> CG.addExposing (CG.funExpose codecFnName)
+--     )
 
 
 enumKVEncoder : String -> List String -> ( FunDecl, Linkage )
@@ -259,9 +263,9 @@ enumKVEncoder name constructors =
 
         impl =
             CG.apply
-                [ CG.fqFun awsCoreKVEncodeMod "build"
-                , CG.parens (CG.apply [ CG.fqFun enumMod "encoder", CG.val enumName ])
-                , CG.parens (CG.apply [ CG.fqFun enumMod "decoder", CG.val enumName ])
+                [ CG.fqFun enumMod "toString"
+                , CG.val enumName
+                , CG.val "val"
                 ]
 
         doc =
@@ -282,8 +286,16 @@ enumKVEncoder name constructors =
 
 
 restrictedKVEncoder : String -> Restricted -> ( FunDecl, Linkage )
-restrictedKVEncoder name _ =
+restrictedKVEncoder name res =
     let
+        basic =
+            case res of
+                RInt _ ->
+                    BInt
+
+                RString _ ->
+                    BString
+
         codecFnName =
             Naming.safeCCL name ++ "KVEncoder"
 
@@ -298,12 +310,13 @@ restrictedKVEncoder name _ =
                 (CG.typed typeName [])
                 (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
 
-        impl =
+        ( impl, implLinkage ) =
             CG.apply
-                [ CG.fqFun awsCoreKVEncodeMod "build"
-                , CG.parens (CG.apply [ CG.fqFun refinedMod "encoder", CG.val enumName ])
-                , CG.parens (CG.apply [ CG.fqFun refinedMod "decoder", CG.val enumName ])
+                [ CG.fqFun refinedMod "unbox"
+                , enumName |> CG.val
+                , CG.val "val"
                 ]
+                |> basicToString basic
 
         doc =
             CG.emptyDocComment
@@ -315,36 +328,40 @@ restrictedKVEncoder name _ =
         codecFnName
         [ CG.varPattern "val" ]
         impl
-    , CG.emptyLinkage
-        |> CG.addImport awsCoreKVEncodeImport
-        |> CG.addImport enumImport
-        |> CG.addExposing (CG.funExpose codecFnName)
+    , CG.combineLinkage
+        [ CG.emptyLinkage
+            |> CG.addImport awsCoreKVEncodeImport
+            |> CG.addImport enumImport
+            |> CG.addExposing (CG.funExpose codecFnName)
+        , implLinkage
+        ]
     )
 
 
-codecCustomType : List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> Expression
-codecCustomType constructors =
-    let
-        codecVariant name args =
-            List.foldr
-                (\( _, l1Type, _ ) accum -> codecType l1Type :: accum)
-                [ Naming.safeCCU name |> CG.fun
-                , Naming.safeCCU name |> CG.string
-                , awsCoreKVEncodeFn ("variant" ++ String.fromInt (List.length args))
-                ]
-                args
-                |> List.reverse
-                |> CG.apply
-    in
-    List.foldr (\( name, consArgs ) accum -> codecVariant name consArgs :: accum)
-        [ CG.apply [ awsCoreKVEncodeFn "buildCustom" ] ]
-        constructors
-        |> CG.pipe
-            (CG.apply
-                [ awsCoreKVEncodeFn "custom"
-                , codecMatchFn constructors
-                ]
-            )
+
+-- codecCustomType : List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> Expression
+-- codecCustomType constructors =
+--     let
+--         codecVariant name args =
+--             List.foldr
+--                 (\( _, l1Type, _ ) accum -> codecType l1Type :: accum)
+--                 [ Naming.safeCCU name |> CG.fun
+--                 , Naming.safeCCU name |> CG.string
+--                 , awsCoreKVEncodeFn ("variant" ++ String.fromInt (List.length args))
+--                 ]
+--                 args
+--                 |> List.reverse
+--                 |> CG.apply
+--     in
+--     List.foldr (\( name, consArgs ) accum -> codecVariant name consArgs :: accum)
+--         [ CG.apply [ awsCoreKVEncodeFn "buildCustom" ] ]
+--         constructors
+--         |> CG.pipe
+--             (CG.apply
+--                 [ awsCoreKVEncodeFn "custom"
+--                 , codecMatchFn constructors
+--                 ]
+--             )
 
 
 codecMatchFn : List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> Expression

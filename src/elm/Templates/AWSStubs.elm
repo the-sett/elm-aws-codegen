@@ -40,8 +40,8 @@ type AWSStubsError
     | NotExpectedKind String String
     | UrlDidNotParse String
     | UnmatchedUrlParam String
-    | StringEncodeUnsupportedType
-    | StringEncodeUnsupportedDecl
+    | StringEncodeUnsupportedType String
+    | StringEncodeUnsupportedDecl String
 
 
 l3ToAwsStubsError : L3.L3Error -> AWSStubsError
@@ -63,11 +63,11 @@ l3ToAwsStubsError err =
 stringEncodeToAwsStubsError : StringEncode.StringEncodeError -> AWSStubsError
 stringEncodeToAwsStubsError err =
     case err of
-        StringEncode.UnsupportedType ->
-            StringEncodeUnsupportedType
+        StringEncode.UnsupportedType name ->
+            StringEncodeUnsupportedType name
 
-        StringEncode.UnsupportedDeclaration ->
-            StringEncodeUnsupportedDecl
+        StringEncode.UnsupportedDeclaration name ->
+            StringEncodeUnsupportedDecl name
 
 
 {-| The error catalogue for this processor.
@@ -92,6 +92,16 @@ errorCatalogue =
         , ( 304
           , { title = "Not The Expected Kind"
             , body = "Was expecting something to be []{arg|key=expected } but found something that is []{arg|key=actual }."
+            }
+          )
+        , ( 305
+          , { title = "Unsupported Type for a Key-Value String encoder."
+            , body = "Cannot generate a Key-Value String encoder for the Type []{arg|key=name }."
+            }
+          )
+        , ( 306
+          , { title = "Unsupported Declarable for a Key-Value String encoder."
+            , body = "Cannot generate a Key-Value String encoder for the Declarable []{arg|key=name }."
             }
           )
         , ( 401
@@ -152,16 +162,16 @@ errorBuilder posFn err =
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
-        StringEncodeUnsupportedType ->
+        StringEncodeUnsupportedType name ->
             Errors.lookupError errorCatalogue
                 305
-                Dict.empty
+                (Dict.fromList [ ( "name", name ) ])
                 []
 
-        StringEncodeUnsupportedDecl ->
+        StringEncodeUnsupportedDecl name ->
             Errors.lookupError errorCatalogue
                 306
-                Dict.empty
+                (Dict.fromList [ ( "name", name ) ])
                 []
 
 
