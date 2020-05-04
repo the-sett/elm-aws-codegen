@@ -189,7 +189,7 @@ typeAliasKVEncoder name l1Type =
         sig =
             CG.funAnn
                 (CG.typed typeName [])
-                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
+                (CG.typed "KVPairs" [])
 
         impl =
             codecNamedType name l1Type
@@ -259,7 +259,7 @@ enumKVEncoder name constructors =
         sig =
             CG.funAnn
                 (CG.typed typeName [])
-                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
+                (CG.typed "KVPairs" [])
 
         impl =
             CG.apply
@@ -308,7 +308,7 @@ restrictedKVEncoder name res =
         sig =
             CG.funAnn
                 (CG.typed typeName [])
-                (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
+                (CG.typed "KVPairs" [])
 
         ( impl, implLinkage ) =
             CG.apply
@@ -527,44 +527,37 @@ codecContainer container =
 codecDict : Type pos RefChecked -> Type pos RefChecked -> Expression
 codecDict l1keyType l1valType =
     case l1keyType of
-        TNamed _ _ name (RcRestricted basic) ->
-            CG.apply
-                [ awsCoreKVEncodeFn "build"
-                , CG.apply
-                    [ CG.fqFun refinedMod "dictEncoder"
-                    , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-                        |> CG.parens
-                    ]
-                    |> CG.parens
-                , CG.apply
-                    [ CG.fqFun refinedMod "dictDecoder"
-                    , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "decoder", codecType l1valType ]
-                        |> CG.parens
-                    ]
-                    |> CG.parens
-                ]
-
-        TNamed _ _ name RcEnum ->
-            CG.apply
-                [ awsCoreKVEncodeFn "build"
-                , CG.apply
-                    [ CG.fqFun enumMod "dictEncoder"
-                    , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-                        |> CG.parens
-                    ]
-                    |> CG.parens
-                , CG.apply
-                    [ CG.fqFun enumMod "dictDecoder"
-                    , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "decoder", codecType l1valType ]
-                        |> CG.parens
-                    ]
-                    |> CG.parens
-                ]
-
+        -- TNamed _ _ name (RcRestricted basic) ->
+        --     CG.apply
+        --         [ awsCoreKVEncodeFn "dict"
+        --         , CG.apply
+        --             [ CG.fqFun refinedMod "dictEncoder"
+        --             , CG.val (Naming.safeCCL name)
+        --             , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
+        --                 |> CG.parens
+        --             ]
+        --             |> CG.parens
+        --         ]
+        --
+        -- CG.apply
+        --     [ CG.fqFun refinedMod "unbox"
+        --     , Naming.safeCCL refName |> CG.val
+        --     , expr
+        --     ]
+        --     |> basicToString basic
+        --     |> Tuple.mapSecond (CG.addImport refinedImport)
+        --     |> Ok
+        -- TNamed _ _ name RcEnum ->
+        --     CG.apply
+        --         [ awsCoreKVEncodeFn "build"
+        --         , CG.apply
+        --             [ CG.fqFun enumMod "dictEncoder"
+        --             , CG.val (Naming.safeCCL name)
+        --             , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
+        --                 |> CG.parens
+        --             ]
+        --             |> CG.parens
+        --         ]
         _ ->
             CG.apply [ awsCoreKVEncodeFn "dict", codecType l1valType ]
                 |> CG.parens
@@ -582,7 +575,7 @@ codecNamedProduct name fields =
         impl =
             CG.pipe
                 (encoderFields fields |> CG.list)
-                [ CG.fqFun awsCoreKVEncodeMod "kvlist"
+                [ CG.fqFun awsCoreKVEncodeMod "object"
                 ]
     in
     impl
