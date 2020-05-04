@@ -316,6 +316,7 @@ restrictedKVEncoder name res =
                 , enumName |> CG.val
                 , CG.val "val"
                 ]
+                |> CG.parens
                 |> basicToString basic
 
         doc =
@@ -489,16 +490,28 @@ codecBasic : Basic -> Expression
 codecBasic basic =
     case basic of
         BBool ->
-            awsCoreKVEncodeFn "bool"
+            CG.apply
+                [ awsCoreKVEncodeFn "bool"
+                , CG.val "val"
+                ]
 
         BInt ->
-            awsCoreKVEncodeFn "int"
+            CG.apply
+                [ awsCoreKVEncodeFn "int"
+                , CG.val "val"
+                ]
 
         BReal ->
-            awsCoreKVEncodeFn "float"
+            CG.apply
+                [ awsCoreKVEncodeFn "float"
+                , CG.val "val"
+                ]
 
         BString ->
-            awsCoreKVEncodeFn "string"
+            CG.apply
+                [ awsCoreKVEncodeFn "string"
+                , CG.val "val"
+                ]
 
 
 codecNamed named =
