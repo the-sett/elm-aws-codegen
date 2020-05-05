@@ -261,12 +261,19 @@ enumKVEncoder name constructors =
                 (CG.typed typeName [])
                 (CG.typed "KVPairs" [])
 
-        impl =
-            CG.apply
-                [ CG.fqFun enumMod "toString"
-                , CG.val enumName
-                , CG.val "val"
-                ]
+        ( impl, implLinkage ) =
+            basicToKVFun BString
+                |> Tuple.mapFirst
+                    (\kvfun ->
+                        CG.pipe
+                            (CG.apply
+                                [ CG.fqFun enumMod "toString"
+                                , CG.val enumName
+                                , CG.val "val"
+                                ]
+                            )
+                            [ kvfun ]
+                    )
 
         doc =
             CG.emptyDocComment
@@ -278,10 +285,12 @@ enumKVEncoder name constructors =
         codecFnName
         [ CG.varPattern "val" ]
         impl
-    , CG.emptyLinkage
-        |> CG.addImport awsCoreKVEncodeImport
-        |> CG.addImport enumImport
-        |> CG.addExposing (CG.funExpose codecFnName)
+    , CG.combineLinkage
+        [ CG.emptyLinkage
+            |> CG.addImport enumImport
+            |> CG.addExposing (CG.funExpose codecFnName)
+        , implLinkage
+        ]
     )
 
 
@@ -336,7 +345,6 @@ restrictedKVEncoder name res =
         impl
     , CG.combineLinkage
         [ CG.emptyLinkage
-            |> CG.addImport awsCoreKVEncodeImport
             |> CG.addImport enumImport
             |> CG.addExposing (CG.funExpose codecFnName)
         , implLinkage
