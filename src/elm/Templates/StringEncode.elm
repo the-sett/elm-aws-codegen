@@ -535,18 +535,18 @@ codecContainer : Container pos RefChecked -> Expression
 codecContainer container =
     case container of
         CList l1Type ->
-            CG.apply [ awsCoreKVEncodeFn "list", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "list", codecType l1Type, CG.val "val" ]
                 |> CG.parens
 
         CSet l1Type ->
-            CG.apply [ awsCoreKVEncodeFn "set", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "set", codecType l1Type, CG.val "val" ]
                 |> CG.parens
 
         CDict l1keyType l1valType ->
             codecDict l1keyType l1valType
 
         COptional l1Type ->
-            CG.apply [ awsCoreKVEncodeFn "maybe", codecType l1Type ]
+            CG.apply [ awsCoreKVEncodeFn "maybe", codecType l1Type, CG.val "val" ]
                 |> CG.parens
 
 
