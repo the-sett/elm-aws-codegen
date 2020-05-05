@@ -553,17 +553,18 @@ codecContainer container =
 codecDict : Type pos RefChecked -> Type pos RefChecked -> Expression
 codecDict l1keyType l1valType =
     case l1keyType of
-        -- TNamed _ _ name (RcRestricted basic) ->
-        --     CG.apply
-        --         [ awsCoreKVEncodeFn "dict"
-        --         , CG.apply
-        --             [ CG.fqFun refinedMod "dictEncoder"
-        --             , CG.val (Naming.safeCCL name)
-        --             , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-        --                 |> CG.parens
-        --             ]
-        --             |> CG.parens
-        --         ]
+        TNamed _ _ name (RcRestricted basic) ->
+            CG.apply
+                [ awsCoreKVEncodeFn "dict"
+                , CG.apply
+                    [ CG.fqFun refinedMod "dictEncoder"
+                    , CG.val (Naming.safeCCL name)
+                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
+                        |> CG.parens
+                    ]
+                    |> CG.parens
+                ]
+
         --
         -- CG.apply
         --     [ CG.fqFun refinedMod "unbox"
@@ -573,19 +574,20 @@ codecDict l1keyType l1valType =
         --     |> basicToKVFun basic
         --     |> Tuple.mapSecond (CG.addImport refinedImport)
         --     |> Ok
-        -- TNamed _ _ name RcEnum ->
-        --     CG.apply
-        --         [ awsCoreKVEncodeFn "build"
-        --         , CG.apply
-        --             [ CG.fqFun enumMod "dictEncoder"
-        --             , CG.val (Naming.safeCCL name)
-        --             , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-        --                 |> CG.parens
-        --             ]
-        --             |> CG.parens
-        --         ]
+        TNamed _ _ name RcEnum ->
+            CG.apply
+                [ awsCoreKVEncodeFn "build"
+                , CG.apply
+                    [ CG.fqFun enumMod "dictEncoder"
+                    , CG.val (Naming.safeCCL name)
+                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
+                        |> CG.parens
+                    ]
+                    |> CG.parens
+                ]
+
         _ ->
-            CG.apply [ awsCoreKVEncodeFn "dict", codecType l1valType ]
+            CG.apply [ awsCoreKVEncodeFn "dict", codecType l1valType, CG.val "val" ]
                 |> CG.parens
 
 
