@@ -311,13 +311,18 @@ restrictedKVEncoder name res =
                 (CG.typed "KVPairs" [])
 
         ( impl, implLinkage ) =
-            CG.apply
-                [ CG.fqFun refinedMod "unbox"
-                , enumName |> CG.val
-                , CG.val "val"
-                ]
-                |> CG.parens
-                |> basicToString basic
+            basicToKVFun basic
+                |> Tuple.mapFirst
+                    (\kvfun ->
+                        CG.pipe
+                            (CG.apply
+                                [ CG.fqFun refinedMod "unbox"
+                                , enumName |> CG.val
+                                , CG.val "val"
+                                ]
+                            )
+                            [ kvfun ]
+                    )
 
         doc =
             CG.emptyDocComment
@@ -557,7 +562,7 @@ codecDict l1keyType l1valType =
         --     , Naming.safeCCL refName |> CG.val
         --     , expr
         --     ]
-        --     |> basicToString basic
+        --     |> basicToKVFun basic
         --     |> Tuple.mapSecond (CG.addImport refinedImport)
         --     |> Ok
         -- TNamed _ _ name RcEnum ->
@@ -664,6 +669,31 @@ encoderOptionalField name expr =
         )
         CG.piper
         (CG.apply [ CG.fqFun awsCoreKVEncodeMod "optional", expr ])
+
+
+basicToKVFun : Basic -> ( Expression, Linkage )
+basicToKVFun basic =
+    case basic of
+        L1.BBool ->
+            ( CG.fqFun awsCoreKVEncodeMod "bool"
+            , CG.emptyLinkage
+                |> CG.addImport awsCoreKVEncodeImport
+            )
+
+        L1.BInt ->
+            ( CG.fqFun awsCoreKVEncodeMod "int"
+            , CG.emptyLinkage
+            )
+
+        L1.BReal ->
+            ( CG.fqFun awsCoreKVEncodeMod "float"
+            , CG.emptyLinkage
+            )
+
+        L1.BString ->
+            ( CG.fqFun awsCoreKVEncodeMod "string"
+            , CG.emptyLinkage
+            )
 
 
 
