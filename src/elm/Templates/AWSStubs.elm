@@ -613,7 +613,11 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                                 CG.piper
                                 (CG.apply
                                     [ CG.fqVal coreHttpMod "addHeaders"
-                                    , CG.parens (CG.apply [ CG.val "headersEncoder", CG.val "req" ])
+                                    , CG.parens
+                                        (CG.pipe
+                                            (CG.apply [ CG.val "headersEncoder", CG.val "req" ])
+                                            [ CG.fqFun awsCoreKVEncodeMod "encode" ]
+                                        )
                                     ]
                                 )
                         )
@@ -627,7 +631,11 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                                 CG.piper
                                 (CG.apply
                                     [ CG.fqVal coreHttpMod "addQuery"
-                                    , CG.parens (CG.apply [ CG.val "queryEncoder", CG.val "req" ])
+                                    , CG.parens
+                                        (CG.pipe
+                                            (CG.apply [ CG.val "queryEncoder", CG.val "req" ])
+                                            [ CG.fqFun awsCoreKVEncodeMod "encode" ]
+                                        )
                                     ]
                                 )
                         )
@@ -1179,6 +1187,11 @@ combineDeclaration declList =
         )
         ( [], CG.emptyLinkage )
         declList
+
+
+awsCoreKVEncodeMod : List String
+awsCoreKVEncodeMod =
+    [ "AWS", "Core", "KVEncode" ]
 
 
 decodeMod : List String
