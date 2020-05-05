@@ -556,32 +556,25 @@ codecDict l1keyType l1valType =
         TNamed _ _ name (RcRestricted basic) ->
             CG.apply
                 [ awsCoreKVEncodeFn "dict"
+                , codecType l1valType
                 , CG.apply
-                    [ CG.fqFun refinedMod "dictEncoder"
+                    [ CG.fqFun refinedMod "unboxedDict"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-                        |> CG.parens
+                    , CG.val "identity"
+                    , CG.val "val"
                     ]
                     |> CG.parens
                 ]
 
-        --
-        -- CG.apply
-        --     [ CG.fqFun refinedMod "unbox"
-        --     , Naming.safeCCL refName |> CG.val
-        --     , expr
-        --     ]
-        --     |> basicToKVFun basic
-        --     |> Tuple.mapSecond (CG.addImport refinedImport)
-        --     |> Ok
         TNamed _ _ name RcEnum ->
             CG.apply
-                [ awsCoreKVEncodeFn "build"
+                [ awsCoreKVEncodeFn "dict"
+                , codecType l1valType
                 , CG.apply
-                    [ CG.fqFun enumMod "dictEncoder"
+                    [ CG.fqFun refinedMod "stringDict"
                     , CG.val (Naming.safeCCL name)
-                    , CG.apply [ awsCoreKVEncodeFn "encoder", codecType l1valType ]
-                        |> CG.parens
+                    , CG.val "identity"
+                    , CG.val "val"
                     ]
                     |> CG.parens
                 ]
