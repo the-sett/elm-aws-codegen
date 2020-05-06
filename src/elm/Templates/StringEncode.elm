@@ -653,7 +653,7 @@ encoderFields fields =
                         _ =
                             case maybeLocName of
                                 Just _ ->
-                                    Debug.log "locationName" maybeLocName
+                                    Debug.log "kvencoder locationName" maybeLocName
 
                                 Nothing ->
                                     maybeLocName
