@@ -4,6 +4,7 @@ module Templates.StringEncode exposing (..)
 to AWS services.
 -}
 
+import Dict
 import Elm.CodeGen as CG exposing (Comment, Declaration, DocComment, Expression, Import, LetDeclaration, Linkage, Pattern, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (FunDecl, FunGen)
 import Elm.Helper as Util
@@ -641,6 +642,27 @@ Helper function useful when building record encoders.
 -}
 encoderFields : List ( String, Type pos RefChecked, L1.Properties ) -> List Expression
 encoderFields fields =
+    let
+        _ =
+            List.foldl
+                (\( _, _, props ) _ ->
+                    let
+                        maybeLocName =
+                            Dict.get "locationName" props
+
+                        _ =
+                            case maybeLocName of
+                                Just _ ->
+                                    Debug.log "locationName" maybeLocName
+
+                                Nothing ->
+                                    maybeLocName
+                    in
+                    ()
+                )
+                ()
+                fields
+    in
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
         []
         fields
