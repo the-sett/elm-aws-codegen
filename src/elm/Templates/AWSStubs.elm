@@ -295,7 +295,7 @@ defaultProperties =
     , fields =
         L1.defineProperties
             [ ( "location", PSEnum locationEnum )
-            , ( "locationName", PSOptional PSString )
+            , ( "serializedName", PSOptional PSString )
             , ( "documentation", PSOptional PSString )
             , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
             ]
@@ -862,7 +862,7 @@ headersFn :
     -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 headersFn propertiesApi fields =
     let
-        --                     ((propertiesApi.field fprops).getStringProperty "locationName")
+        --                     ((propertiesApi.field fprops).getStringProperty "serializedName")
         headersEncoderFn =
             StringEncode.partialKVEncoder "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
@@ -884,7 +884,7 @@ queryFn :
     -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 queryFn propertiesApi fields =
     let
-        --                 ((propertiesApi.field fprops).getStringProperty "locationName")
+        --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
         queryEncoderFn =
             StringEncode.partialKVEncoder "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
@@ -1148,7 +1148,7 @@ withLocationName : String -> PropertyFilter pos (Field pos ref)
 withLocationName name propertiesApi ( _, _, props ) =
     ResultME.map
         (Maybe.map ((==) name) >> Maybe.withDefault False)
-        ((propertiesApi.field props).getOptionalStringProperty "locationName")
+        ((propertiesApi.field props).getOptionalStringProperty "serializedName")
 
 
 isExcluded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)

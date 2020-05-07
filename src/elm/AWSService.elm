@@ -263,7 +263,7 @@ shapeRefCodec =
         |> Codec.optionalField "idempotencyToken" .idempotencyToken Codec.string
         |> Codec.optionalField "jsonvalue" .jsonvalue Codec.bool
         |> Codec.optionalField "location" (.location >> Just) locationCodec
-        |> Codec.optionalField "locationName" .locationName Codec.string
+        |> Codec.optionalField "serializedName" .locationName Codec.string
         |> Codec.optionalField "queryName" .queryName Codec.string
         |> Codec.optionalField "resultWrapper" .resultWrapper Codec.string
         |> Codec.optionalField "streaming" .streaming Codec.bool
@@ -320,7 +320,7 @@ shapeCodec =
         |> Codec.optionalField "fault" .fault Codec.bool
         |> Codec.optionalField "flattened" .flattened Codec.bool
         |> Codec.optionalField "key" .key shapeRefCodec
-        |> Codec.optionalField "locationName" .locationName Codec.string
+        |> Codec.optionalField "serializedName" .locationName Codec.string
         |> Codec.optionalField "max" .max Codec.int
         |> Codec.optionalField "member" .member shapeRefCodec
         |> Codec.optionalField "members" .members (Codec.dict shapeRefCodec)

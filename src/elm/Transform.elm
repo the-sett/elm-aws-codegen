@@ -391,7 +391,7 @@ modelStructure shape name =
                             shapeRef.locationName
                     in
                     Dict.empty
-                        |> Dict.update "locationName" (always (Maybe.map PString locationName))
+                        |> Dict.update "serializedName" (always (Maybe.map PString locationName))
                         |> Dict.insert "location" (PEnum AWSStubs.locationEnum loc)
 
                 optionalField =
