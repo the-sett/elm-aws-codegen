@@ -726,11 +726,30 @@ Helper function useful when building record encoders.
 -}
 encoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
 encoderFields propertiesApi fields =
+    let
+        fieldMapperFn ( fieldName, l1Type, fprops ) accum =
+            let
+                maybeSerName =
+                    (propertiesApi.field fprops).getOptionalStringProperty "serializedName"
+            in
+            case maybeSerName of
+                Ok (Just serName) ->
+                    let
+                        _ =
+                            Debug.log "encoderFields" serName
+                    in
+                    (codecTypeField serName l1Type |> Ok) :: accum
+
+                Ok Nothing ->
+                    (codecTypeField fieldName l1Type |> Ok) :: accum
+
+                Err err ->
+                    Err err :: accum
+    in
     --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
-    List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
-        []
-        fields
-        |> Ok
+    List.foldl fieldMapperFn [] fields
+        |> ResultME.combineList
+        |> ResultME.mapError L3Error
 
 
 {-| Helper function for building field encoders.
