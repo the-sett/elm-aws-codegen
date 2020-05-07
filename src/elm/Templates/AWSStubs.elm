@@ -777,7 +777,7 @@ headersFn propertiesApi fields =
     let
         --                     ((propertiesApi.field fprops).getStringProperty "serializedName")
         headersEncoderFn =
-            StringEncode.partialKVEncoder "requestTypeName" fields
+            StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
                 |> Result.map (Tuple.mapBoth Just Just)
                 |> Result.mapError StringEncodeError
@@ -799,7 +799,7 @@ queryFn propertiesApi fields =
     let
         --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
         queryEncoderFn =
-            StringEncode.partialKVEncoder "requestTypeName" fields
+            StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
                 |> Result.map (Tuple.mapBoth Just Just)
                 |> Result.mapError StringEncodeError
@@ -1002,21 +1002,21 @@ kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declar
 kvEncoders propertiesApi model =
     Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
         |> ResultME.mapError L3Error
-        |> ResultME.map (Dict.map kvEncoder)
+        |> ResultME.map (Dict.map (kvEncoder propertiesApi))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
         |> ResultME.flatten
         |> ResultME.map combineDeclarations
 
 
-kvEncoder : String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
-kvEncoder name decl =
+kvEncoder : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
+kvEncoder propertiesApi name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
-            StringEncode.kvEncoder name decl
+            StringEncode.kvEncoder propertiesApi name decl
                 |> Result.map (FunDecl.asTopLevel FunDecl.defaultOptions)
                 |> Result.map (Tuple.mapFirst List.singleton)
                 |> Result.mapError StringEncodeError

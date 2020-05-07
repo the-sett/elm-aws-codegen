@@ -196,8 +196,12 @@ typeToString l2type expr =
 
 {-| Generates a KVEncoder for a type declaration.
 -}
-kvEncoder : String -> Declarable pos RefChecked -> Result StringEncodeError FunGen
-kvEncoder name decl =
+kvEncoder :
+    PropertiesAPI pos
+    -> String
+    -> Declarable pos RefChecked
+    -> Result StringEncodeError FunGen
+kvEncoder propertiesApi name decl =
     case decl of
         DAlias _ _ l1Type ->
             typeAliasKVEncoder name l1Type |> Ok
@@ -215,8 +219,12 @@ kvEncoder name decl =
             restrictedKVEncoder name res |> Ok
 
 
-partialKVEncoder : String -> List (Field pos RefChecked) -> Result StringEncodeError FunGen
-partialKVEncoder name fields =
+partialKVEncoder :
+    PropertiesAPI pos
+    -> String
+    -> List (Field pos RefChecked)
+    -> Result StringEncodeError FunGen
+partialKVEncoder propertiesApi name fields =
     let
         encodeFnName =
             Naming.safeCCL (name ++ "Encoder")
