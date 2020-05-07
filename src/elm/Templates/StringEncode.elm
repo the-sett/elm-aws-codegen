@@ -204,7 +204,7 @@ kvEncoder :
 kvEncoder propertiesApi name decl =
     case decl of
         DAlias _ _ l1Type ->
-            typeAliasKVEncoder name l1Type |> Ok
+            typeAliasKVEncoder propertiesApi name l1Type |> Ok
 
         DSum _ _ constructors ->
             -- customTypeKVEncoder name (List.Nonempty.toList constructors)
@@ -236,7 +236,7 @@ partialKVEncoder propertiesApi name fields =
             CG.typed "Encoder" [ CG.typed typeName [] ]
 
         impl =
-            codecNamedProduct name fields
+            codecNamedProduct propertiesApi name fields
 
         doc =
             CG.emptyDocComment
@@ -257,8 +257,8 @@ partialKVEncoder propertiesApi name fields =
 
 {-| Generates a KVEncoder for an L1 type alias.
 -}
-typeAliasKVEncoder : String -> Type pos RefChecked -> ( FunDecl, Linkage )
-typeAliasKVEncoder name l1Type =
+typeAliasKVEncoder : PropertiesAPI pos -> String -> Type pos RefChecked -> ( FunDecl, Linkage )
+typeAliasKVEncoder propertiesApi name l1Type =
     let
         codecFnName =
             Naming.safeCCL name ++ "KVEncoder"
@@ -272,7 +272,7 @@ typeAliasKVEncoder name l1Type =
                 (CG.typed "KVPairs" [])
 
         impl =
-            codecNamedType name l1Type
+            codecNamedType propertiesApi name l1Type
 
         doc =
             CG.emptyDocComment
@@ -488,8 +488,8 @@ codecMatchFn constructors =
 
 {-| Generates a KVEncoder for an L1 type that has been named as an alias.
 -}
-codecNamedType : String -> Type pos RefChecked -> Expression
-codecNamedType name l1Type =
+codecNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> Expression
+codecNamedType propertiesApi name l1Type =
     case l1Type of
         TUnit _ _ ->
             codecUnit
@@ -501,10 +501,10 @@ codecNamedType name l1Type =
             CG.string "codecNamedType_TNamed"
 
         TProduct _ _ fields ->
-            codecNamedProduct name (List.Nonempty.toList fields)
+            codecNamedProduct propertiesApi name (List.Nonempty.toList fields)
 
         TEmptyProduct _ _ ->
-            codecNamedProduct name []
+            codecNamedProduct propertiesApi name []
 
         TContainer _ _ container ->
             codecType l1Type
@@ -667,8 +667,8 @@ codecDict l1keyType l1valType =
 {-| Generates a codec for an L1 product type that has been named as an alias.
 The alias name is also the constructor function for the type.
 -}
-codecNamedProduct : String -> List ( String, Type pos RefChecked, L1.Properties ) -> Expression
-codecNamedProduct name fields =
+codecNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> Expression
+codecNamedProduct propertiesApi name fields =
     let
         typeName =
             Naming.safeCCU name
