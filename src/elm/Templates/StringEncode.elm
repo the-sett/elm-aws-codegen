@@ -726,6 +726,7 @@ Helper function useful when building record encoders.
 -}
 encoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
 encoderFields propertiesApi fields =
+    --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
         []
         fields

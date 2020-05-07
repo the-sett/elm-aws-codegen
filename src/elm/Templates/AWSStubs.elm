@@ -775,13 +775,11 @@ headersFn :
     -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 headersFn propertiesApi fields =
     let
-        --                     ((propertiesApi.field fprops).getStringProperty "serializedName")
         headersEncoderFn =
             StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
-                |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
-                |> Result.map (Tuple.mapBoth Just Just)
-                |> Result.mapError StringEncodeError
-                |> ResultME.fromResult
+                |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
+                |> ResultME.map (Tuple.mapBoth Just Just)
+                |> ResultME.mapError StringEncodeError
     in
     case fields of
         [] ->
@@ -797,13 +795,11 @@ queryFn :
     -> ResultME AWSStubsError ( Maybe LetDeclaration, Maybe Linkage )
 queryFn propertiesApi fields =
     let
-        --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
         queryEncoderFn =
             StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
-                |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
-                |> Result.map (Tuple.mapBoth Just Just)
-                |> Result.mapError StringEncodeError
-                |> ResultME.fromResult
+                |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
+                |> ResultME.map (Tuple.mapBoth Just Just)
+                |> ResultME.mapError StringEncodeError
     in
     case fields of
         [] ->
@@ -1017,10 +1013,9 @@ kvEncoder propertiesApi name decl =
 
         _ ->
             StringEncode.kvEncoder propertiesApi name decl
-                |> Result.map (FunDecl.asTopLevel FunDecl.defaultOptions)
-                |> Result.map (Tuple.mapFirst List.singleton)
-                |> Result.mapError StringEncodeError
-                |> ResultME.fromResult
+                |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
+                |> ResultME.map (Tuple.mapFirst List.singleton)
+                |> ResultME.mapError StringEncodeError
 
 
 
