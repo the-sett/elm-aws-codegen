@@ -8,8 +8,10 @@ import Dict
 import Elm.CodeGen as CG exposing (Comment, Declaration, DocComment, Expression, Import, LetDeclaration, Linkage, Pattern, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (FunDecl, FunGen)
 import Elm.Helper as Util
-import L1 exposing (Basic(..), Container(..), Declarable(..), Field, Restricted(..), Type(..))
+import Errors exposing (Error, ErrorBuilder)
+import L1 exposing (Basic(..), Container(..), Declarable(..), Field, PropSpec(..), Properties, Property(..), Restricted(..), Type(..))
 import L2 exposing (RefChecked(..))
+import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, PropertiesAPI)
 import List.Nonempty
 import Maybe.Extra
 import Naming
@@ -17,10 +19,72 @@ import Set exposing (Set)
 
 
 type StringEncodeError
-    = -- | CheckedPropertyMissing String PropSpec
-      -- | CheckedPropertyWrongKind String PropSpec
-      UnsupportedType String
+    = UnsupportedType String
     | UnsupportedDeclaration String
+
+
+errorCatalogue =
+    Dict.fromList
+        [ ( 305
+          , { title = "Unsupported Type for a Key-Value String encoder."
+            , body = "Cannot generate a Key-Value String encoder for the Type []{arg|key=name }."
+            }
+          )
+        , ( 306
+          , { title = "Unsupported Declarable for a Key-Value String encoder."
+            , body = "Cannot generate a Key-Value String encoder for the Declarable []{arg|key=name }."
+            }
+          )
+        ]
+
+
+errorBuilder : ErrorBuilder pos StringEncodeError
+errorBuilder posFn err =
+    case err of
+        UnsupportedType name ->
+            Errors.lookupError errorCatalogue
+                305
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+        UnsupportedDeclaration name ->
+            Errors.lookupError errorCatalogue
+                306
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+
+
+-- = CheckedPropertyMissing String PropSpec
+-- | CheckedPropertyWrongKind String PropSpec
+-- processorImpl : ProcessorImpl pos AWSStubsError
+-- processorImpl =
+--     { name = "StringEncode"
+--     , defaults = defaultProperties
+--     , check = check
+--     , buildError = errorBuilder
+--     }
+
+
+defaultProperties : DefaultProperties
+defaultProperties =
+    { top = L1.defineProperties [] []
+    , alias = L1.defineProperties [] []
+    , sum = L1.defineProperties [] []
+    , enum = L1.defineProperties [] []
+    , restricted = L1.defineProperties [] []
+    , fields =
+        L1.defineProperties
+            [ ( "serializedName", PSOptional PSString ) ]
+            []
+    , unit = L1.defineProperties [] []
+    , basic = L1.defineProperties [] []
+    , named = L1.defineProperties [] []
+    , product = L1.defineProperties [] []
+    , emptyProduct = L1.defineProperties [] []
+    , container = L1.defineProperties [] []
+    , function = L1.defineProperties [] []
+    }
 
 
 

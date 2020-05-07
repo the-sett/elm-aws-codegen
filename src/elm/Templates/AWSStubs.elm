@@ -35,86 +35,21 @@ import UrlParser exposing (UrlPart(..))
 
 
 -- TODO:
--- 1.  Map locationName fields correctly. Choose better universal name for CODEC mapping of field
--- names. "serializedName" for example.
---
--- 2. What error type to use for the above? Its L3.L3Error.
---
 -- 3. Responses may contain header fields. Therefore, response decoding needs to be partial...
 
 
 type AWSStubsError
-    = CheckedPropertyMissing String PropSpec
-    | CheckedPropertyWrongKind String PropSpec
-    | DerefDeclMissing String
-    | NotExpectedKind String String
+    = L3Error L3.L3Error
+    | StringEncodeError StringEncode.StringEncodeError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
-    | StringEncodeUnsupportedType String
-    | StringEncodeUnsupportedDecl String
-
-
-l3ToAwsStubsError : L3.L3Error -> AWSStubsError
-l3ToAwsStubsError err =
-    case err of
-        L3.CheckedPropertyMissing name propSpec ->
-            CheckedPropertyMissing name propSpec
-
-        L3.CheckedPropertyWrongKind name propSpec ->
-            CheckedPropertyWrongKind name propSpec
-
-        L3.DerefDeclMissing name ->
-            DerefDeclMissing name
-
-        L3.NotExpectedKind expected actual ->
-            NotExpectedKind expected actual
-
-
-stringEncodeToAwsStubsError : StringEncode.StringEncodeError -> AWSStubsError
-stringEncodeToAwsStubsError err =
-    case err of
-        StringEncode.UnsupportedType name ->
-            StringEncodeUnsupportedType name
-
-        StringEncode.UnsupportedDeclaration name ->
-            StringEncodeUnsupportedDecl name
 
 
 {-| The error catalogue for this processor.
 -}
 errorCatalogue =
     Dict.fromList
-        [ ( 301
-          , { title = "Required Property Missing"
-            , body = "The required property []{arg|key=name } was not set."
-            }
-          )
-        , ( 302
-          , { title = "Property is the Wrong Kind"
-            , body = "The required property []{arg|key=name } is the wrong kind."
-            }
-          )
-        , ( 303
-          , { title = "Name Type Alias Could Not Be Found"
-            , body = "The type alias []{arg|key=name } could not be found."
-            }
-          )
-        , ( 304
-          , { title = "Not The Expected Kind"
-            , body = "Was expecting something to be []{arg|key=expected } but found something that is []{arg|key=actual }."
-            }
-          )
-        , ( 305
-          , { title = "Unsupported Type for a Key-Value String encoder."
-            , body = "Cannot generate a Key-Value String encoder for the Type []{arg|key=name }."
-            }
-          )
-        , ( 306
-          , { title = "Unsupported Declarable for a Key-Value String encoder."
-            , body = "Cannot generate a Key-Value String encoder for the Declarable []{arg|key=name }."
-            }
-          )
-        , ( 401
+        [ ( 401
           , { title = "Unable to Parse URL Spec"
             , body = "Parsing the URL specification gave this error: []{arg|key=errMsg }."
             }
@@ -132,33 +67,11 @@ The parameter named []{arg|key=name } did not match a parameter in the URL speci
 errorBuilder : ErrorBuilder pos AWSStubsError
 errorBuilder posFn err =
     case err of
-        CheckedPropertyMissing name propSpec ->
-            Errors.lookupError errorCatalogue
-                301
-                (Dict.fromList [ ( "name", name ) ])
-                []
+        L3Error l3error ->
+            L3.errorBuilder posFn l3error
 
-        CheckedPropertyWrongKind name propSpec ->
-            Errors.lookupError errorCatalogue
-                302
-                (Dict.fromList [ ( "name", name ) ])
-                []
-
-        DerefDeclMissing name ->
-            Errors.lookupError errorCatalogue
-                303
-                (Dict.fromList [ ( "name", name ) ])
-                []
-
-        NotExpectedKind expected actual ->
-            Errors.lookupError errorCatalogue
-                304
-                (Dict.fromList
-                    [ ( "expected", expected )
-                    , ( "actual", actual )
-                    ]
-                )
-                []
+        StringEncodeError stringEncodeError ->
+            StringEncode.errorBuilder posFn stringEncodeError
 
         UrlDidNotParse errMsg ->
             Errors.lookupError errorCatalogue
@@ -169,18 +82,6 @@ errorBuilder posFn err =
         UnmatchedUrlParam name ->
             Errors.lookupError errorCatalogue
                 402
-                (Dict.fromList [ ( "name", name ) ])
-                []
-
-        StringEncodeUnsupportedType name ->
-            Errors.lookupError errorCatalogue
-                305
-                (Dict.fromList [ ( "name", name ) ])
-                []
-
-        StringEncodeUnsupportedDecl name ->
-            Errors.lookupError errorCatalogue
-                306
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
@@ -363,7 +264,7 @@ generate posFn propertiesApi model =
         (jsonCodecs propertiesApi model)
         (kvEncoders propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation"
-            |> ResultME.mapError l3ToAwsStubsError
+            |> ResultME.mapError L3Error
         )
         |> ResultME.flatten
         |> ResultME.mapError (errorBuilder posFn)
@@ -377,7 +278,7 @@ module_ : PropertiesAPI pos -> L3 pos -> List TopLevelExpose -> ResultME AWSStub
 module_ propertiesApi model exposings =
     propertiesApi.top.getQNameProperty "name"
         |> ResultME.map (\path -> CG.normalModule path exposings)
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
 
 
 
@@ -395,7 +296,7 @@ service propertiesApi model =
                 else
                     globalService propertiesApi model
             )
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
 
 
 optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error LetDeclaration
@@ -535,7 +436,7 @@ operations propertiesApi model =
         |> ResultME.map (Dict.map (operation propertiesApi model))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
         |> ResultME.flatten
         |> ResultME.map combineDeclarations
 
@@ -577,13 +478,13 @@ requestFn propertiesApi model declPropertyGet funPropertyGet name pos request re
     ResultME.map3
         (requestFnFromParams propertiesApi model name request response)
         (funPropertyGet.getStringProperty "url"
-            |> ResultME.mapError l3ToAwsStubsError
+            |> ResultME.mapError L3Error
         )
         (funPropertyGet.getStringProperty "httpMethod"
-            |> ResultME.mapError l3ToAwsStubsError
+            |> ResultME.mapError L3Error
         )
         (declPropertyGet.getOptionalStringProperty "documentation"
-            |> ResultME.mapError l3ToAwsStubsError
+            |> ResultME.mapError L3Error
         )
         |> ResultME.flatten
 
@@ -800,19 +701,19 @@ requestFnRequest propertiesApi model name urlSpec request =
                 )
                 (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
-                    |> ResultME.mapError l3ToAwsStubsError
+                    |> ResultME.mapError L3Error
                 )
                 (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
-                    |> ResultME.mapError l3ToAwsStubsError
+                    |> ResultME.mapError L3Error
                 )
                 (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInUri)
-                    |> ResultME.mapError l3ToAwsStubsError
+                    |> ResultME.mapError L3Error
                 )
                 (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
-                    |> ResultME.mapError l3ToAwsStubsError
+                    |> ResultME.mapError L3Error
                 )
                 |> ResultME.flatten
 
@@ -867,7 +768,7 @@ headersFn propertiesApi fields =
             StringEncode.partialKVEncoder "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
                 |> Result.map (Tuple.mapBoth Just Just)
-                |> Result.mapError stringEncodeToAwsStubsError
+                |> Result.mapError StringEncodeError
                 |> ResultME.fromResult
     in
     case fields of
@@ -889,7 +790,7 @@ queryFn propertiesApi fields =
             StringEncode.partialKVEncoder "requestTypeName" fields
                 |> Result.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
                 |> Result.map (Tuple.mapBoth Just Just)
-                |> Result.mapError stringEncodeToAwsStubsError
+                |> Result.mapError StringEncodeError
                 |> ResultME.fromResult
     in
     case fields of
@@ -923,7 +824,7 @@ buildUrlFromParams propertiesApi uriFields urlParts =
                                     UnmatchedUrlParam name |> ResultME.error
 
                                 Err err ->
-                                    Err err |> ResultME.mapError l3ToAwsStubsError
+                                    Err err |> ResultME.mapError L3Error
                 )
                 urlParts
                 |> ResultME.combineList
@@ -953,7 +854,7 @@ fieldAsString : Field pos L2.RefChecked -> ResultME AWSStubsError ( Expression, 
 fieldAsString ( fname, l2type, _ ) =
     StringEncode.typeToString l2type
         (CG.access (CG.val "req") (Naming.safeCCL fname))
-        |> Result.mapError stringEncodeToAwsStubsError
+        |> Result.mapError StringEncodeError
         |> ResultME.fromResult
 
 
@@ -1029,7 +930,7 @@ typeDeclarations :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 typeDeclarations propertiesApi model =
     Query.filterDictByProps propertiesApi (Query.notPropFilter isExcluded) model.declarations
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
         |> ResultME.map (Dict.map (typeDeclaration propertiesApi))
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
@@ -1066,7 +967,7 @@ jsonCodecs propertiesApi model =
         |> ResultME.map (Dict.map jsonCodec)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
 
 
 jsonCodec : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
@@ -1088,7 +989,7 @@ jsonCodec name decl =
 kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoders propertiesApi model =
     Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
-        |> ResultME.mapError l3ToAwsStubsError
+        |> ResultME.mapError L3Error
         |> ResultME.map (Dict.map kvEncoder)
         |> ResultME.map Dict.values
         |> ResultME.map ResultME.combineList
@@ -1106,7 +1007,7 @@ kvEncoder name decl =
             StringEncode.kvEncoder name decl
                 |> Result.map (FunDecl.asTopLevel FunDecl.defaultOptions)
                 |> Result.map (Tuple.mapFirst List.singleton)
-                |> Result.mapError stringEncodeToAwsStubsError
+                |> Result.mapError StringEncodeError
                 |> ResultME.fromResult
 
 
