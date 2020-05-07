@@ -200,17 +200,17 @@ kvEncoder :
     PropertiesAPI pos
     -> String
     -> Declarable pos RefChecked
-    -> Result StringEncodeError FunGen
+    -> ResultME StringEncodeError FunGen
 kvEncoder propertiesApi name decl =
     case decl of
         DAlias _ _ l1Type ->
-            typeAliasKVEncoder propertiesApi name l1Type |> Ok
+            typeAliasKVEncoder propertiesApi name l1Type
 
         DSum _ _ constructors ->
             -- customTypeKVEncoder name (List.Nonempty.toList constructors)
             L1.declarableConsName decl
                 |> UnsupportedDeclaration
-                |> Err
+                |> ResultME.error
 
         DEnum _ _ labels ->
             enumKVEncoder name (List.Nonempty.toList labels) |> Ok
@@ -223,71 +223,72 @@ partialKVEncoder :
     PropertiesAPI pos
     -> String
     -> List (Field pos RefChecked)
-    -> Result StringEncodeError FunGen
+    -> ResultME StringEncodeError FunGen
 partialKVEncoder propertiesApi name fields =
-    let
-        encodeFnName =
-            Naming.safeCCL (name ++ "Encoder")
+    ResultME.map
+        (\impl ->
+            let
+                encodeFnName =
+                    Naming.safeCCL (name ++ "Encoder")
 
-        typeName =
-            Naming.safeCCU name
+                typeName =
+                    Naming.safeCCU name
 
-        sig =
-            CG.typed "Encoder" [ CG.typed typeName [] ]
+                sig =
+                    CG.typed "Encoder" [ CG.typed typeName [] ]
 
-        impl =
-            codecNamedProduct propertiesApi name fields
-
-        doc =
-            CG.emptyDocComment
-                |> CG.markdown ("Encoder for " ++ typeName ++ ".")
-    in
-    ( FunDecl
-        (Just doc)
-        (Just sig)
-        encodeFnName
-        [ CG.varPattern "val" ]
-        impl
-    , CG.emptyLinkage
-        |> CG.addImport awsCoreKVEncodeImport
-        |> CG.addExposing (CG.funExpose encodeFnName)
-    )
-        |> Ok
+                doc =
+                    CG.emptyDocComment
+                        |> CG.markdown ("Encoder for " ++ typeName ++ ".")
+            in
+            ( FunDecl
+                (Just doc)
+                (Just sig)
+                encodeFnName
+                [ CG.varPattern "val" ]
+                impl
+            , CG.emptyLinkage
+                |> CG.addImport awsCoreKVEncodeImport
+                |> CG.addExposing (CG.funExpose encodeFnName)
+            )
+        )
+        (codecNamedProduct propertiesApi name fields)
 
 
 {-| Generates a KVEncoder for an L1 type alias.
 -}
-typeAliasKVEncoder : PropertiesAPI pos -> String -> Type pos RefChecked -> ( FunDecl, Linkage )
+typeAliasKVEncoder : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError ( FunDecl, Linkage )
 typeAliasKVEncoder propertiesApi name l1Type =
-    let
-        codecFnName =
-            Naming.safeCCL name ++ "KVEncoder"
+    ResultME.map
+        (\impl ->
+            let
+                codecFnName =
+                    Naming.safeCCL name ++ "KVEncoder"
 
-        typeName =
-            Naming.safeCCU name
+                typeName =
+                    Naming.safeCCU name
 
-        sig =
-            CG.funAnn
-                (CG.typed typeName [])
-                (CG.typed "KVPairs" [])
+                sig =
+                    CG.funAnn
+                        (CG.typed typeName [])
+                        (CG.typed "KVPairs" [])
 
-        impl =
-            codecNamedType propertiesApi name l1Type
-
-        doc =
-            CG.emptyDocComment
-                |> CG.markdown ("KVEncoder for " ++ typeName ++ ".")
-    in
-    ( FunDecl
-        (Just doc)
-        (Just sig)
-        codecFnName
-        [ CG.varPattern "val" ]
-        impl
-    , CG.emptyLinkage
-        |> CG.addImport awsCoreKVEncodeImport
-        |> CG.addExposing (CG.funExpose codecFnName)
-    )
+                doc =
+                    CG.emptyDocComment
+                        |> CG.markdown ("KVEncoder for " ++ typeName ++ ".")
+            in
+            ( FunDecl
+                (Just doc)
+                (Just sig)
+                codecFnName
+                [ CG.varPattern "val" ]
+                impl
+            , CG.emptyLinkage
+                |> CG.addImport awsCoreKVEncodeImport
+                |> CG.addExposing (CG.funExpose codecFnName)
+            )
+        )
+        (codecNamedType propertiesApi name l1Type)
 
 
 
@@ -488,17 +489,17 @@ codecMatchFn constructors =
 
 {-| Generates a KVEncoder for an L1 type that has been named as an alias.
 -}
-codecNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> Expression
+codecNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError Expression
 codecNamedType propertiesApi name l1Type =
     case l1Type of
         TUnit _ _ ->
-            codecUnit
+            codecUnit |> Ok
 
         TBasic _ _ basic ->
-            codecType l1Type
+            codecType l1Type |> Ok
 
         TNamed _ _ named _ ->
-            CG.string "codecNamedType_TNamed"
+            CG.string "codecNamedType_TNamed" |> Ok
 
         TProduct _ _ fields ->
             codecNamedProduct propertiesApi name (List.Nonempty.toList fields)
@@ -507,10 +508,10 @@ codecNamedType propertiesApi name l1Type =
             codecNamedProduct propertiesApi name []
 
         TContainer _ _ container ->
-            codecType l1Type
+            codecType l1Type |> Ok
 
         TFunction _ _ arg res ->
-            CG.unit
+            CG.unit |> Ok
 
 
 {-| Generates a KVEncoder for an L1 type.
@@ -667,19 +668,23 @@ codecDict l1keyType l1valType =
 {-| Generates a codec for an L1 product type that has been named as an alias.
 The alias name is also the constructor function for the type.
 -}
-codecNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> Expression
+codecNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError Expression
 codecNamedProduct propertiesApi name fields =
-    let
-        typeName =
-            Naming.safeCCU name
+    ResultME.map
+        (\fieldEncoders ->
+            let
+                typeName =
+                    Naming.safeCCU name
 
-        impl =
-            CG.pipe
-                (encoderFields propertiesApi fields |> CG.list)
-                [ CG.fqFun awsCoreKVEncodeMod "object"
-                ]
-    in
-    impl
+                impl =
+                    CG.pipe
+                        (fieldEncoders |> CG.list)
+                        [ CG.fqFun awsCoreKVEncodeMod "object"
+                        ]
+            in
+            impl
+        )
+        (encoderFields propertiesApi fields)
 
 
 {-| Generates a codec for an L1 product type that does not have a name.
@@ -724,6 +729,7 @@ encoderFields propertiesApi fields =
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
         []
         fields
+        |> Ok
 
 
 {-| Helper function for building field encoders.
