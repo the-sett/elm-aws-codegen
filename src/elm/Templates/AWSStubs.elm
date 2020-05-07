@@ -35,7 +35,28 @@ import UrlParser exposing (UrlPart(..))
 
 
 -- TODO:
+-- 2. Wire up the L3 modules explcitly. Only use error builders of wired up modules,
+-- don't expose them directly.
+--
 -- 3. Responses may contain header fields. Therefore, response decoding needs to be partial...
+--
+--=== This processor.
+
+
+processorImpl : ProcessorImpl pos AWSStubsError
+processorImpl =
+    { name = "AWSStubs"
+    , defaults = defaultProperties
+    , check = check
+    , buildError = errorBuilder
+    }
+
+
+
+--=== Wire up processors this depends on.
+-- stringEncodeProcessor =
+--     L3.builder posFn StringEncode.processorImpl
+--=== Errors
 
 
 type AWSStubsError
@@ -84,15 +105,6 @@ errorBuilder posFn err =
                 402
                 (Dict.fromList [ ( "name", name ) ])
                 []
-
-
-processorImpl : ProcessorImpl pos AWSStubsError
-processorImpl =
-    { name = "AWSStubs"
-    , defaults = defaultProperties
-    , check = check
-    , buildError = errorBuilder
-    }
 
 
 protocolEnum : Enum String

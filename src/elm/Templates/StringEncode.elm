@@ -15,6 +15,7 @@ import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, Propertie
 import List.Nonempty
 import Maybe.Extra
 import Naming
+import ResultME exposing (ResultME)
 import Set exposing (Set)
 
 
@@ -58,14 +59,18 @@ errorBuilder posFn err =
                 []
 
 
+check : L3 pos -> ResultME err (L3 pos)
+check l3 =
+    l3 |> Ok
 
--- processorImpl : ProcessorImpl pos AWSStubsError
--- processorImpl =
---     { name = "StringEncode"
---     , defaults = defaultProperties
---     , check = check
---     , buildError = errorBuilder
---     }
+
+processorImpl : ProcessorImpl pos StringEncodeError
+processorImpl =
+    { name = "StringEncode"
+    , defaults = defaultProperties
+    , check = check
+    , buildError = errorBuilder
+    }
 
 
 defaultProperties : DefaultProperties
