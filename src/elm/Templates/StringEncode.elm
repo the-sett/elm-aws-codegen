@@ -675,7 +675,7 @@ codecNamedProduct propertiesApi name fields =
 
         impl =
             CG.pipe
-                (encoderFields fields |> CG.list)
+                (encoderFields propertiesApi fields |> CG.list)
                 [ CG.fqFun awsCoreKVEncodeMod "object"
                 ]
     in
@@ -719,8 +719,8 @@ codecContainerField name container =
 {-| Outputs encoders for a list of fields and terminates the list with `Encoder.buildObject`.
 Helper function useful when building record encoders.
 -}
-encoderFields : List ( String, Type pos RefChecked, L1.Properties ) -> List Expression
-encoderFields fields =
+encoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
+encoderFields propertiesApi fields =
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
         []
         fields
