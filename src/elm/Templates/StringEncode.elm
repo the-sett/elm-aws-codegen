@@ -642,27 +642,6 @@ Helper function useful when building record encoders.
 -}
 encoderFields : List ( String, Type pos RefChecked, L1.Properties ) -> List Expression
 encoderFields fields =
-    let
-        _ =
-            List.foldl
-                (\( _, _, props ) _ ->
-                    let
-                        maybeLocName =
-                            Dict.get "locationName" props
-
-                        _ =
-                            case maybeLocName of
-                                Just _ ->
-                                    Debug.log "kvencoder locationName" maybeLocName
-
-                                Nothing ->
-                                    maybeLocName
-                    in
-                    ()
-                )
-                ()
-                fields
-    in
     List.foldr (\( fieldName, l1Type, _ ) accum -> codecTypeField fieldName l1Type :: accum)
         []
         fields

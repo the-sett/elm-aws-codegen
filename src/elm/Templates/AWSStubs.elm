@@ -33,6 +33,14 @@ import Tuple3
 import UrlParser exposing (UrlPart(..))
 
 
+
+-- TODO:
+-- 1.  Map locationName fields correctly. Choose better universal name for CODEC mapping of field
+-- names. "serializedName" for example.
+--
+-- 2. Responses may contain header fields. Therefore, response decoding needs to be partial...
+
+
 type AWSStubsError
     = CheckedPropertyMissing String PropSpec
     | CheckedPropertyWrongKind String PropSpec
