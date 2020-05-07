@@ -38,7 +38,9 @@ import UrlParser exposing (UrlPart(..))
 -- 1.  Map locationName fields correctly. Choose better universal name for CODEC mapping of field
 -- names. "serializedName" for example.
 --
--- 2. Responses may contain header fields. Therefore, response decoding needs to be partial...
+-- 2. What error type to use for the above? Its L3.L3Error.
+--
+-- 3. Responses may contain header fields. Therefore, response decoding needs to be partial...
 
 
 type AWSStubsError
