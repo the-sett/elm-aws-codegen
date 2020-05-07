@@ -19,7 +19,8 @@ import Set exposing (Set)
 
 
 type StringEncodeError
-    = UnsupportedType String
+    = L3Error L3.L3Error
+    | UnsupportedType String
     | UnsupportedDeclaration String
 
 
@@ -41,6 +42,9 @@ errorCatalogue =
 errorBuilder : ErrorBuilder pos StringEncodeError
 errorBuilder posFn err =
     case err of
+        L3Error l3error ->
+            L3.errorBuilder posFn l3error
+
         UnsupportedType name ->
             Errors.lookupError errorCatalogue
                 305
@@ -55,8 +59,6 @@ errorBuilder posFn err =
 
 
 
--- = CheckedPropertyMissing String PropSpec
--- | CheckedPropertyWrongKind String PropSpec
 -- processorImpl : ProcessorImpl pos AWSStubsError
 -- processorImpl =
 --     { name = "StringEncode"
