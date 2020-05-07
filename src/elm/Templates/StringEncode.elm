@@ -537,30 +537,30 @@ codecType l1Type =
 
 {-| Generates a field codec for a named field with an L1 type.
 -}
-codecTypeField : String -> Type pos RefChecked -> Expression
-codecTypeField name l1Type =
+codecTypeField : String -> String -> Type pos RefChecked -> Expression
+codecTypeField name serializedName l1Type =
     case l1Type of
         TUnit _ _ ->
-            codecUnit |> encoderField name
+            codecUnit |> encoderField name serializedName
 
         TBasic _ _ basic ->
             codecBasic basic
-                |> encoderField name
+                |> encoderField name serializedName
 
         TNamed _ _ named _ ->
             codecNamed named
-                |> encoderField name
+                |> encoderField name serializedName
 
         TProduct _ _ fields ->
             codecProduct (List.Nonempty.toList fields)
-                |> encoderField name
+                |> encoderField name serializedName
 
         TEmptyProduct _ _ ->
             codecProduct []
-                |> encoderField name
+                |> encoderField name serializedName
 
         TContainer _ _ container ->
-            codecContainerField name container
+            codecContainerField name serializedName container
 
         TFunction _ _ arg res ->
             CG.unit
@@ -699,26 +699,26 @@ codecProduct fields =
 {-| Generates a field codec for an L1 container type. The 'optional' type is mapped
 onto `Maybe` and makes use of `KVEncoder.optionalField`.
 -}
-codecContainerField : String -> Container pos RefChecked -> Expression
-codecContainerField name container =
+codecContainerField : String -> String -> Container pos RefChecked -> Expression
+codecContainerField name serializedName container =
     case container of
         CList l1Type ->
             CG.apply [ awsCoreKVEncodeFn "list", codecType l1Type ]
                 |> CG.parens
-                |> encoderField name
+                |> encoderField name serializedName
 
         CSet l1Type ->
             CG.apply [ awsCoreKVEncodeFn "set", codecType l1Type ]
                 |> CG.parens
-                |> encoderField name
+                |> encoderField name serializedName
 
         CDict l1keyType l1valType ->
             codecDict l1keyType l1valType
-                |> encoderField name
+                |> encoderField name serializedName
 
         COptional l1Type ->
             codecType l1Type
-                |> encoderOptionalField name
+                |> encoderOptionalField name serializedName
 
 
 {-| Outputs encoders for a list of fields and terminates the list with `Encoder.buildObject`.
@@ -738,15 +738,14 @@ encoderFields propertiesApi fields =
                         _ =
                             Debug.log "encoderFields" serName
                     in
-                    (codecTypeField serName l1Type |> Ok) :: accum
+                    (codecTypeField fieldName serName l1Type |> Ok) :: accum
 
                 Ok Nothing ->
-                    (codecTypeField fieldName l1Type |> Ok) :: accum
+                    (codecTypeField fieldName fieldName l1Type |> Ok) :: accum
 
                 Err err ->
                     Err err :: accum
     in
-    --                 ((propertiesApi.field fprops).getStringProperty "serializedName")
     List.foldl fieldMapperFn [] fields
         |> ResultME.combineList
         |> ResultME.mapError L3Error
@@ -754,11 +753,11 @@ encoderFields propertiesApi fields =
 
 {-| Helper function for building field encoders.
 -}
-encoderField : String -> Expression -> Expression
-encoderField name expr =
+encoderField : String -> String -> Expression -> Expression
+encoderField name serializedName expr =
     CG.applyBinOp
         (CG.tuple
-            [ CG.string name
+            [ CG.string serializedName
             , CG.access (CG.val "val") (Naming.safeCCL name)
             ]
         )
@@ -768,11 +767,11 @@ encoderField name expr =
 
 {-| Helper function for building optional field encoders.
 -}
-encoderOptionalField : String -> Expression -> Expression
-encoderOptionalField name expr =
+encoderOptionalField : String -> String -> Expression -> Expression
+encoderOptionalField name serializedName expr =
     CG.applyBinOp
         (CG.tuple
-            [ CG.string name
+            [ CG.string serializedName
             , CG.access (CG.val "val") (Naming.safeCCL name)
             ]
         )
