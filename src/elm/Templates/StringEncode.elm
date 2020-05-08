@@ -734,10 +734,6 @@ encoderFields propertiesApi fields =
             in
             case maybeSerName of
                 Ok (Just serName) ->
-                    let
-                        _ =
-                            Debug.log "encoderFields" serName
-                    in
                     (codecTypeField fieldName serName l1Type |> Ok) :: accum
 
                 Ok Nothing ->
