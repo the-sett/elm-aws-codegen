@@ -252,7 +252,7 @@ partialKVEncoder propertiesApi name fields =
                 |> CG.addExposing (CG.funExpose encodeFnName)
             )
         )
-        (codecNamedProduct propertiesApi name fields)
+        (kvEncoderNamedProduct propertiesApi name fields)
 
 
 {-| Generates a KVEncoder for an L1 type alias.
@@ -262,7 +262,7 @@ typeAliasKVEncoder propertiesApi name l1Type =
     ResultME.map
         (\impl ->
             let
-                codecFnName =
+                kvEncoderFnName =
                     Naming.safeCCL name ++ "KVEncoder"
 
                 typeName =
@@ -280,55 +280,21 @@ typeAliasKVEncoder propertiesApi name l1Type =
             ( FunDecl
                 (Just doc)
                 (Just sig)
-                codecFnName
+                kvEncoderFnName
                 [ CG.varPattern "val" ]
                 impl
             , CG.emptyLinkage
                 |> CG.addImport awsKVEncodeImport
-                |> CG.addExposing (CG.funExpose codecFnName)
+                |> CG.addExposing (CG.funExpose kvEncoderFnName)
             )
         )
-        (codecNamedType propertiesApi name l1Type)
-
-
-
--- customTypeKVEncoder : String -> List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> ( FunDecl, Linkage )
--- customTypeKVEncoder name constructors =
---     let
---         codecFnName =
---             Naming.safeCCL name ++ "KVEncoder"
---
---         typeName =
---             Naming.safeCCU name
---
---         sig =
---             CG.funAnn
---                 (CG.typed typeName [])
---                 (CG.listAnn (CG.tupleAnn [ CG.stringAnn, CG.stringAnn ]))
---
---         impl =
---             codecCustomType constructors
---
---         doc =
---             CG.emptyDocComment
---                 |> CG.markdown ("KVEncoder for " ++ typeName ++ ".")
---     in
---     ( FunDecl
---         (Just doc)
---         (Just sig)
---         codecFnName
---         [ CG.varPattern "val" ]
---         impl
---     , CG.emptyLinkage
---         |> CG.addImport awsKVEncodeImport
---         |> CG.addExposing (CG.funExpose codecFnName)
---     )
+        (kvEncoderNamedType propertiesApi name l1Type)
 
 
 enumKVEncoder : String -> List String -> ( FunDecl, Linkage )
 enumKVEncoder name constructors =
     let
-        codecFnName =
+        kvEncoderFnName =
             Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
@@ -363,13 +329,13 @@ enumKVEncoder name constructors =
     ( FunDecl
         (Just doc)
         (Just sig)
-        codecFnName
+        kvEncoderFnName
         [ CG.varPattern "val" ]
         impl
     , CG.combineLinkage
         [ CG.emptyLinkage
             |> CG.addImport enumImport
-            |> CG.addExposing (CG.funExpose codecFnName)
+            |> CG.addExposing (CG.funExpose kvEncoderFnName)
         , implLinkage
         ]
     )
@@ -386,7 +352,7 @@ restrictedKVEncoder name res =
                 RString _ ->
                     BString
 
-        codecFnName =
+        kvEncoderFnName =
             Naming.safeCCL name ++ "KVEncoder"
 
         typeName =
@@ -421,94 +387,40 @@ restrictedKVEncoder name res =
     ( FunDecl
         (Just doc)
         (Just sig)
-        codecFnName
+        kvEncoderFnName
         [ CG.varPattern "val" ]
         impl
     , CG.combineLinkage
         [ CG.emptyLinkage
             |> CG.addImport enumImport
-            |> CG.addExposing (CG.funExpose codecFnName)
+            |> CG.addExposing (CG.funExpose kvEncoderFnName)
         , implLinkage
         ]
     )
 
 
-
--- codecCustomType : List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> Expression
--- codecCustomType constructors =
---     let
---         codecVariant name args =
---             List.foldr
---                 (\( _, l1Type, _ ) accum -> codecType l1Type :: accum)
---                 [ Naming.safeCCU name |> CG.fun
---                 , Naming.safeCCU name |> CG.string
---                 , awsKVEncodeFn ("variant" ++ String.fromInt (List.length args))
---                 ]
---                 args
---                 |> List.reverse
---                 |> CG.apply
---     in
---     List.foldr (\( name, consArgs ) accum -> codecVariant name consArgs :: accum)
---         [ CG.apply [ awsKVEncodeFn "buildCustom" ] ]
---         constructors
---         |> CG.pipe
---             (CG.apply
---                 [ awsKVEncodeFn "custom"
---                 , codecMatchFn constructors
---                 ]
---             )
-
-
-codecMatchFn : List ( String, List ( String, Type pos RefChecked, L1.Properties ) ) -> Expression
-codecMatchFn constructors =
-    let
-        consFnName name =
-            "f" ++ Naming.safeCCL name
-
-        args =
-            List.foldr (\( name, _ ) accum -> (consFnName name |> CG.varPattern) :: accum)
-                [ CG.varPattern "value" ]
-                constructors
-
-        consPattern ( name, consArgs ) =
-            ( CG.namedPattern (Naming.safeCCU name)
-                (List.map (\( argName, _, _ ) -> CG.varPattern argName) consArgs)
-            , List.foldr (\( argName, _, _ ) accum -> CG.val argName :: accum)
-                [ consFnName name |> CG.fun ]
-                consArgs
-                |> List.reverse
-                |> CG.apply
-            )
-
-        matchFnBody =
-            List.map consPattern constructors
-                |> CG.caseExpr (CG.val "value")
-    in
-    CG.lambda args matchFnBody
-
-
 {-| Generates a KVEncoder for an L1 type that has been named as an alias.
 -}
-codecNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError Expression
-codecNamedType propertiesApi name l1Type =
+kvEncoderNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError Expression
+kvEncoderNamedType propertiesApi name l1Type =
     case l1Type of
         TUnit _ _ ->
-            codecUnit |> Ok
+            kvEncoderUnit |> Ok
 
         TBasic _ _ basic ->
-            codecType l1Type |> Ok
+            kvEncoderType l1Type |> Ok
 
         TNamed _ _ named _ ->
-            CG.string "codecNamedType_TNamed" |> Ok
+            CG.string "kvEncoderNamedType_TNamed" |> Ok
 
         TProduct _ _ fields ->
-            codecNamedProduct propertiesApi name (List.Nonempty.toList fields)
+            kvEncoderNamedProduct propertiesApi name (List.Nonempty.toList fields)
 
         TEmptyProduct _ _ ->
-            codecNamedProduct propertiesApi name []
+            kvEncoderNamedProduct propertiesApi name []
 
         TContainer _ _ container ->
-            codecType l1Type |> Ok
+            kvEncoderType l1Type |> Ok
 
         TFunction _ _ arg res ->
             CG.unit |> Ok
@@ -516,72 +428,72 @@ codecNamedType propertiesApi name l1Type =
 
 {-| Generates a KVEncoder for an L1 type.
 -}
-codecType : Type pos RefChecked -> Expression
-codecType l1Type =
+kvEncoderType : Type pos RefChecked -> Expression
+kvEncoderType l1Type =
     case l1Type of
         TBasic _ _ basic ->
-            codecBasic basic
+            kvEncoderBasic basic
 
         TNamed _ _ named _ ->
-            codecNamed named
+            kvEncoderNamed named
 
         TProduct _ _ fields ->
-            codecProduct (List.Nonempty.toList fields)
+            kvEncoderProduct (List.Nonempty.toList fields)
 
         TContainer _ _ container ->
-            codecContainer container
+            kvEncoderContainer container
 
         _ ->
             CG.unit
 
 
-{-| Generates a field codec for a named field with an L1 type.
+{-| Generates a field kvEncoder for a named field with an L1 type.
 -}
-codecTypeField : String -> String -> Type pos RefChecked -> Expression
-codecTypeField name serializedName l1Type =
+kvEncoderTypeField : String -> String -> Type pos RefChecked -> Expression
+kvEncoderTypeField name serializedName l1Type =
     case l1Type of
         TUnit _ _ ->
-            codecUnit |> encoderField name serializedName
+            kvEncoderUnit |> kvEncoderField name serializedName
 
         TBasic _ _ basic ->
-            codecBasic basic
-                |> encoderField name serializedName
+            kvEncoderBasic basic
+                |> kvEncoderField name serializedName
 
         TNamed _ _ named _ ->
-            codecNamed named
-                |> encoderField name serializedName
+            kvEncoderNamed named
+                |> kvEncoderField name serializedName
 
         TProduct _ _ fields ->
-            codecProduct (List.Nonempty.toList fields)
-                |> encoderField name serializedName
+            kvEncoderProduct (List.Nonempty.toList fields)
+                |> kvEncoderField name serializedName
 
         TEmptyProduct _ _ ->
-            codecProduct []
-                |> encoderField name serializedName
+            kvEncoderProduct []
+                |> kvEncoderField name serializedName
 
         TContainer _ _ container ->
-            codecContainerField name serializedName container
+            kvEncoderContainerField name serializedName container
 
         TFunction _ _ arg res ->
             CG.unit
 
 
-{-| Generates a codec for unit.
+{-| Generates a kvEncoder for unit.
 
 Decodes `()`, and encodes to JSON `null`.
 
 -}
-codecUnit =
+kvEncoderUnit =
     CG.apply
         [ awsKVEncodeFn "constant"
         , CG.unit
         ]
 
 
-{-| Generates a codec for a basic L1 type.
+{-| Generates a kvEncoder for a basic L1 type.
 -}
-codecBasic : Basic -> Expression
-codecBasic basic =
+kvEncoderBasic : Basic -> Expression
+kvEncoderBasic basic =
     case basic of
         BBool ->
             CG.apply
@@ -608,36 +520,36 @@ codecBasic basic =
                 ]
 
 
-codecNamed named =
+kvEncoderNamed named =
     CG.fun (Naming.safeCCL named ++ "KVEncoder")
 
 
-codecContainer : Container pos RefChecked -> Expression
-codecContainer container =
+kvEncoderContainer : Container pos RefChecked -> Expression
+kvEncoderContainer container =
     case container of
         CList l1Type ->
-            CG.apply [ awsKVEncodeFn "list", codecType l1Type, CG.val "val" ]
+            CG.apply [ awsKVEncodeFn "list", kvEncoderType l1Type, CG.val "val" ]
                 |> CG.parens
 
         CSet l1Type ->
-            CG.apply [ awsKVEncodeFn "set", codecType l1Type, CG.val "val" ]
+            CG.apply [ awsKVEncodeFn "set", kvEncoderType l1Type, CG.val "val" ]
                 |> CG.parens
 
         CDict l1keyType l1valType ->
-            codecDict l1keyType l1valType
+            kvEncoderDict l1keyType l1valType
 
         COptional l1Type ->
-            CG.apply [ awsKVEncodeFn "maybe", codecType l1Type, CG.val "val" ]
+            CG.apply [ awsKVEncodeFn "maybe", kvEncoderType l1Type, CG.val "val" ]
                 |> CG.parens
 
 
-codecDict : Type pos RefChecked -> Type pos RefChecked -> Expression
-codecDict l1keyType l1valType =
+kvEncoderDict : Type pos RefChecked -> Type pos RefChecked -> Expression
+kvEncoderDict l1keyType l1valType =
     case l1keyType of
         TNamed _ _ name (RcRestricted basic) ->
             CG.apply
                 [ awsKVEncodeFn "dict"
-                , codecType l1valType
+                , kvEncoderType l1valType
                 , CG.apply
                     [ CG.fqFun refinedMod "unboxedDict"
                     , CG.val (Naming.safeCCL name)
@@ -650,7 +562,7 @@ codecDict l1keyType l1valType =
         TNamed _ _ name RcEnum ->
             CG.apply
                 [ awsKVEncodeFn "dict"
-                , codecType l1valType
+                , kvEncoderType l1valType
                 , CG.apply
                     [ CG.fqFun refinedMod "stringDict"
                     , CG.val (Naming.safeCCL name)
@@ -661,15 +573,15 @@ codecDict l1keyType l1valType =
                 ]
 
         _ ->
-            CG.apply [ awsKVEncodeFn "dict", codecType l1valType, CG.val "val" ]
+            CG.apply [ awsKVEncodeFn "dict", kvEncoderType l1valType, CG.val "val" ]
                 |> CG.parens
 
 
-{-| Generates a codec for an L1 product type that has been named as an alias.
+{-| Generates a kvEncoder for an L1 product type that has been named as an alias.
 The alias name is also the constructor function for the type.
 -}
-codecNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError Expression
-codecNamedProduct propertiesApi name fields =
+kvEncoderNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError Expression
+kvEncoderNamedProduct propertiesApi name fields =
     ResultME.map
         (\fieldEncoders ->
             let
@@ -684,48 +596,48 @@ codecNamedProduct propertiesApi name fields =
             in
             impl
         )
-        (encoderFields propertiesApi fields)
+        (kvEncoderFields propertiesApi fields)
 
 
-{-| Generates a codec for an L1 product type that does not have a name.
+{-| Generates a kvEncoder for an L1 product type that does not have a name.
 Without a name there is no constructor function for the product, so it must be
 built explicitly by its fields.
 -}
-codecProduct : List ( String, Type pos RefChecked, L1.Properties ) -> Expression
-codecProduct fields =
-    CG.string "codecProduct"
+kvEncoderProduct : List ( String, Type pos RefChecked, L1.Properties ) -> Expression
+kvEncoderProduct fields =
+    CG.string "kvEncoderProduct"
 
 
-{-| Generates a field codec for an L1 container type. The 'optional' type is mapped
+{-| Generates a field kvEncoder for an L1 container type. The 'optional' type is mapped
 onto `Maybe` and makes use of `KVEncoder.optionalField`.
 -}
-codecContainerField : String -> String -> Container pos RefChecked -> Expression
-codecContainerField name serializedName container =
+kvEncoderContainerField : String -> String -> Container pos RefChecked -> Expression
+kvEncoderContainerField name serializedName container =
     case container of
         CList l1Type ->
-            CG.apply [ awsKVEncodeFn "list", codecType l1Type ]
+            CG.apply [ awsKVEncodeFn "list", kvEncoderType l1Type ]
                 |> CG.parens
-                |> encoderField name serializedName
+                |> kvEncoderField name serializedName
 
         CSet l1Type ->
-            CG.apply [ awsKVEncodeFn "set", codecType l1Type ]
+            CG.apply [ awsKVEncodeFn "set", kvEncoderType l1Type ]
                 |> CG.parens
-                |> encoderField name serializedName
+                |> kvEncoderField name serializedName
 
         CDict l1keyType l1valType ->
-            codecDict l1keyType l1valType
-                |> encoderField name serializedName
+            kvEncoderDict l1keyType l1valType
+                |> kvEncoderField name serializedName
 
         COptional l1Type ->
-            codecType l1Type
+            kvEncoderType l1Type
                 |> encoderOptionalField name serializedName
 
 
 {-| Outputs encoders for a list of fields and terminates the list with `Encoder.buildObject`.
 Helper function useful when building record encoders.
 -}
-encoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
-encoderFields propertiesApi fields =
+kvEncoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
+kvEncoderFields propertiesApi fields =
     let
         fieldMapperFn ( fieldName, l1Type, fprops ) accum =
             let
@@ -734,10 +646,10 @@ encoderFields propertiesApi fields =
             in
             case maybeSerName of
                 Ok (Just serName) ->
-                    (codecTypeField fieldName serName l1Type |> Ok) :: accum
+                    (kvEncoderTypeField fieldName serName l1Type |> Ok) :: accum
 
                 Ok Nothing ->
-                    (codecTypeField fieldName fieldName l1Type |> Ok) :: accum
+                    (kvEncoderTypeField fieldName fieldName l1Type |> Ok) :: accum
 
                 Err err ->
                     Err err :: accum
@@ -749,8 +661,8 @@ encoderFields propertiesApi fields =
 
 {-| Helper function for building field encoders.
 -}
-encoderField : String -> String -> Expression -> Expression
-encoderField name serializedName expr =
+kvEncoderField : String -> String -> Expression -> Expression
+kvEncoderField name serializedName expr =
     CG.applyBinOp
         (CG.tuple
             [ CG.string serializedName
