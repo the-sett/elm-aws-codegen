@@ -981,15 +981,31 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         , loweredLinkage
                         ]
 
+                -- function sig over all groups of fields, status, then header, then body.
+                -- (\field field2 .. ->
+                --
+                -- function body over the record type, pics out fields from fn args.
+                -- Blah {
+                --  field = field
+                --  , field2 = field2
+                -- })
+                --   |> statusCodeDecoder
+                --   |> headerKVDecoder
+                --   |> bodyFieldDecoder
+                --
+                -- Old decoder:
+                --
+                -- decoder =
+                --     CG.pipe
+                --         (CG.apply
+                --             [ CG.fqFun codecMod "decoder"
+                --             , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
+                --             ]
+                --         )
+                --         [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
+                --         |> CG.letVal "decoder"
                 decoder =
-                    CG.pipe
-                        (CG.apply
-                            [ CG.fqFun codecMod "decoder"
-                            , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
-                            ]
-                        )
-                        [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
-                        |> CG.letVal "decoder"
+                    CG.unit |> CG.letVal "decoder"
             in
             ( loweredType, decoder, linkage )
         )
