@@ -881,10 +881,13 @@ fieldAsString ( fname, l2type, _ ) =
 If there is no response type defined for the endpoint then `()` is used to indicate
 that the response has completed but returned no data.
 
+Not that some AWS service specs define a response type, but it is just an empty
+structure. These are given the response type `()` also.
+
 The output of this is the response type alias for the endpoint, the decoder for this
 expected response and any linkage that needs to be rolled up.
 
-When there is no response shape, the decoder will be `(AWS.Core.Decode.FixedResult ()`.
+When there is no response shape, the decoder will be `(AWS.Http.constantDecoder ()`.
 
 -}
 requestFnResponse :
@@ -895,11 +898,14 @@ requestFnResponse :
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
 requestFnResponse propertiesApi model name response =
     case response of
-        (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
-            nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType
+        L1.TNamed _ _ responseTypeName L2.RcTProduct ->
+            nameTypedResponseDecoder propertiesApi model responseTypeName response
+
+        L1.TNamed _ _ responseTypeName L2.RcTEmptyProduct ->
+            fixedResponseDecoder CG.unit |> Ok
 
         TUnit _ _ ->
-            fixedResponseDecoder |> Ok
+            fixedResponseDecoder CG.unit |> Ok
 
         _ ->
             L1.typeConsName response |> UnsupportedType |> ResultME.error
@@ -908,8 +914,8 @@ requestFnResponse propertiesApi model name response =
 {-| Generates a response decoder that always yield `()`. For use in situations
 where an endpoint does not give any response data.
 -}
-fixedResponseDecoder : ( TypeAnnotation, LetDeclaration, Linkage )
-fixedResponseDecoder =
+fixedResponseDecoder : Expression -> ( TypeAnnotation, LetDeclaration, Linkage )
+fixedResponseDecoder expr =
     let
         linkage =
             CG.emptyLinkage
@@ -919,7 +925,7 @@ fixedResponseDecoder =
         decoder =
             CG.apply
                 [ CG.fqVal awsHttpMod "constantDecoder"
-                , CG.unit
+                , expr
                 ]
                 |> CG.letVal "decoder"
 
@@ -938,31 +944,46 @@ nameTypedResponseDecoder :
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
 nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType =
-    let
-        ( loweredType, loweredLinkage ) =
-            Elm.Lang.lowerType l1ResponseType
+    ResultME.map3
+        (\statusCodeFields headerFields bodyFields ->
+            let
+                ( loweredType, loweredLinkage ) =
+                    Elm.Lang.lowerType l1ResponseType
 
-        responseType =
-            loweredType
+                responseType =
+                    loweredType
 
-        linkage =
-            CG.combineLinkage
-                [ CG.emptyLinkage
-                    |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
-                , loweredLinkage
-                ]
+                linkage =
+                    CG.combineLinkage
+                        [ CG.emptyLinkage
+                            |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
+                        , loweredLinkage
+                        ]
 
-        decoder =
-            CG.pipe
-                (CG.apply
-                    [ CG.fqFun codecMod "decoder"
-                    , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
-                    ]
-                )
-                [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
-                |> CG.letVal "decoder"
-    in
-    ( responseType, decoder, linkage ) |> Ok
+                decoder =
+                    CG.pipe
+                        (CG.apply
+                            [ CG.fqFun codecMod "decoder"
+                            , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
+                            ]
+                        )
+                        [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
+                        |> CG.letVal "decoder"
+            in
+            ( responseType, decoder, linkage )
+        )
+        (Query.deref responseTypeName model.declarations
+            |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+            |> ResultME.mapError L3Error
+        )
+        (Query.deref responseTypeName model.declarations
+            |> ResultME.andThen (filterProductDecl propertiesApi isInStatusCode)
+            |> ResultME.mapError L3Error
+        )
+        (Query.deref responseTypeName model.declarations
+            |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
+            |> ResultME.mapError L3Error
+        )
 
 
 
@@ -1113,6 +1134,11 @@ isInUri =
 isInBody : PropertyFilter pos ( String, Type pos ref, Properties )
 isInBody =
     isInLocation "body"
+
+
+isInStatusCode : PropertyFilter pos ( String, Type pos ref, Properties )
+isInStatusCode =
+    isInLocation "statusCode"
 
 
 isInLocation : String -> PropertyFilter pos ( String, Type pos ref, Properties )
