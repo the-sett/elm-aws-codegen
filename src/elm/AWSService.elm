@@ -14,7 +14,8 @@ module AWSService exposing
 {-| AWS Service2 Descriptor. This module provides the data model and decoders.
 -}
 
-import AWS.Core.Service exposing (Protocol(..), Signer(..), TimestampFormat(..), protocolEnum, signerEnum, timestampFormatEnum)
+import AWS.Config exposing (Protocol(..), Signer(..), TimestampFormat(..))
+import AWSEnums
 import Codec exposing (Codec)
 import Dict exposing (Dict)
 import Enum exposing (Enum)
@@ -63,11 +64,15 @@ type alias MetaData =
 
 
 protocolCodec =
-    Codec.build (Enum.encoder protocolEnum) (Enum.decoder protocolEnum)
+    Codec.build
+        (Enum.encoder AWSEnums.protocolEnum)
+        (Enum.decoder AWSEnums.protocolEnum)
 
 
 signerCodec =
-    Codec.build (Enum.encoder signerEnum) (Enum.decoder signerEnum)
+    Codec.build
+        (Enum.encoder AWSEnums.signerEnum)
+        (Enum.decoder AWSEnums.signerEnum)
 
 
 metaDataCodec =
@@ -228,7 +233,9 @@ type alias ShapeRef =
 
 
 timestampFormatCodec =
-    Codec.build (Enum.encoder timestampFormatEnum) (Enum.decoder timestampFormatEnum)
+    Codec.build
+        (Enum.encoder AWSEnums.timestampFormatEnum)
+        (Enum.decoder AWSEnums.timestampFormatEnum)
 
 
 shapeRefCodec =

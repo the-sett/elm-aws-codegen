@@ -8,7 +8,6 @@ module Templates.AWSStubs exposing
     , topLevelEnum
     )
 
-import AWS.Core.Service exposing (Protocol(..), Signer(..))
 import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)

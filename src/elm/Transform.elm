@@ -1,6 +1,6 @@
 module Transform exposing (transform)
 
-import AWS.Core.Service exposing (Protocol(..), Signer(..))
+import AWS.Config exposing (Protocol(..), Signer(..))
 import AWSService exposing (AWSService, AWSType(..), Location(..), Operation, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
