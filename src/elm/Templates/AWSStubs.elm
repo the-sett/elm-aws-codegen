@@ -64,6 +64,7 @@ type AWSStubsError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
     | UnsupportedType String
+    | UnsupportedDeclaration String
 
 
 {-| The error catalogue for this processor.
@@ -83,8 +84,13 @@ The parameter named []{arg|key=name } did not match a parameter in the URL speci
             }
           )
         , ( 403
-          , { title = "Unsupported Type for an AWS service response."
-            , body = "Cannot generate a response decoder for the Type []{arg|key=name }."
+          , { title = "Unsupported Type."
+            , body = "Type not support []{arg|key=name }."
+            }
+          )
+        , ( 404
+          , { title = "Unsupported Declarable."
+            , body = "Declarable not suported []{arg|key=name }."
             }
           )
         ]
@@ -114,6 +120,12 @@ errorBuilder posFn err =
         UnsupportedType name ->
             Errors.lookupError errorCatalogue
                 403
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+        UnsupportedDeclaration name ->
+            Errors.lookupError errorCatalogue
+                404
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
@@ -896,10 +908,21 @@ requestFnResponse :
     -> String
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
-requestFnResponse propertiesApi model name response =
-    case response of
+requestFnResponse propertiesApi model name responseType =
+    case responseType of
         L1.TNamed _ _ responseTypeName L2.RcTProduct ->
-            nameTypedResponseDecoder propertiesApi model responseTypeName response
+            ResultME.andThen
+                (\responseDecl ->
+                    case responseDecl of
+                        L1.DAlias _ _ (L1.TProduct _ _ fields) ->
+                            nameTypedResponseDecoder propertiesApi model responseTypeName responseType fields
+
+                        _ ->
+                            L1.declarableConsName responseDecl |> UnsupportedDeclaration |> ResultME.error
+                )
+                (Query.deref responseTypeName model.declarations
+                    |> ResultME.mapError L3Error
+                )
 
         L1.TNamed _ _ responseTypeName L2.RcTEmptyProduct ->
             fixedResponseDecoder CG.unit |> Ok
@@ -908,7 +931,7 @@ requestFnResponse propertiesApi model name response =
             fixedResponseDecoder CG.unit |> Ok
 
         _ ->
-            L1.typeConsName response |> UnsupportedType |> ResultME.error
+            L1.typeConsName responseType |> UnsupportedType |> ResultME.error
 
 
 {-| Generates a response decoder that always yield `()`. For use in situations
@@ -942,16 +965,14 @@ nameTypedResponseDecoder :
     -> L3 pos
     -> String
     -> L1.Type pos L2.RefChecked
+    -> Nonempty (Field pos ref)
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
-nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType =
+nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fields =
     ResultME.map3
         (\statusCodeFields headerFields bodyFields ->
             let
                 ( loweredType, loweredLinkage ) =
                     Elm.Lang.lowerType l1ResponseType
-
-                responseType =
-                    loweredType
 
                 linkage =
                     CG.combineLinkage
@@ -970,7 +991,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType =
                         [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
                         |> CG.letVal "decoder"
             in
-            ( responseType, decoder, linkage )
+            ( loweredType, decoder, linkage )
         )
         (Query.deref responseTypeName model.declarations
             |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
