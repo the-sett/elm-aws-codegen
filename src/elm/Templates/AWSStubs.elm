@@ -311,42 +311,32 @@ service propertiesApi model =
         |> ResultME.mapError L3Error
 
 
-optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error LetDeclaration
+optionsFn : PropertiesAPI pos -> L3 pos -> ResultME L3.L3Error (List Expression)
 optionsFn propertiesApi model =
     ResultME.map4
         (\jsonVersion signingName targetPrefix xmlNamespace ->
             let
                 jsonVersionOption =
                     Maybe.map
-                        (\name -> CG.apply [ CG.fqFun coreServiceMod "setJsonVersion", CG.string name ])
+                        (\name -> CG.apply [ CG.fqFun awsConfigMod "withJsonVersion", CG.string name ])
                         jsonVersion
 
                 signingNameOption =
                     Maybe.map
-                        (\name -> CG.apply [ CG.fqFun coreServiceMod "setSigningName", CG.string name ])
+                        (\name -> CG.apply [ CG.fqFun awsConfigMod "withSigningName", CG.string name ])
                         signingName
 
                 targetPrefixOption =
                     Maybe.map
-                        (\name -> CG.apply [ CG.fqFun coreServiceMod "setTargetPrefix", CG.string name ])
+                        (\name -> CG.apply [ CG.fqFun awsConfigMod "withTargetPrefix", CG.string name ])
                         targetPrefix
 
                 xmlNamespaceOption =
                     Maybe.map
-                        (\name -> CG.apply [ CG.fqFun coreServiceMod "setXmlNamespace", CG.string name ])
+                        (\name -> CG.apply [ CG.fqFun awsConfigMod "withXmlNamespace", CG.string name ])
                         xmlNamespace
-
-                options =
-                    [ jsonVersionOption, signingNameOption, targetPrefixOption, xmlNamespaceOption ] |> Maybe.Extra.values
             in
-            (case options of
-                [] ->
-                    CG.fun "identity"
-
-                op :: ops ->
-                    CG.chain op (List.map CG.parens ops)
-            )
-                |> CG.letFunction "optionsFn" []
+            [ jsonVersionOption, signingNameOption, targetPrefixOption, xmlNamespaceOption ] |> Maybe.Extra.values
         )
         (propertiesApi.top.getOptionalStringProperty "jsonVersion")
         (propertiesApi.top.getOptionalStringProperty "signingName")
@@ -361,19 +351,24 @@ regionalService propertiesApi model =
             let
                 sig =
                     CG.funAnn
-                        (CG.fqTyped coreServiceMod "Region" [])
-                        (CG.fqTyped coreServiceMod "Service" [])
+                        (CG.fqTyped awsConfigMod "Region" [])
+                        (CG.fqTyped awsServiceMod "Service" [])
+
+                fromConfig =
+                    CG.fqFun awsServiceMod "service"
 
                 impl =
-                    CG.apply
-                        [ CG.fqFun coreServiceMod "defineRegional"
-                        , CG.string endpointPrefix
-                        , CG.string apiVersion
-                        , CG.fqVal coreServiceMod protocol
-                        , CG.fqVal coreServiceMod signer
-                        , CG.fun "optionsFn"
-                        ]
-                        |> CG.letExpr [ options ]
+                    CG.pipe
+                        (CG.apply
+                            [ CG.fqFun awsConfigMod "defineRegional"
+                            , CG.string endpointPrefix
+                            , CG.string apiVersion
+                            , CG.fqVal awsConfigMod protocol
+                            , CG.fqVal awsConfigMod signer
+                            , CG.val "region"
+                            ]
+                        )
+                        (List.append options [ fromConfig ])
 
                 doc =
                     CG.emptyDocComment
@@ -383,10 +378,11 @@ regionalService propertiesApi model =
                 (Just doc)
                 (Just sig)
                 "service"
-                []
+                [ CG.varPattern "region" ]
                 impl
             , CG.emptyLinkage
-                |> CG.addImport (CG.importStmt coreServiceMod Nothing Nothing)
+                |> CG.addImport (CG.importStmt awsConfigMod Nothing Nothing)
+                |> CG.addImport (CG.importStmt awsServiceMod Nothing Nothing)
                 |> CG.addExposing (CG.funExpose "service")
             )
         )
@@ -403,18 +399,22 @@ globalService propertiesApi model =
         (\endpointPrefix apiVersion protocol signer options ->
             let
                 sig =
-                    CG.fqTyped coreServiceMod "Service" []
+                    CG.fqTyped awsServiceMod "Service" []
+
+                fromConfig =
+                    CG.fqFun awsServiceMod "service"
 
                 impl =
-                    CG.apply
-                        [ CG.fqFun coreServiceMod "defineGlobal"
-                        , CG.string endpointPrefix
-                        , CG.string apiVersion
-                        , CG.fqVal coreServiceMod protocol
-                        , CG.fqVal coreServiceMod signer
-                        , CG.fun "optionsFn"
-                        ]
-                        |> CG.letExpr [ options ]
+                    CG.pipe
+                        (CG.apply
+                            [ CG.fqFun awsConfigMod "defineRegional"
+                            , CG.string endpointPrefix
+                            , CG.string apiVersion
+                            , CG.fqVal awsConfigMod protocol
+                            , CG.fqVal awsConfigMod signer
+                            ]
+                        )
+                        (List.append options [ fromConfig ])
 
                 doc =
                     CG.emptyDocComment
@@ -427,7 +427,8 @@ globalService propertiesApi model =
                 []
                 impl
             , CG.emptyLinkage
-                |> CG.addImport (CG.importStmt coreServiceMod Nothing Nothing)
+                |> CG.addImport (CG.importStmt awsConfigMod Nothing Nothing)
+                |> CG.addImport (CG.importStmt awsServiceMod Nothing Nothing)
                 |> CG.addExposing (CG.funExpose "service")
             )
         )
@@ -519,7 +520,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                     requestFnResponse name response
 
                 wrappedResponseType =
-                    CG.fqTyped coreHttpMod "Request" [ responseType ]
+                    CG.fqTyped awsHttpMod "Request" [ responseType ]
 
                 requestSig =
                     case maybeRequestType of
@@ -527,7 +528,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             CG.funAnn requestType wrappedResponseType
 
                         Nothing ->
-                            CG.fqTyped coreHttpMod "Request" [ responseType ]
+                            CG.fqTyped awsHttpMod "Request" [ responseType ]
 
                 maybeAddHeaders reqImpl =
                     Maybe.map
@@ -535,11 +536,11 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             CG.applyBinOp reqImpl
                                 CG.piper
                                 (CG.apply
-                                    [ CG.fqVal coreHttpMod "addHeaders"
+                                    [ CG.fqVal awsHttpMod "addHeaders"
                                     , CG.parens
                                         (CG.pipe
                                             (CG.apply [ CG.val "headersEncoder", CG.val "req" ])
-                                            [ CG.fqFun awsCoreKVEncodeMod "encode" ]
+                                            [ CG.fqFun awsKVEncodeMod "encode" ]
                                         )
                                     ]
                                 )
@@ -553,11 +554,11 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                             CG.applyBinOp reqImpl
                                 CG.piper
                                 (CG.apply
-                                    [ CG.fqVal coreHttpMod "addQuery"
+                                    [ CG.fqVal awsHttpMod "addQuery"
                                     , CG.parens
                                         (CG.pipe
                                             (CG.apply [ CG.val "queryEncoder", CG.val "req" ])
-                                            [ CG.fqFun awsCoreKVEncodeMod "encode" ]
+                                            [ CG.fqFun awsKVEncodeMod "encode" ]
                                         )
                                     ]
                                 )
@@ -567,9 +568,9 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
 
                 baseRequestImpl =
                     CG.apply
-                        [ CG.fqFun coreHttpMod "requestWithJsonDecoder"
+                        [ CG.fqFun awsHttpMod "request"
                         , CG.string (Naming.safeCCU name)
-                        , CG.fqVal coreHttpMod httpMethod
+                        , CG.fqVal awsHttpMod httpMethod
                         , CG.val "url"
                         , CG.val "jsonBody"
                         , CG.val "decoder"
@@ -606,7 +607,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                 [ requestLinkage
                 , responseLinkage
                 , CG.emptyLinkage
-                    |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                    |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                     |> CG.addExposing (CG.funExpose (Naming.safeCCL name))
                 ]
             )
@@ -669,13 +670,13 @@ requestFnRequest propertiesApi model name urlSpec request =
                                 jsonBody =
                                     case bodyFields of
                                         [] ->
-                                            CG.fqVal coreHttpMod "emptyBody"
+                                            CG.fqVal awsHttpMod "emptyBody"
                                                 |> CG.letVal "jsonBody"
 
                                         _ ->
                                             CG.pipe (CG.val "req")
                                                 [ CG.val "encoder"
-                                                , CG.fqVal coreHttpMod "jsonBody"
+                                                , CG.fqVal awsHttpMod "jsonBody"
                                                 ]
                                                 |> CG.letVal "jsonBody"
 
@@ -683,7 +684,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                     CG.combineLinkage
                                         (Maybe.Extra.values
                                             [ CG.emptyLinkage
-                                                |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                                                |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                                                 |> Just
                                             , loweredLinkage |> Just
                                             , encoderLinkage
@@ -732,11 +733,11 @@ requestFnRequest propertiesApi model name urlSpec request =
         _ ->
             let
                 emptyJsonBody =
-                    CG.fqVal coreHttpMod "emptyBody"
+                    CG.fqVal awsHttpMod "emptyBody"
                         |> CG.letVal "jsonBody"
 
                 linkage =
-                    CG.emptyLinkage |> CG.addImport (CG.importStmt coreHttpMod Nothing Nothing)
+                    CG.emptyLinkage |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
             in
             { maybeRequestType = Nothing
             , argPatterns = []
@@ -894,16 +895,18 @@ requestFnResponse name response =
                 linkage =
                     CG.combineLinkage
                         [ CG.emptyLinkage
-                            |> CG.addImport (CG.importStmt coreDecodeMod Nothing Nothing)
+                            |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                         , loweredLinkage
                         ]
 
                 decoder =
-                    CG.apply
-                        [ CG.fqFun codecMod "decoder"
-                        , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
-                        ]
-                        |> CG.parens
+                    CG.pipe
+                        (CG.apply
+                            [ CG.fqFun codecMod "decoder"
+                            , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
+                            ]
+                        )
+                        [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
                         |> CG.letVal "decoder"
             in
             ( responseType, decoder, linkage )
@@ -912,12 +915,12 @@ requestFnResponse name response =
             let
                 linkage =
                     CG.emptyLinkage
-                        |> CG.addImport (CG.importStmt coreDecodeMod Nothing Nothing)
+                        |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                         |> CG.addImport decodeImport
 
                 decoder =
                     CG.apply
-                        [ CG.fqVal decodeMod "succeed"
+                        [ CG.fqVal awsHttpMod "constantDecoder"
                         , CG.unit
                         ]
                         |> CG.letVal "decoder"
@@ -1107,9 +1110,24 @@ combineDeclaration declList =
         declList
 
 
-awsCoreKVEncodeMod : List String
-awsCoreKVEncodeMod =
-    [ "AWS", "Core", "KVEncode" ]
+awsConfigMod : List String
+awsConfigMod =
+    [ "AWS", "Config" ]
+
+
+awsHttpMod : List String
+awsHttpMod =
+    [ "AWS", "Http" ]
+
+
+awsKVEncodeMod : List String
+awsKVEncodeMod =
+    [ "AWS", "KVEncode" ]
+
+
+awsServiceMod : List String
+awsServiceMod =
+    [ "AWS", "Service" ]
 
 
 decodeMod : List String
@@ -1120,21 +1138,6 @@ decodeMod =
 codecMod : List String
 codecMod =
     [ "Codec" ]
-
-
-coreHttpMod : List String
-coreHttpMod =
-    [ "AWS", "Core", "Http" ]
-
-
-coreDecodeMod : List String
-coreDecodeMod =
-    [ "AWS", "Core", "Decode" ]
-
-
-coreServiceMod : List String
-coreServiceMod =
-    [ "AWS", "Core", "Service" ]
 
 
 refinedMod : List String
