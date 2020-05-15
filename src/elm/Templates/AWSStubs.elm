@@ -12,6 +12,7 @@ import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.Codec
+import Elm.Decode
 import Elm.Encode exposing (defaultEncoderOptions)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Lang
@@ -981,6 +982,16 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         , loweredLinkage
                         ]
 
+                bodyDecoder =
+                    case bodyFields of
+                        [] ->
+                            CG.val "noBody"
+
+                        bf :: bfs ->
+                            Elm.Decode.partialDecoder Elm.Decode.defaultDecoderOptions "" (Nonempty bf bfs)
+                                |> FunDecl.asExpression FunDecl.defaultOptions
+                                |> Tuple.first
+
                 decoder =
                     CG.pipe
                         (CG.lambda
@@ -1000,7 +1011,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         )
                         [ CG.val "statusCodeDecoder"
                         , CG.val "headerDecoder"
-                        , CG.val "bodyDecoder"
+                        , bodyDecoder
                         ]
                         |> CG.letVal "decoder"
             in
