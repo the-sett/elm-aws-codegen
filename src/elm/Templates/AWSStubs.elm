@@ -981,31 +981,28 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         , loweredLinkage
                         ]
 
-                -- function sig over all groups of fields, status, then header, then body.
-                -- (\field field2 .. ->
-                --
-                -- function body over the record type, pics out fields from fn args.
-                -- Blah {
-                --  field = field
-                --  , field2 = field2
-                -- })
-                --   |> statusCodeDecoder
-                --   |> headerKVDecoder
-                --   |> bodyFieldDecoder
-                --
-                -- Old decoder:
-                --
-                -- decoder =
-                --     CG.pipe
-                --         (CG.apply
-                --             [ CG.fqFun codecMod "decoder"
-                --             , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
-                --             ]
-                --         )
-                --         [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
-                --         |> CG.letVal "decoder"
                 decoder =
-                    CG.unit |> CG.letVal "decoder"
+                    CG.pipe
+                        (CG.lambda
+                            (List.map (\( fname, _, _ ) -> Naming.safeCCL fname |> CG.varPattern)
+                                (statusCodeFields ++ headerFields ++ bodyFields)
+                            )
+                            (CG.record
+                                (Nonempty.map
+                                    (\( fname, _, _ ) ->
+                                        ( Naming.safeCCL fname, CG.val (Naming.safeCCL fname) )
+                                    )
+                                    fields
+                                    |> Nonempty.toList
+                                )
+                            )
+                            |> CG.parens
+                        )
+                        [ CG.val "statusCodeDecoder"
+                        , CG.val "headerDecoder"
+                        , CG.val "bodyDecoder"
+                        ]
+                        |> CG.letVal "decoder"
             in
             ( loweredType, decoder, linkage )
         )
@@ -1024,42 +1021,6 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
 
 
 
--- Response with header fields and status code:
---
---    "InvocationResponse": {
---       "type": "structure",
---       "members": {
---         "StatusCode": {
---           "shape": "Integer",
---           "documentation": "<p>The HTTP status code is in the 200 range for a successful request. For the <code>RequestResponse</code> invocation type, this status code is
--- 200. For the <code>Event</code> invocation type, this status code is 202. For the <code>DryRun</code> invocation type, the status code is 204.</p>",
---           "location": "statusCode"
---         },
---         "FunctionError": {
---           "shape": "String",
---           "documentation": "<p>If present, indicates that an error occurred during function execution. Details about the error are included in the response payload.</p> <ul
--- > <li> <p> <code>Handled</code> - The runtime caught an error thrown by the function and formatted it into a JSON document.</p> </li> <li> <p> <code>Unhandled</code> - The
--- runtime didn't handle the error. For example, the function ran out of memory or timed out.</p> </li> </ul>",
---           "location": "header",
---           "locationName": "X-Amz-Function-Error"
---         },
---         "LogResult": {
---           "shape": "String",
---           "documentation": "<p>The last 4 KB of the execution log, which is base64 encoded.</p>",
---           "location": "header",
---           "locationName": "X-Amz-Log-Result"
---         },
---         "Payload": {
---           "shape": "Blob",
---           "documentation": "<p>The response from the function, or an error object.</p>"
---         },
---         "ExecutedVersion": {
---           "shape": "Version",
---           "documentation": "<p>The version of the function that executed. When you invoke a function with an alias, this indicates which version the alias resolved to.</p>",
---           "location": "header",
---           "locationName": "X-Amz-Executed-Version"
---         }
---       },
 --== Types Declarations
 
 
