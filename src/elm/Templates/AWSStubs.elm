@@ -621,7 +621,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
             )
         )
         (requestFnRequest propertiesApi model name urlSpec request)
-        (requestFnResponse name response)
+        (requestFnResponse propertiesApi model name response)
 
 
 {-| Figures out what the request type for the endpoint will be.
@@ -888,59 +888,81 @@ When there is no response shape, the decoder will be `(AWS.Core.Decode.FixedResu
 
 -}
 requestFnResponse :
-    String
+    PropertiesAPI pos
+    -> L3 pos
+    -> String
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
-requestFnResponse name response =
+requestFnResponse propertiesApi model name response =
     case response of
         (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
-            let
-                ( loweredType, loweredLinkage ) =
-                    Elm.Lang.lowerType l1ResponseType
-
-                responseType =
-                    loweredType
-
-                linkage =
-                    CG.combineLinkage
-                        [ CG.emptyLinkage
-                            |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
-                        , loweredLinkage
-                        ]
-
-                decoder =
-                    CG.pipe
-                        (CG.apply
-                            [ CG.fqFun codecMod "decoder"
-                            , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
-                            ]
-                        )
-                        [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
-                        |> CG.letVal "decoder"
-            in
-            ( responseType, decoder, linkage ) |> Ok
+            nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType
 
         TUnit _ _ ->
-            let
-                linkage =
-                    CG.emptyLinkage
-                        |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
-                        |> CG.addImport decodeImport
-
-                decoder =
-                    CG.apply
-                        [ CG.fqVal awsHttpMod "constantDecoder"
-                        , CG.unit
-                        ]
-                        |> CG.letVal "decoder"
-
-                responseType =
-                    CG.unitAnn
-            in
-            ( responseType, decoder, linkage ) |> Ok
+            fixedResponseDecoder |> Ok
 
         _ ->
             L1.typeConsName response |> UnsupportedType |> ResultME.error
+
+
+{-| Generates a response decoder that always yield `()`. For use in situations
+where an endpoint does not give any response data.
+-}
+fixedResponseDecoder : ( TypeAnnotation, LetDeclaration, Linkage )
+fixedResponseDecoder =
+    let
+        linkage =
+            CG.emptyLinkage
+                |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
+                |> CG.addImport decodeImport
+
+        decoder =
+            CG.apply
+                [ CG.fqVal awsHttpMod "constantDecoder"
+                , CG.unit
+                ]
+                |> CG.letVal "decoder"
+
+        responseType =
+            CG.unitAnn
+    in
+    ( responseType, decoder, linkage )
+
+
+{-| Generates a response decoder for a nemd type.
+-}
+nameTypedResponseDecoder :
+    PropertiesAPI pos
+    -> L3 pos
+    -> String
+    -> L1.Type pos L2.RefChecked
+    -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
+nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType =
+    let
+        ( loweredType, loweredLinkage ) =
+            Elm.Lang.lowerType l1ResponseType
+
+        responseType =
+            loweredType
+
+        linkage =
+            CG.combineLinkage
+                [ CG.emptyLinkage
+                    |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
+                , loweredLinkage
+                ]
+
+        decoder =
+            CG.pipe
+                (CG.apply
+                    [ CG.fqFun codecMod "decoder"
+                    , CG.val (Naming.safeCCL responseTypeName ++ "Codec")
+                    ]
+                )
+                [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
+                |> CG.letVal "decoder"
+    in
+    ( responseType, decoder, linkage ) |> Ok
 
 
 
