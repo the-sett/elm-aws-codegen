@@ -63,6 +63,7 @@ type AWSStubsError
     | KVEncodeError KVEncode.KVEncodeError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
+    | UnsupportedType String
 
 
 {-| The error catalogue for this processor.
@@ -79,6 +80,11 @@ errorCatalogue =
             , body = """
 The parameter named []{arg|key=name } did not match a parameter in the URL specification.
 """
+            }
+          )
+        , ( 403
+          , { title = "Unsupported Type for an AWS service response."
+            , body = "Cannot generate a response decoder for the Type []{arg|key=name }."
             }
           )
         ]
@@ -102,6 +108,12 @@ errorBuilder posFn err =
         UnmatchedUrlParam name ->
             Errors.lookupError errorCatalogue
                 402
+                (Dict.fromList [ ( "name", name ) ])
+                []
+
+        UnsupportedType name ->
+            Errors.lookupError errorCatalogue
+                403
                 (Dict.fromList [ ( "name", name ) ])
                 []
 
@@ -512,12 +524,9 @@ requestFnFromParams :
     -> Maybe String
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFnFromParams propertiesApi model name request response urlSpec httpMethod documentation =
-    ResultME.map
-        (\{ maybeRequestType, argPatterns, encoder, setHeaders, setQueryParams, jsonBody, requestLinkage, url } ->
+    ResultME.map2
+        (\{ maybeRequestType, argPatterns, encoder, setHeaders, setQueryParams, jsonBody, requestLinkage, url } ( responseType, responseDecoder, responseLinkage ) ->
             let
-                ( responseType, responseDecoder, responseLinkage ) =
-                    requestFnResponse name response
-
                 wrappedResponseType =
                     CG.fqTyped awsHttpMod "Request" [ responseType ]
 
@@ -612,6 +621,7 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
             )
         )
         (requestFnRequest propertiesApi model name urlSpec request)
+        (requestFnResponse name response)
 
 
 {-| Figures out what the request type for the endpoint will be.
@@ -880,7 +890,7 @@ When there is no response shape, the decoder will be `(AWS.Core.Decode.FixedResu
 requestFnResponse :
     String
     -> L1.Type pos L2.RefChecked
-    -> ( TypeAnnotation, LetDeclaration, Linkage )
+    -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
 requestFnResponse name response =
     case response of
         (L1.TNamed _ _ responseTypeName _) as l1ResponseType ->
@@ -908,9 +918,9 @@ requestFnResponse name response =
                         [ CG.fqFun awsHttpMod "jsonBodyDecoder" ]
                         |> CG.letVal "decoder"
             in
-            ( responseType, decoder, linkage )
+            ( responseType, decoder, linkage ) |> Ok
 
-        _ ->
+        TUnit _ _ ->
             let
                 linkage =
                     CG.emptyLinkage
@@ -927,10 +937,49 @@ requestFnResponse name response =
                 responseType =
                     CG.unitAnn
             in
-            ( responseType, decoder, linkage )
+            ( responseType, decoder, linkage ) |> Ok
+
+        _ ->
+            L1.typeConsName response |> UnsupportedType |> ResultME.error
 
 
 
+-- Response with header fields and status code:
+--
+--    "InvocationResponse": {
+--       "type": "structure",
+--       "members": {
+--         "StatusCode": {
+--           "shape": "Integer",
+--           "documentation": "<p>The HTTP status code is in the 200 range for a successful request. For the <code>RequestResponse</code> invocation type, this status code is
+-- 200. For the <code>Event</code> invocation type, this status code is 202. For the <code>DryRun</code> invocation type, the status code is 204.</p>",
+--           "location": "statusCode"
+--         },
+--         "FunctionError": {
+--           "shape": "String",
+--           "documentation": "<p>If present, indicates that an error occurred during function execution. Details about the error are included in the response payload.</p> <ul
+-- > <li> <p> <code>Handled</code> - The runtime caught an error thrown by the function and formatted it into a JSON document.</p> </li> <li> <p> <code>Unhandled</code> - The
+-- runtime didn't handle the error. For example, the function ran out of memory or timed out.</p> </li> </ul>",
+--           "location": "header",
+--           "locationName": "X-Amz-Function-Error"
+--         },
+--         "LogResult": {
+--           "shape": "String",
+--           "documentation": "<p>The last 4 KB of the execution log, which is base64 encoded.</p>",
+--           "location": "header",
+--           "locationName": "X-Amz-Log-Result"
+--         },
+--         "Payload": {
+--           "shape": "Blob",
+--           "documentation": "<p>The response from the function, or an error object.</p>"
+--         },
+--         "ExecutedVersion": {
+--           "shape": "Version",
+--           "documentation": "<p>The version of the function that executed. When you invoke a function with an alias, this indicates which version the alias resolved to.</p>",
+--           "location": "header",
+--           "locationName": "X-Amz-Executed-Version"
+--         }
+--       },
 --== Types Declarations
 
 
