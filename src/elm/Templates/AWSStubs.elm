@@ -1065,7 +1065,17 @@ typeDeclaration propertiesAPI name decl =
 
 jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCodecs propertiesApi model =
-    Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
+    Query.filterDictByProps propertiesApi
+        (Query.notPropFilter
+            (Query.orPropFilter
+                (Query.orPropFilter
+                    isRequest
+                    isResponse
+                )
+                isExcluded
+            )
+        )
+        model.declarations
         |> ResultME.map (Dict.map jsonCodec)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
@@ -1090,7 +1100,17 @@ jsonCodec name decl =
 
 kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoders propertiesApi model =
-    Query.filterDictByProps propertiesApi (Query.notPropFilter (Query.orPropFilter isRequest isExcluded)) model.declarations
+    Query.filterDictByProps propertiesApi
+        (Query.notPropFilter
+            (Query.orPropFilter
+                (Query.orPropFilter
+                    isRequest
+                    isResponse
+                )
+                isExcluded
+            )
+        )
+        model.declarations
         |> ResultME.mapError L3Error
         |> ResultME.map (Dict.map (kvEncoder propertiesApi))
         |> ResultME.map Dict.values
@@ -1167,6 +1187,19 @@ isRequest : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
 isRequest propertiesAPI decl =
     case (propertiesAPI.declarable decl).getOptionalEnumProperty topLevelEnum "topLevel" of
         Ok (Just "request") ->
+            Ok True
+
+        Ok blah ->
+            Ok False
+
+        Err err ->
+            Err err
+
+
+isResponse : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+isResponse propertiesAPI decl =
+    case (propertiesAPI.declarable decl).getOptionalEnumProperty topLevelEnum "topLevel" of
+        Ok (Just "response") ->
             Ok True
 
         Ok blah ->
