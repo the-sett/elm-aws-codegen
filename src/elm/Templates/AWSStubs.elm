@@ -27,7 +27,7 @@ import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
-import Templates.StringEncode as StringEncode
+import Templates.KVEncode as KVEncode
 import Tuple3
 import UrlParser exposing (UrlPart(..))
 
@@ -54,13 +54,13 @@ processorImpl =
 
 --=== Wire up processors this depends on.
 -- stringEncodeProcessor =
---     L3.builder posFn StringEncode.processorImpl
+--     L3.builder posFn KVEncode.processorImpl
 --=== Errors
 
 
 type AWSStubsError
     = L3Error L3.L3Error
-    | StringEncodeError StringEncode.StringEncodeError
+    | KVEncodeError KVEncode.KVEncodeError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
 
@@ -90,8 +90,8 @@ errorBuilder posFn err =
         L3Error l3error ->
             L3.errorBuilder posFn l3error
 
-        StringEncodeError stringEncodeError ->
-            StringEncode.errorBuilder posFn stringEncodeError
+        KVEncodeError stringEncodeError ->
+            KVEncode.errorBuilder posFn stringEncodeError
 
         UrlDidNotParse errMsg ->
             Errors.lookupError errorCatalogue
@@ -236,17 +236,17 @@ check l3 =
 generate : (pos -> SourceLines) -> PropertiesAPI pos -> L3 pos -> ResultME Error File
 generate posFn propertiesApi model =
     ResultME.map6
-        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( kvStringEncoders, kvStringEncodersLinkage ) documentation ->
+        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( kvKVEncoders, kvKVEncodersLinkage ) documentation ->
             let
                 declarations =
-                    kvStringEncoders
+                    kvKVEncoders
                         |> List.append codecs
                         |> List.append types
                         |> List.append endpoints
                         |> (::) serviceFn
 
                 linkages =
-                    [ serviceLinkage, operationsLinkage, typeDeclLinkage, codecsLinkage, kvStringEncodersLinkage ]
+                    [ serviceLinkage, operationsLinkage, typeDeclLinkage, codecsLinkage, kvKVEncodersLinkage ]
 
                 ( imports, exposings ) =
                     CG.combineLinkage linkages
@@ -264,7 +264,7 @@ generate posFn propertiesApi model =
                         |> CG.markdown "# JSON Codecs for the data model."
                         |> CG.docTagsFromExposings (Tuple.second codecsLinkage)
                         |> CG.markdown "# Key-Value String encoders for the data model."
-                        |> CG.docTagsFromExposings (Tuple.second kvStringEncodersLinkage)
+                        |> CG.docTagsFromExposings (Tuple.second kvKVEncodersLinkage)
             in
             module_ propertiesApi model exposings
                 |> ResultME.map (\moduleSpec -> CG.file moduleSpec imports declarations (Just doc))
@@ -776,10 +776,10 @@ headersFn :
 headersFn propertiesApi fields =
     let
         headersEncoderFn =
-            StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
+            KVEncode.partialKVEncoder propertiesApi "requestTypeName" fields
                 |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "headersEncoder" })
                 |> ResultME.map (Tuple.mapBoth Just Just)
-                |> ResultME.mapError StringEncodeError
+                |> ResultME.mapError KVEncodeError
     in
     case fields of
         [] ->
@@ -796,10 +796,10 @@ queryFn :
 queryFn propertiesApi fields =
     let
         queryEncoderFn =
-            StringEncode.partialKVEncoder propertiesApi "requestTypeName" fields
+            KVEncode.partialKVEncoder propertiesApi "requestTypeName" fields
                 |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "queryEncoder" })
                 |> ResultME.map (Tuple.mapBoth Just Just)
-                |> ResultME.mapError StringEncodeError
+                |> ResultME.mapError KVEncodeError
     in
     case fields of
         [] ->
@@ -860,9 +860,9 @@ buildUrlFromParams propertiesApi uriFields urlParts =
 -}
 fieldAsString : Field pos L2.RefChecked -> ResultME AWSStubsError ( Expression, Linkage )
 fieldAsString ( fname, l2type, _ ) =
-    StringEncode.typeToString l2type
+    KVEncode.typeToString l2type
         (CG.access (CG.val "req") (Naming.safeCCL fname))
-        |> Result.mapError StringEncodeError
+        |> Result.mapError KVEncodeError
         |> ResultME.fromResult
 
 
@@ -1014,10 +1014,10 @@ kvEncoder propertiesApi name decl =
             ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
-            StringEncode.kvEncoder propertiesApi name decl
+            KVEncode.kvEncoder propertiesApi name decl
                 |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
                 |> ResultME.map (Tuple.mapFirst List.singleton)
-                |> ResultME.mapError StringEncodeError
+                |> ResultME.mapError KVEncodeError
 
 
 

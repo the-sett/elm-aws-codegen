@@ -1,4 +1,4 @@
-module Templates.StringEncode exposing (..)
+module Templates.KVEncode exposing (..)
 
 {-| Code generators for URL paths, query arguments or header fields in formats acceptable
 to AWS services.
@@ -19,7 +19,7 @@ import ResultME exposing (ResultME)
 import Set exposing (Set)
 
 
-type StringEncodeError
+type KVEncodeError
     = L3Error L3.L3Error
     | UnsupportedType String
     | UnsupportedDeclaration String
@@ -40,7 +40,7 @@ errorCatalogue =
         ]
 
 
-errorBuilder : ErrorBuilder pos StringEncodeError
+errorBuilder : ErrorBuilder pos KVEncodeError
 errorBuilder posFn err =
     case err of
         L3Error l3error ->
@@ -64,9 +64,9 @@ check l3 =
     l3 |> Ok
 
 
-processorImpl : ProcessorImpl pos StringEncodeError
+processorImpl : ProcessorImpl pos KVEncodeError
 processorImpl =
-    { name = "StringEncode"
+    { name = "KVEncode"
     , defaults = defaultProperties
     , check = check
     , buildError = errorBuilder
@@ -146,7 +146,7 @@ Only simple types can be handled by this function, which is why its result is a
 and will produce `Nothing`.
 
 -}
-typeToString : Type pos L2.RefChecked -> Expression -> Result StringEncodeError ( Expression, Linkage )
+typeToString : Type pos L2.RefChecked -> Expression -> Result KVEncodeError ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
         TBasic _ _ basic ->
@@ -200,7 +200,7 @@ kvEncoder :
     PropertiesAPI pos
     -> String
     -> Declarable pos RefChecked
-    -> ResultME StringEncodeError FunGen
+    -> ResultME KVEncodeError FunGen
 kvEncoder propertiesApi name decl =
     case decl of
         DAlias _ _ l1Type ->
@@ -223,7 +223,7 @@ partialKVEncoder :
     PropertiesAPI pos
     -> String
     -> List (Field pos RefChecked)
-    -> ResultME StringEncodeError FunGen
+    -> ResultME KVEncodeError FunGen
 partialKVEncoder propertiesApi name fields =
     ResultME.map
         (\impl ->
@@ -257,7 +257,7 @@ partialKVEncoder propertiesApi name fields =
 
 {-| Generates a KVEncoder for an L1 type alias.
 -}
-typeAliasKVEncoder : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError ( FunDecl, Linkage )
+typeAliasKVEncoder : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME KVEncodeError ( FunDecl, Linkage )
 typeAliasKVEncoder propertiesApi name l1Type =
     ResultME.map
         (\impl ->
@@ -401,7 +401,7 @@ restrictedKVEncoder name res =
 
 {-| Generates a KVEncoder for an L1 type that has been named as an alias.
 -}
-kvEncoderNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME StringEncodeError Expression
+kvEncoderNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME KVEncodeError Expression
 kvEncoderNamedType propertiesApi name l1Type =
     case l1Type of
         TUnit _ _ ->
@@ -580,7 +580,7 @@ kvEncoderDict l1keyType l1valType =
 {-| Generates a kvEncoder for an L1 product type that has been named as an alias.
 The alias name is also the constructor function for the type.
 -}
-kvEncoderNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError Expression
+kvEncoderNamedProduct : PropertiesAPI pos -> String -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME KVEncodeError Expression
 kvEncoderNamedProduct propertiesApi name fields =
     ResultME.map
         (\fieldEncoders ->
@@ -636,7 +636,7 @@ kvEncoderContainerField name serializedName container =
 {-| Outputs encoders for a list of fields and terminates the list with `Encoder.buildObject`.
 Helper function useful when building record encoders.
 -}
-kvEncoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME StringEncodeError (List Expression)
+kvEncoderFields : PropertiesAPI pos -> List ( String, Type pos RefChecked, L1.Properties ) -> ResultME KVEncodeError (List Expression)
 kvEncoderFields propertiesApi fields =
     let
         fieldMapperFn ( fieldName, l1Type, fprops ) accum =
