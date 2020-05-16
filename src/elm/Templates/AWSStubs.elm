@@ -959,7 +959,7 @@ fixedResponseDecoder expr =
     ( responseType, decoder, linkage )
 
 
-{-| Generates a response decoder for a nemd type.
+{-| Generates a response decoder for a named type.
 -}
 nameTypedResponseDecoder :
     PropertiesAPI pos
