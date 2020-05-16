@@ -975,45 +975,49 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                 ( loweredType, loweredLinkage ) =
                     Elm.Lang.lowerType l1ResponseType
 
+                ( bodyDecoder, bodyDecoderLinkage ) =
+                    case bodyFields of
+                        [] ->
+                            ( CG.val "noBody", CG.emptyLinkage )
+
+                        bf :: bfs ->
+                            Elm.Decode.partialDecoder Elm.Decode.defaultDecoderOptions "" (Nonempty bf bfs)
+                                |> FunDecl.asExpression FunDecl.defaultOptions
+
+                decoder =
+                    CG.pipe
+                        (CG.apply
+                            [ CG.fqFun decodeMod "succeed"
+                            , CG.lambda
+                                (List.map (\( fname, _, _ ) -> Naming.safeCCL fname |> CG.varPattern)
+                                    (statusCodeFields ++ headerFields ++ bodyFields)
+                                )
+                                (CG.record
+                                    (Nonempty.map
+                                        (\( fname, _, _ ) ->
+                                            ( Naming.safeCCL fname, CG.val (Naming.safeCCL fname) )
+                                        )
+                                        fields
+                                        |> Nonempty.toList
+                                    )
+                                )
+                                |> CG.parens
+                            ]
+                        )
+                        [ --  CG.val "statusCodeDecoder"
+                          -- , CG.val "headerDecoder"
+                          -- ,
+                          bodyDecoder
+                        ]
+                        |> CG.letVal "decoder"
+
                 linkage =
                     CG.combineLinkage
                         [ CG.emptyLinkage
                             |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                         , loweredLinkage
+                        , bodyDecoderLinkage
                         ]
-
-                bodyDecoder =
-                    case bodyFields of
-                        [] ->
-                            CG.val "noBody"
-
-                        bf :: bfs ->
-                            Elm.Decode.partialDecoder Elm.Decode.defaultDecoderOptions "" (Nonempty bf bfs)
-                                |> FunDecl.asExpression FunDecl.defaultOptions
-                                |> Tuple.first
-
-                decoder =
-                    CG.pipe
-                        (CG.lambda
-                            (List.map (\( fname, _, _ ) -> Naming.safeCCL fname |> CG.varPattern)
-                                (statusCodeFields ++ headerFields ++ bodyFields)
-                            )
-                            (CG.record
-                                (Nonempty.map
-                                    (\( fname, _, _ ) ->
-                                        ( Naming.safeCCL fname, CG.val (Naming.safeCCL fname) )
-                                    )
-                                    fields
-                                    |> Nonempty.toList
-                                )
-                            )
-                            |> CG.parens
-                        )
-                        [ CG.val "statusCodeDecoder"
-                        , CG.val "headerDecoder"
-                        , bodyDecoder
-                        ]
-                        |> CG.letVal "decoder"
             in
             ( loweredType, decoder, linkage )
         )
