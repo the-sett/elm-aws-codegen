@@ -989,13 +989,13 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         (CG.apply
                             [ CG.fqFun decodeMod "succeed"
                             , CG.lambda
-                                (List.map (\( fname, _, _ ) -> Naming.safeCCL fname |> CG.varPattern)
+                                (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
                                     (statusCodeFields ++ headerFields ++ bodyFields)
                                 )
                                 (CG.record
                                     (Nonempty.map
                                         (\( fname, _, _ ) ->
-                                            ( Naming.safeCCL fname, CG.val (Naming.safeCCL fname) )
+                                            ( Naming.safeCCL fname, CG.val (Naming.safeCCL (fname ++ "Fld")) )
                                         )
                                         fields
                                         |> Nonempty.toList
