@@ -981,7 +981,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             ( CG.val "noBody", CG.emptyLinkage )
 
                         bf :: bfs ->
-                            Elm.Decode.partialDecoder Elm.Decode.defaultDecoderOptions "" (Nonempty bf bfs)
+                            Elm.Decode.partialDecoder { namedTypeDecoder = Elm.Decode.AssumeCodec } "" (Nonempty bf bfs)
                                 |> FunDecl.asExpression FunDecl.defaultOptions
 
                 decoder =
