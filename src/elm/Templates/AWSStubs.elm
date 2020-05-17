@@ -984,24 +984,26 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             Elm.Decode.partialDecoder { namedTypeDecoder = Elm.Decode.AssumeCodec } "" (Nonempty bf bfs)
                                 |> FunDecl.asExpression FunDecl.defaultOptions
 
+                constructorFn =
+                    CG.lambda
+                        (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
+                            (statusCodeFields ++ headerFields ++ bodyFields)
+                        )
+                        (CG.record
+                            (Nonempty.map
+                                (\( fname, _, _ ) ->
+                                    ( Naming.safeCCL fname, CG.val (Naming.safeCCL (fname ++ "Fld")) )
+                                )
+                                fields
+                                |> Nonempty.toList
+                            )
+                        )
+
                 decoder =
                     CG.pipe
                         (CG.apply
                             [ CG.fqFun decodeMod "succeed"
-                            , CG.lambda
-                                (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
-                                    (statusCodeFields ++ headerFields ++ bodyFields)
-                                )
-                                (CG.record
-                                    (Nonempty.map
-                                        (\( fname, _, _ ) ->
-                                            ( Naming.safeCCL fname, CG.val (Naming.safeCCL (fname ++ "Fld")) )
-                                        )
-                                        fields
-                                        |> Nonempty.toList
-                                    )
-                                )
-                                |> CG.parens
+                            , constructorFn |> CG.parens
                             ]
                         )
                         [ --  CG.val "statusCodeDecoder"
@@ -1037,6 +1039,21 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
 
 
 
+-- What does a full JSON decoder look like?
+-- fullJsonDecoder status metadata body =
+--     Json.Decode.succeed
+--         (KVDecode.succeed
+--             ((\status nextMarkerFld aliasesFld ->
+--                 { aliases = aliasesFld, nextMarker = nextMarkerFld }
+--              )
+--                 metadata.statusCode
+--             )
+--             |> KVDecode.field
+--             |> KVDecode.optional
+--             |> kvDecoder.decode metadata.headers
+--         )
+--         |> Pipeline.optional "NextMarker" (Json.Decode.maybe (Codec.decoder stringCodec)) Nothing
+--         |> Pipeline.optional "Aliases" (Json.Decode.maybe (Codec.decoder aliasListCodec)) Nothing
 --== Types Declarations
 
 
