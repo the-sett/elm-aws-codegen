@@ -1008,6 +1008,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                           -- , CG.val "headerDecoder"
                           -- ,
                           bodyDecoder
+                        , CG.fqFun awsHttpMod "jsonBodyDecoder"
                         ]
                         |> CG.letVal "decoder"
 
