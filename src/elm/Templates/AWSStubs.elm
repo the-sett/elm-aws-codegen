@@ -167,7 +167,7 @@ locationEnum =
     Enum.define
         [ "header"
         , "querystring"
-        , "statusCode"
+        , "statuscode"
         , "uri"
         , "body"
         ]
@@ -1249,7 +1249,7 @@ isInBody =
 
 isInStatusCode : PropertyFilter pos ( String, Type pos ref, Properties )
 isInStatusCode =
-    isInLocation "statusCode"
+    isInLocation "statuscode"
 
 
 isInLocation : String -> PropertyFilter pos ( String, Type pos ref, Properties )
