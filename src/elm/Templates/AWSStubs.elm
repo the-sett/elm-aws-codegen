@@ -972,6 +972,12 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
     ResultME.map3
         (\statusCodeFields headerFields bodyFields ->
             let
+                _ =
+                    Debug.log "statusCodeFields" statusCodeFields
+
+                _ =
+                    Debug.log "headerFields" headerFields
+
                 ( loweredType, loweredLinkage ) =
                     Elm.Lang.lowerType l1ResponseType
 
@@ -1016,9 +1022,15 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             maybeAppliedToStatusCode
 
                         _ ->
-                            CG.apply
-                                [ CG.fqFun awsKVDecodeMod "succeed"
-                                , maybeAppliedToStatusCode |> CG.parens
+                            CG.pipe
+                                (CG.apply
+                                    [ CG.fqFun awsKVDecodeMod "object"
+                                    , maybeAppliedToStatusCode |> CG.parens
+                                    ]
+                                )
+                                [ bodyDecoder
+                                , CG.fqFun awsKVDecodeMod "buildObject"
+                                , CG.fqFun awsKVDecodeMod "decodeKVPairs"
                                 ]
 
                 maybeWithBodyDecoder =
@@ -1033,8 +1045,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                     , maybeWithHeaderDecoding |> CG.parens
                                     ]
                                 )
-                                [ bodyDecoder
-                                ]
+                                [ bodyDecoder ]
 
                 isJustBody =
                     List.isEmpty statusCodeFields && List.isEmpty headerFields
@@ -1067,11 +1078,11 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
             ( loweredType, decoder, linkage )
         )
         (Query.deref responseTypeName model.declarations
-            |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+            |> ResultME.andThen (filterProductDecl propertiesApi isInStatusCode)
             |> ResultME.mapError L3Error
         )
         (Query.deref responseTypeName model.declarations
-            |> ResultME.andThen (filterProductDecl propertiesApi isInStatusCode)
+            |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
             |> ResultME.mapError L3Error
         )
         (Query.deref responseTypeName model.declarations
