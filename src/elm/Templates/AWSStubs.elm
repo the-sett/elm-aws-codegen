@@ -999,20 +999,62 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             )
                         )
 
+                maybeAppliedToStatusCode =
+                    case statusCodeFields of
+                        [] ->
+                            constructorFn
+
+                        _ ->
+                            CG.apply
+                                [ constructorFn |> CG.parens
+                                , CG.access (CG.val "metadata") "statusCode"
+                                ]
+
+                maybeWithHeaderDecoding =
+                    case headerFields of
+                        [] ->
+                            maybeAppliedToStatusCode
+
+                        _ ->
+                            CG.apply
+                                [ CG.fqFun awsKVDecodeMod "succeed"
+                                , maybeAppliedToStatusCode |> CG.parens
+                                ]
+
+                maybeWithBodyDecoder =
+                    case bodyFields of
+                        [] ->
+                            maybeWithHeaderDecoding
+
+                        _ ->
+                            CG.pipe
+                                (CG.apply
+                                    [ CG.fqFun decodeMod "succeed"
+                                    , maybeWithHeaderDecoding |> CG.parens
+                                    ]
+                                )
+                                [ bodyDecoder
+                                ]
+
+                isJustBody =
+                    List.isEmpty statusCodeFields && List.isEmpty headerFields
+
                 decoder =
-                    CG.pipe
-                        (CG.apply
-                            [ CG.fqFun decodeMod "succeed"
-                            , constructorFn |> CG.parens
-                            ]
-                        )
-                        [ --  CG.val "statusCodeDecoder"
-                          -- , CG.val "headerDecoder"
-                          -- ,
-                          bodyDecoder
-                        , CG.fqFun awsHttpMod "jsonBodyDecoder"
-                        ]
-                        |> CG.letVal "decoder"
+                    if isJustBody then
+                        CG.applyBinOp maybeWithBodyDecoder
+                            CG.piper
+                            (CG.fqFun awsHttpMod "jsonBodyDecoder")
+                            |> CG.letVal "decoder"
+
+                    else
+                        CG.applyBinOp
+                            (CG.lambda
+                                [ CG.varPattern "status", CG.varPattern "metadata" ]
+                                maybeWithBodyDecoder
+                            )
+                            CG.piper
+                            (CG.fqFun awsHttpMod "jsonFullDecoder")
+                            |> CG.letVal "decoder"
 
                 linkage =
                     CG.combineLinkage
@@ -1283,6 +1325,11 @@ awsHttpMod =
 awsKVEncodeMod : List String
 awsKVEncodeMod =
     [ "AWS", "KVEncode" ]
+
+
+awsKVDecodeMod : List String
+awsKVDecodeMod =
+    [ "AWS", "KVDecode" ]
 
 
 awsServiceMod : List String
