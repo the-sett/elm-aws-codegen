@@ -1030,7 +1030,12 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                 )
                                 [ bodyDecoder
                                 , CG.fqFun awsKVDecodeMod "buildObject"
-                                , CG.fqFun awsKVDecodeMod "decodeKVPairs"
+                                , CG.apply
+                                    [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
+                                    , CG.val "obj"
+                                    , CG.access (CG.val "metadata") "headers"
+                                    ]
+                                    |> CG.lambda [ CG.varPattern "obj" ]
                                 ]
 
                 maybeWithBodyDecoder =
@@ -1101,9 +1106,11 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
 --              )
 --                 metadata.statusCode
 --             )
+--             |> KVDecode.object
 --             |> KVDecode.field
 --             |> KVDecode.optional
---             |> kvDecoder.decode metadata.headers
+--             |> KVDecode.buildObject
+--             |> (\obj -> KvDecode.decodeKVPairs obj metadata.headers)
 --         )
 --         |> Pipeline.optional "NextMarker" (Json.Decode.maybe (Codec.decoder stringCodec)) Nothing
 --         |> Pipeline.optional "Aliases" (Json.Decode.maybe (Codec.decoder aliasListCodec)) Nothing
