@@ -1,12 +1,31 @@
 module Templates.AWSStubs exposing
-    ( elmEnumStyleEnum
+    ( processorImpl
     , generate
-    , locationEnum
-    , processorImpl
-    , protocolEnum
-    , signerEnum
-    , topLevelEnum
+    , elmEnumStyleEnum, locationEnum, protocolEnum, signerEnum, topLevelEnum
+    , isExcluded, isInBody, isInHeader, isInQueryString, isInStatusCode, isInUri, isRequest, isResponse
+    , withLocationName
     )
+
+{-| Code generator to output AWS service stubs.
+
+
+# Code generator.
+
+@docs processorImpl
+@docs generate
+
+
+# Property Enums.
+
+@docs elmEnumStyleEnum, locationEnum, protocolEnum, signerEnum, topLevelEnum
+
+
+# Filters on Properties.
+
+@docs isExcluded, isInBody, isInHeader, isInQueryString, isInStatusCode, isInUri, isRequest, isResponse
+@docs withLocationName
+
+-}
 
 import Dict exposing (Dict)
 import Documentation
