@@ -265,18 +265,25 @@ check l3 =
 
 generate : (pos -> SourceLines) -> PropertiesAPI pos -> L3 pos -> ResultME Error File
 generate posFn propertiesApi model =
-    ResultME.map6
-        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( kvKVEncoders, kvKVEncodersLinkage ) documentation ->
+    ResultME.map7
+        (\( serviceFn, serviceLinkage ) ( endpoints, operationsLinkage ) ( types, typeDeclLinkage ) ( codecs, codecsLinkage ) ( kvKVEncoders, kvKVEncodersLinkage ) ( kvKVDecoders, kvKVDecodersLinkage ) documentation ->
             let
                 declarations =
                     kvKVEncoders
+                        |> List.append kvKVDecoders
                         |> List.append codecs
                         |> List.append types
                         |> List.append endpoints
                         |> (::) serviceFn
 
                 linkages =
-                    [ serviceLinkage, operationsLinkage, typeDeclLinkage, codecsLinkage, kvKVEncodersLinkage ]
+                    [ serviceLinkage
+                    , operationsLinkage
+                    , typeDeclLinkage
+                    , codecsLinkage
+                    , kvKVEncodersLinkage
+                    , kvKVDecodersLinkage
+                    ]
 
                 ( imports, exposings ) =
                     CG.combineLinkage linkages
@@ -304,6 +311,7 @@ generate posFn propertiesApi model =
         (typeDeclarations propertiesApi model)
         (jsonCodecs propertiesApi model)
         (kvEncoders propertiesApi model)
+        (kvDecoders propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation"
             |> ResultME.mapError L3Error
         )
@@ -995,7 +1003,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             Elm.Decode.partialDecoder { namedTypeDecoder = Elm.Decode.AssumeCodec } "" (Nonempty bf bfs)
                                 |> FunDecl.asExpression FunDecl.defaultOptions
 
-                ( kvDecoder, kvDecoderLinkage ) =
+                ( headersDecoder, headersDecoderLinkage ) =
                     KVDecode.partialKVDecoder propertiesApi "requestTypeName" headerFields
                         |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
                         |> ResultME.mapError KVDecodeError
@@ -1039,7 +1047,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                     , maybeAppliedToStatusCode |> CG.parens
                                     ]
                                 )
-                                [ kvDecoder
+                                [ headersDecoder
                                 , CG.fqFun awsKVDecodeMod "buildObject"
                                 , CG.apply
                                     [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
@@ -1089,7 +1097,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                         , loweredLinkage
                         , bodyDecoderLinkage
-                        , kvDecoderLinkage
+                        , headersDecoderLinkage
                         ]
             in
             ( loweredType, decoder, linkage )
@@ -1233,6 +1241,44 @@ kvEncoder propertiesApi name decl =
                 |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
                 |> ResultME.map (Tuple.mapFirst List.singleton)
                 |> ResultME.mapError KVEncodeError
+
+
+
+--== Key-Value String Decoders
+
+
+kvDecoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
+kvDecoders propertiesApi model =
+    Query.filterDictByProps propertiesApi
+        (Query.notPropFilter
+            (Query.orPropFilter
+                (Query.orPropFilter
+                    isRequest
+                    isResponse
+                )
+                isExcluded
+            )
+        )
+        model.declarations
+        |> ResultME.mapError L3Error
+        |> ResultME.map (Dict.map (kvDecoder propertiesApi))
+        |> ResultME.map Dict.values
+        |> ResultME.map ResultME.combineList
+        |> ResultME.flatten
+        |> ResultME.map combineDeclarations
+
+
+kvDecoder : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
+kvDecoder propertiesApi name decl =
+    case decl of
+        DAlias _ _ (TFunction _ _ _ _) ->
+            ( [], CG.emptyLinkage ) |> Ok
+
+        _ ->
+            KVDecode.kvDecoder propertiesApi name decl
+                |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
+                |> ResultME.map (Tuple.mapFirst List.singleton)
+                |> ResultME.mapError KVDecodeError
 
 
 
