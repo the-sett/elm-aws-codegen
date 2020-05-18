@@ -661,14 +661,6 @@ kvDecoderFields propertiesApi fields =
 -}
 kvDecoderField : String -> String -> Expression -> Expression
 kvDecoderField name serializedName expr =
-    -- CG.applyBinOp
-    --     (CG.tuple
-    --         [ CG.string serializedName
-    --         , CG.access (CG.val "val") (Naming.safeCCL name)
-    --         ]
-    --     )
-    --     CG.piper
-    --     (CG.apply [ CG.fqFun awsKVDecodeMod "field", expr ])
     CG.apply
         [ CG.fqFun awsKVDecodeMod "field"
         , CG.string serializedName
@@ -680,14 +672,6 @@ kvDecoderField name serializedName expr =
 -}
 decoderOptionalField : String -> String -> Expression -> Expression
 decoderOptionalField name serializedName expr =
-    -- CG.applyBinOp
-    --     (CG.tuple
-    --         [ CG.string serializedName
-    --         , CG.access (CG.val "val") (Naming.safeCCL name)
-    --         ]
-    --     )
-    --     CG.piper
-    --     (CG.apply [ CG.fqFun awsKVDecodeMod "optional", expr ])
     CG.apply
         [ CG.fqFun awsKVDecodeMod "optional"
         , CG.string serializedName
