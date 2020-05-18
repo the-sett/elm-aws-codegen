@@ -128,23 +128,6 @@ errorBuilder posFn err =
                 []
 
 
-
--- Find shapes that need decoder, encoder or both (codec).
--- Need encoder if request body has something as a dependency.
--- Need decoder if response body has something as a dependency.
---
--- Find shapes that need kv-encoder
--- Need kv-encoder if query params or request header has something as a dependency.
---
--- Find shapes that need kv-decoder.
--- Need kv-decoder if response header has something as a dependency.
---
--- Algorithm:
--- 1. Filter to relevant fields
--- 2. Take transitive closure
--- 3. Mark all in the closure.
-
-
 transform : (() -> SourceLines) -> AWSService -> ResultME Error (L3 ())
 transform posFn service =
     let
@@ -182,6 +165,7 @@ transform posFn service =
             Result.map2 List.append shapesResult operationsResult
                 |> ResultME.andThen l2Checker.check
                 |> ResultME.map (markTopLevelShapes service.operations)
+                |> ResultME.map markCodecs
                 |> ResultME.andThen checkProtocolSupported
     in
     ResultME.map
@@ -572,3 +556,33 @@ markTopLevelShape _ operation l2model =
     markTopLevel "request" operation.input l2model
         |> Maybe.andThen (markTopLevel "response" operation.output)
         |> Maybe.withDefault l2model
+
+
+
+--== Which serializers are needed - Third Pass
+-- The third  pass over the data model looks at what parts of it need the
+-- various encoders and decoders generated for them. This depends on whether
+-- are serialized as JSON or XML, in the body, headers or query parameters and
+-- so on.
+
+
+{-| Find shapes that need decoder, encoder or both (codec).
+Need encoder if request body has something as a dependency.
+Need decoder if response body has something as a dependency.
+
+Find shapes that need kv-encoder
+Need kv-encoder if query params or request header has something as a dependency.
+
+Find shapes that need kv-decoder.
+Need kv-decoder if response header has something as a dependency.
+
+Algorithm:
+
+1.  Filter to relevant fields
+2.  Take transitive closure
+3.  Mark all in the closure.
+
+-}
+markCodecs : L2 () -> L2 ()
+markCodecs l2 =
+    l2
