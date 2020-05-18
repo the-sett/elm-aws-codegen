@@ -28,6 +28,7 @@ import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
+import Templates.KVDecode as KVDecode
 import Templates.KVEncode as KVEncode
 import Tuple3
 import UrlParser exposing (UrlPart(..))
@@ -62,6 +63,7 @@ processorImpl =
 type AWSStubsError
     = L3Error L3.L3Error
     | KVEncodeError KVEncode.KVEncodeError
+    | KVDecodeError KVDecode.KVDecodeError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
     | UnsupportedType String
@@ -105,6 +107,9 @@ errorBuilder posFn err =
 
         KVEncodeError stringEncodeError ->
             KVEncode.errorBuilder posFn stringEncodeError
+
+        KVDecodeError stringEncodeError ->
+            KVDecode.errorBuilder posFn stringEncodeError
 
         UrlDidNotParse errMsg ->
             Errors.lookupError errorCatalogue
@@ -990,6 +995,12 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             Elm.Decode.partialDecoder { namedTypeDecoder = Elm.Decode.AssumeCodec } "" (Nonempty bf bfs)
                                 |> FunDecl.asExpression FunDecl.defaultOptions
 
+                ( kvDecoder, kvDecoderLinkage ) =
+                    KVDecode.partialKVDecoder propertiesApi "requestTypeName" headerFields
+                        |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
+                        |> ResultME.mapError KVDecodeError
+                        |> Result.withDefault ( CG.string "failedKVDecoder", CG.emptyLinkage )
+
                 constructorFn =
                     CG.lambda
                         (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
@@ -1028,7 +1039,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                     , maybeAppliedToStatusCode |> CG.parens
                                     ]
                                 )
-                                [ bodyDecoder
+                                [ kvDecoder
                                 , CG.fqFun awsKVDecodeMod "buildObject"
                                 , CG.apply
                                     [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
@@ -1078,6 +1089,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
                         , loweredLinkage
                         , bodyDecoderLinkage
+                        , kvDecoderLinkage
                         ]
             in
             ( loweredType, decoder, linkage )
