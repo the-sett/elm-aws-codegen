@@ -24,6 +24,7 @@ import L3 exposing (L3)
 import List.Nonempty
 import Maybe.Extra
 import Naming
+import Query
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
 import String.Case as Case
@@ -560,6 +561,9 @@ markTopLevelShape _ operation l2model =
 
 
 --== Which serializers are needed - Third Pass
+--### TODO: Move this all into AWSStubs. It needs the properties API to run
+-- queries, so will be better placed there.
+--
 -- The third  pass over the data model looks at what parts of it need the
 -- various encoders and decoders generated for them. This depends on whether
 -- are serialized as JSON or XML, in the body, headers or query parameters and
@@ -585,4 +589,9 @@ Algorithm:
 -}
 markCodecs : L2 () -> L2 ()
 markCodecs l2 =
+    -- let
+    --     -- Find all requests.
+    --     _ =
+    --         Query.filterDictByProps propertiesApi AWSStubs.isRequest l2
+    -- in
     l2
