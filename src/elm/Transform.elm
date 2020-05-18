@@ -128,6 +128,23 @@ errorBuilder posFn err =
                 []
 
 
+
+-- Find shapes that need decoder, encoder or both (codec).
+-- Need encoder if request body has something as a dependency.
+-- Need decoder if response body has something as a dependency.
+--
+-- Find shapes that need kv-encoder
+-- Need kv-encoder if query params or request header has something as a dependency.
+--
+-- Find shapes that need kv-decoder.
+-- Need kv-decoder if response header has something as a dependency.
+--
+-- Algorithm:
+-- 1. Filter to relevant fields
+-- 2. Take transitive closure
+-- 3. Mark all in the closure.
+
+
 transform : (() -> SourceLines) -> AWSService -> ResultME Error (L3 ())
 transform posFn service =
     let
