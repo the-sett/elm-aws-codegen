@@ -595,28 +595,24 @@ markCodecs l2 =
                 , declarations = l2
                 }
 
-        -- Find all requests.
-        requests =
-            Query.filterDictByProps propertiesApi AWSStubs.isRequest l2
-                |> Result.withDefault Dict.empty
+        closure =
+            selectClosure propertiesApi l2 AWSStubs.isRequest
 
-        _ =
-            requests
-                |> Dict.keys
-                |> Debug.log "\nThe requests"
-
-        -- closure =
-        --     Query.transitiveClosure requests l2
-        --         |> Result.withDefault Dict.empty
-        --
         -- _ =
         --     closure
+        --         |> Result.withDefault Dict.empty
         --         |> Dict.keys
         --         |> Debug.log "\nClosure against the model."
-        --
-        -- _ =
-        --     Dict.diff closure requests
-        --         |> Dict.keys
-        --         |> Debug.log "\nDependencies of the requests."
+        -- Use Dict.update to update matches with properties.
     in
     l2
+
+
+{-| Filters out a starting set from the model and then computes its transitive closure.
+
+This allows a set of things to be selected along with all of their dependencies.
+
+-}
+selectClosure propertiesApi model filter =
+    Query.filterDictByProps propertiesApi filter model
+        |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
