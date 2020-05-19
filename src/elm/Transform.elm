@@ -595,14 +595,43 @@ markCodecs l2 =
                 , declarations = l2
                 }
 
-        closure =
+        requestClosure =
             selectClosure propertiesApi l2 AWSStubs.isRequest
 
+        responseClosure =
+            selectClosure propertiesApi l2 AWSStubs.isResponse
+
+        merged =
+            ResultME.map2
+                (\left right ->
+                    let
+                        ( jsonEncode, jsonCodec, jsonDecode ) =
+                            Dict.merge
+                                (\name _ ( encodeAccum, codecAccum, decodeAccum ) -> ( name :: encodeAccum, codecAccum, decodeAccum ))
+                                (\name _ _ ( encodeAccum, codecAccum, decodeAccum ) -> ( encodeAccum, name :: codecAccum, decodeAccum ))
+                                (\name _ ( encodeAccum, codecAccum, decodeAccum ) -> ( encodeAccum, codecAccum, name :: decodeAccum ))
+                                left
+                                right
+                                ( [], [], [] )
+
+                        -- _ =
+                        --     Debug.log "\n--- jsonEncode" jsonEncode
+                        --
+                        -- _ =
+                        --     Debug.log "\n--- jsonCodec" jsonCodec
+                        --
+                        -- _ =
+                        --     Debug.log "\n--- jsonDecode" jsonDecode
+                    in
+                    ( jsonEncode, jsonCodec, jsonDecode )
+                )
+                requestClosure
+                responseClosure
+
         -- _ =
-        --     closure
-        --         |> Result.withDefault Dict.empty
-        --         |> Dict.keys
-        --         |> Debug.log "\nClosure against the model."
+        --     Query.deref requestTypeName model.declarations
+        --         |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+        --         |> ResultME.mapError L3Error
         -- Use Dict.update to update matches with properties.
     in
     l2
@@ -613,6 +642,11 @@ markCodecs l2 =
 This allows a set of things to be selected along with all of their dependencies.
 
 -}
+selectClosure :
+    L3.PropertiesAPI pos
+    -> L2 pos
+    -> Query.PropertyFilter pos (L1.Declarable pos RefChecked)
+    -> ResultME L3.L3Error (L2 pos)
 selectClosure propertiesApi model filter =
     Query.filterDictByProps propertiesApi filter model
         |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
