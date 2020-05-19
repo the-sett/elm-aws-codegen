@@ -650,3 +650,25 @@ selectClosure :
 selectClosure propertiesApi model filter =
     Query.filterDictByProps propertiesApi filter model
         |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
+
+
+
+-- Get all requests type names.
+-- Look up all requests as product decls and filter their fields.
+-- Get header, query and body field sets.
+-- Similarly for responses.
+
+
+selectRequestFields :
+    L3.PropertiesAPI pos
+    -> L2 pos
+    -> ResultME L3.L3Error (L2 pos)
+selectRequestFields propertiesApi model =
+    Query.filterDictByProps propertiesApi isRequest model
+        |> ResultME.andThen (\filtered -> filtered)
+
+
+
+-- Query.deref requestTypeName model.declarations
+--     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
+--     |> ResultME.mapError L3Error
