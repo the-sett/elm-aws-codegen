@@ -1004,12 +1004,6 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
     ResultME.map3
         (\statusCodeFields headerFields bodyFields ->
             let
-                _ =
-                    Debug.log "statusCodeFields" statusCodeFields
-
-                _ =
-                    Debug.log "headerFields" headerFields
-
                 ( loweredType, loweredLinkage ) =
                     Elm.Lang.lowerType l1ResponseType
 
