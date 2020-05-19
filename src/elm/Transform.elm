@@ -596,9 +596,27 @@ markCodecs l2 =
                 }
 
         -- Find all requests.
-        _ =
+        requests =
             Query.filterDictByProps propertiesApi AWSStubs.isRequest l2
-                |> ResultME.map Dict.keys
-                |> Debug.log "requests"
+                |> Result.withDefault Dict.empty
+
+        _ =
+            requests
+                |> Dict.keys
+                |> Debug.log "\nThe requests"
+
+        -- closure =
+        --     Query.transitiveClosure requests l2
+        --         |> Result.withDefault Dict.empty
+        --
+        -- _ =
+        --     closure
+        --         |> Dict.keys
+        --         |> Debug.log "\nClosure against the model."
+        --
+        -- _ =
+        --     Dict.diff closure requests
+        --         |> Dict.keys
+        --         |> Debug.log "\nDependencies of the requests."
     in
     l2
