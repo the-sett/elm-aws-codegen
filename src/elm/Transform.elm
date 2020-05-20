@@ -12,6 +12,7 @@ import L1
         ( Basic(..)
         , Container(..)
         , Declarable(..)
+        , Field
         , L1
         , PropSpec(..)
         , Property(..)
@@ -20,15 +21,16 @@ import L1
         , Unchecked(..)
         )
 import L2 exposing (L2, RefChecked(..))
-import L3 exposing (L3)
+import L3 exposing (L3, PropertiesAPI)
 import List.Nonempty
 import Maybe.Extra
 import Naming
-import Query
+import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
 import SourcePos exposing (SourceLines)
 import String.Case as Case
 import Templates.AWSStubs as AWSStubs
+import Tuple3
 
 
 type TransformError pos
@@ -662,13 +664,33 @@ selectClosure propertiesApi model filter =
 selectRequestFields :
     L3.PropertiesAPI pos
     -> L2 pos
+    -> Query.PropertyFilter pos (Declarable pos RefChecked)
     -> ResultME L3.L3Error (L2 pos)
-selectRequestFields propertiesApi model =
-    Query.filterDictByProps propertiesApi isRequest model
-        |> ResultME.andThen (\filtered -> filtered)
+selectRequestFields propertiesApi model filter =
+    Query.filterDictByProps propertiesApi filter model
+        |> ResultME.map
+            (\filtered ->
+                Dict.foldl
+                    (\k v a -> a)
+                    Dict.empty
+                    filtered
+            )
 
 
 
 -- Query.deref requestTypeName model.declarations
 --     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
 --     |> ResultME.mapError L3Error
+
+
+filterProductDecl :
+    PropertiesAPI pos
+    -> PropertyFilter pos (Field pos L2.RefChecked)
+    -> L1.Declarable pos L2.RefChecked
+    -> ResultME L3.L3Error (List (Field pos L2.RefChecked))
+filterProductDecl propertiesApi filter decl =
+    Query.expectAlias decl
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen Query.expectProductOrEmpty
+        |> ResultME.map Tuple3.third
+        |> ResultME.andThen (Query.filterListByProps propertiesApi filter)
