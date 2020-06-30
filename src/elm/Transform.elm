@@ -671,7 +671,7 @@ selectRequestFields propertiesApi model filter =
         |> ResultME.map
             (\filtered ->
                 Dict.foldl
-                    (\k v a -> a)
+                    (\name decl accum -> accum)
                     Dict.empty
                     filtered
             )
