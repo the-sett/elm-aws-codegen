@@ -592,10 +592,7 @@ markCodecs l2 =
         -- This makes a properties API on top of an empty set of defaults and specs.
         -- Useful function to pull out somewhere - maybe in the Query API?
         propertiesApi =
-            L3.makePropertiesAPI L3.emptyDefaultProperties
-                { properties = L1.emptyProperties
-                , declarations = l2
-                }
+            Query.propertiesApiWithoutDefaults l2
 
         requestClosure =
             selectClosure propertiesApi l2 AWSStubs.isRequest
