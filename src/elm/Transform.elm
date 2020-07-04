@@ -166,10 +166,10 @@ transform posFn service =
 
         l2Result =
             Result.map2 List.append shapesResult operationsResult
+                |> ResultME.andThen checkProtocolSupported
                 |> ResultME.andThen l2Checker.check
                 |> ResultME.map (markTopLevelShapes service.operations)
                 |> ResultME.andThen markCodecs
-                |> ResultME.andThen checkProtocolSupported
     in
     ResultME.map
         (\l2 ->
