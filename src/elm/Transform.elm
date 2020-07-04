@@ -168,7 +168,7 @@ transform posFn service =
             Result.map2 List.append shapesResult operationsResult
                 |> ResultME.andThen l2Checker.check
                 |> ResultME.map (markTopLevelShapes service.operations)
-                |> ResultME.map markCodecs
+                |> ResultME.andThen markCodecs
                 |> ResultME.andThen checkProtocolSupported
     in
     ResultME.map
@@ -586,11 +586,9 @@ Algorithm:
 3.  Mark all in the closure.
 
 -}
-markCodecs : L2 () -> L2 ()
+markCodecs : L2 () -> ResultME L3.L3Error (L2 ())
 markCodecs l2 =
     let
-        -- This makes a properties API on top of an empty set of defaults and specs.
-        -- Useful function to pull out somewhere - maybe in the Query API?
         propertiesApi =
             Query.propertiesApiWithoutDefaults l2
 
@@ -613,6 +611,12 @@ markCodecs l2 =
                                 right
                                 ( [], [], [] )
 
+                        l2WithCodecsMarked =
+                            l2
+                                |> markCodecKinds jsonEncode "encoder"
+                                |> markCodecKinds jsonCodec "codec"
+                                |> markCodecKinds jsonDecode "decoder"
+
                         -- _ =
                         --     Debug.log "\n--- jsonEncode" jsonEncode
                         --
@@ -622,7 +626,7 @@ markCodecs l2 =
                         -- _ =
                         --     Debug.log "\n--- jsonDecode" jsonDecode
                     in
-                    ( jsonEncode, jsonCodec, jsonDecode )
+                    l2WithCodecsMarked
                 )
                 requestClosure
                 responseClosure
@@ -633,7 +637,29 @@ markCodecs l2 =
         --         |> ResultME.mapError L3Error
         -- Use Dict.update to update matches with properties.
     in
-    l2
+    merged
+
+
+{-| Mark declarations in the model as requiring a particular kind of codec to
+be generated for them.
+-}
+markCodecKinds : List String -> String -> L2 () -> L2 ()
+markCodecKinds names kind model =
+    List.foldl (\name accum -> markCodecKind name kind accum)
+        model
+        names
+
+
+markCodecKind : String -> String -> L2 () -> L2 ()
+markCodecKind name kind model =
+    let
+        setCodecKindProp val props =
+            --Dict.insert "codecKind" (PEnum Codec.codecEnum val) props
+            Dict.insert "codecKind" (PString val) props
+    in
+    Dict.update name
+        (Maybe.map (L1.updatePropertiesOfDeclarable (setCodecKindProp kind)))
+        model
 
 
 {-| Filters out a starting set from the model and then computes its transitive closure.
