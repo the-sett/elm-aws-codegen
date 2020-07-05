@@ -34,7 +34,8 @@ import Tuple3
 
 
 type TransformError pos
-    = UnresolvedRef pos String
+    = L3Error L3.L3Error
+    | UnresolvedRef pos String
     | NoMembers pos String
     | MapKeyEmpty pos
     | MapValueEmpty pos
@@ -100,6 +101,9 @@ errorCatalogue =
 errorBuilder : ErrorBuilder pos (TransformError pos)
 errorBuilder posFn err =
     case err of
+        L3Error l3error ->
+            L3.errorBuilder posFn l3error
+
         UnresolvedRef pos name ->
             Errors.lookupError errorCatalogue
                 801
@@ -169,7 +173,7 @@ transform posFn service =
                 |> ResultME.andThen checkProtocolSupported
                 |> ResultME.andThen l2Checker.check
                 |> ResultME.map (markTopLevelShapes service.operations)
-                |> ResultME.andThen markCodecs
+                |> ResultME.andThen (markCodecs >> ResultME.mapError errorMapFn)
     in
     ResultME.map
         (\l2 ->
@@ -587,7 +591,7 @@ Algorithm:
 3.  Mark all in the closure.
 
 -}
-markCodecs : L2 () -> ResultME L3.L3Error (L2 ())
+markCodecs : L2 () -> ResultME (TransformError pos) (L2 ())
 markCodecs l2 =
     let
         propertiesApi =
@@ -639,6 +643,7 @@ markCodecs l2 =
         -- Use Dict.update to update matches with properties.
     in
     l2WithCodecsMarked
+        |> ResultME.mapError L3Error
 
 
 {-| Mark declarations in the model as requiring a particular kind of codec to
