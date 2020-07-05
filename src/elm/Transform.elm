@@ -572,6 +572,7 @@ markTopLevelShape _ operation l2model =
 {-| Find shapes that need decoder, encoder or both (codec).
 Need encoder if request body has something as a dependency.
 Need decoder if response body has something as a dependency.
+Make something a codec if it needs both encoding and decoding.
 
 Find shapes that need kv-encoder
 Need kv-encoder if query params or request header has something as a dependency.
@@ -581,8 +582,8 @@ Need kv-decoder if response header has something as a dependency.
 
 Algorithm:
 
-1.  Filter to relevant fields
-2.  Take transitive closure
+1.  Filter to relevant fields.
+2.  Take transitive closure.
 3.  Mark all in the closure.
 
 -}
@@ -598,7 +599,7 @@ markCodecs l2 =
         responseClosure =
             selectClosure propertiesApi l2 AWSStubs.isResponse
 
-        merged =
+        l2WithCodecsMarked =
             ResultME.map2
                 (\left right ->
                     let
@@ -611,7 +612,7 @@ markCodecs l2 =
                                 right
                                 ( [], [], [] )
 
-                        l2WithCodecsMarked =
+                        result =
                             l2
                                 |> markCodecKinds jsonEncode "encoder"
                                 |> markCodecKinds jsonCodec "codec"
@@ -626,7 +627,7 @@ markCodecs l2 =
                         -- _ =
                         --     Debug.log "\n--- jsonDecode" jsonDecode
                     in
-                    l2WithCodecsMarked
+                    result
                 )
                 requestClosure
                 responseClosure
@@ -637,7 +638,7 @@ markCodecs l2 =
         --         |> ResultME.mapError L3Error
         -- Use Dict.update to update matches with properties.
     in
-    merged
+    l2WithCodecsMarked
 
 
 {-| Mark declarations in the model as requiring a particular kind of codec to
@@ -654,8 +655,8 @@ markCodecKind : String -> String -> L2 () -> L2 ()
 markCodecKind name kind model =
     let
         setCodecKindProp val props =
-            --Dict.insert "codecKind" (PEnum Codec.codecEnum val) props
-            Dict.insert "codecKind" (PString val) props
+            --Dict.insert "codec" (PEnum Codec.codecEnum val) props
+            Dict.insert "codec" (PString val) props
     in
     Dict.update name
         (Maybe.map (L1.updatePropertiesOfDeclarable (setCodecKindProp kind)))
