@@ -84,6 +84,7 @@ type AWSStubsError
     = L3Error L3.L3Error
     | KVEncodeError KVEncode.KVEncodeError
     | KVDecodeError KVDecode.KVDecodeError
+    | JsonCodingError Coding.JsonCodingError
     | UrlDidNotParse String
     | UnmatchedUrlParam String
     | UnsupportedType String
@@ -130,6 +131,9 @@ errorBuilder posFn err =
 
         KVDecodeError stringEncodeError ->
             KVDecode.errorBuilder posFn stringEncodeError
+
+        JsonCodingError jsonCodingError ->
+            Coding.errorBuilder posFn jsonCodingError
 
         UrlDidNotParse errMsg ->
             Errors.lookupError errorCatalogue
@@ -1201,22 +1205,28 @@ jsonCodings propertiesApi model =
             )
         )
         model.declarations
-        |> ResultME.map (Dict.map (jsonCoding propertiesApi))
+        |> ResultME.mapError L3Error
+        |> ResultME.andThen (Dict.map (jsonCoding propertiesApi) >> ResultME.combineDict)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
-        |> ResultME.mapError L3Error
 
 
-jsonCoding : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
+jsonCoding :
+    PropertiesAPI pos
+    -> String
+    -> L1.Declarable pos L2.RefChecked
+    -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCoding propertiesApi name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
+                |> Ok
 
         _ ->
             Coding.coding propertiesApi name decl
-                |> FunDecl.asTopLevel FunDecl.defaultOptions
-                |> Tuple.mapFirst List.singleton
+                |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
+                |> ResultME.map (Tuple.mapFirst List.singleton)
+                |> ResultME.mapError JsonCodingError
 
 
 
