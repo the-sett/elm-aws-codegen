@@ -544,9 +544,16 @@ modelOperation name operation =
 -}
 markTopLevelShapes : Dict String Operation -> L2 () -> L2 ()
 markTopLevelShapes operations model =
-    Dict.foldl markTopLevelShape
-        model
-        operations
+    let
+        tlMarked =
+            Dict.foldl markTopLevelShape
+                model
+                operations
+
+        _ =
+            Debug.log "Top Level Marked" (Dict.keys tlMarked)
+    in
+    tlMarked
 
 
 markTopLevelShape : String -> Operation -> L2 () -> L2 ()
@@ -623,14 +630,20 @@ markCodecs l2 =
                                 |> markCodecKinds jsonCodec "MinibillCodec"
                                 |> markCodecKinds jsonDecode "Decoder"
 
-                        -- _ =
-                        --     Debug.log "\n--- jsonEncode" jsonEncode
-                        --
-                        -- _ =
-                        --     Debug.log "\n--- jsonCodec" jsonCodec
-                        --
-                        -- _ =
-                        --     Debug.log "\n--- jsonDecode" jsonDecode
+                        _ =
+                            Debug.log "\nRequest Closure" (Dict.keys left)
+
+                        _ =
+                            Debug.log "\nResponse Closure" (Dict.keys right)
+
+                        _ =
+                            Debug.log "\nJSON Encode" jsonEncode
+
+                        _ =
+                            Debug.log "\nJSON Codec" jsonCodec
+
+                        _ =
+                            Debug.log "\nJSON Decode" jsonDecode
                     in
                     result
                 )

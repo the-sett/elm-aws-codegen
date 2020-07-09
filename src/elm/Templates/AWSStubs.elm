@@ -1209,7 +1209,7 @@ jsonCodings propertiesApi model =
             (\val ->
                 let
                     _ =
-                        Debug.log "declarations" (Dict.keys (Dict.diff model.declarations val))
+                        Debug.log "\nFiltered out of JSON coding" (Dict.keys (Dict.diff model.declarations val))
                 in
                 val
             )
