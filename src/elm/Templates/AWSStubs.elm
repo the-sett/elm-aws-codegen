@@ -30,10 +30,10 @@ module Templates.AWSStubs exposing
 import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
-import Elm.Codec
-import Elm.Decode
-import Elm.Encode exposing (defaultEncoderOptions)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
+import Elm.Json.Decode as Decode
+import Elm.Json.Encode as Encode exposing (defaultEncoderOptions)
+import Elm.Json.MinibillCodec as Codec
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
@@ -714,8 +714,8 @@ requestFnRequest propertiesApi model name urlSpec request =
                                             ( Nothing, Nothing )
 
                                         _ ->
-                                            Elm.Encode.partialEncoder
-                                                { defaultEncoderOptions | namedTypeEncoder = Elm.Encode.AssumeCodec }
+                                            Encode.partialEncoder
+                                                { defaultEncoderOptions | namedTypeEncoder = Encode.AssumeCodec }
                                                 requestTypeName
                                                 bodyFields
                                                 |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
@@ -1013,7 +1013,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             ( CG.val "noBody", CG.emptyLinkage )
 
                         bf :: bfs ->
-                            Elm.Decode.partialDecoder { namedTypeDecoder = Elm.Decode.AssumeCodec } "" (Nonempty bf bfs)
+                            Decode.partialDecoder { namedTypeDecoder = Decode.AssumeCodec } "" (Nonempty bf bfs)
                                 |> FunDecl.asExpression FunDecl.defaultOptions
 
                 ( headersDecoder, headersDecoderLinkage ) =
@@ -1213,7 +1213,7 @@ jsonCodec name decl =
             ( [], CG.emptyLinkage )
 
         _ ->
-            Elm.Codec.codec name decl
+            Codec.codec name decl
                 |> FunDecl.asTopLevel FunDecl.defaultOptions
                 |> Tuple.mapFirst List.singleton
 
