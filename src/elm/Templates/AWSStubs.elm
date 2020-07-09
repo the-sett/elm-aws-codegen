@@ -1201,20 +1201,20 @@ jsonCodings propertiesApi model =
             )
         )
         model.declarations
-        |> ResultME.map (Dict.map jsonCoding)
+        |> ResultME.map (Dict.map (jsonCoding propertiesApi))
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
         |> ResultME.mapError L3Error
 
 
-jsonCoding : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
-jsonCoding name decl =
+jsonCoding : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
+jsonCoding propertiesApi name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
 
         _ ->
-            Codec.codec name decl
+            Coding.coding propertiesApi name decl
                 |> FunDecl.asTopLevel FunDecl.defaultOptions
                 |> Tuple.mapFirst List.singleton
 
