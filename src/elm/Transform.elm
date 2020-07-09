@@ -4,6 +4,7 @@ import AWS.Config exposing (Protocol(..), Signer(..))
 import AWSService exposing (AWSService, AWSType(..), Location(..), Operation, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
+import Elm.Json.Coding as Coding
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
 import HttpMethod exposing (HttpMethod(..))
@@ -618,9 +619,9 @@ markCodecs l2 =
 
                         result =
                             l2
-                                |> markCodecKinds jsonEncode "encoder"
-                                |> markCodecKinds jsonCodec "codec"
-                                |> markCodecKinds jsonDecode "decoder"
+                                |> markCodecKinds jsonEncode "Encoder"
+                                |> markCodecKinds jsonCodec "MinibillCodec"
+                                |> markCodecKinds jsonDecode "Decoder"
 
                         -- _ =
                         --     Debug.log "\n--- jsonEncode" jsonEncode
@@ -660,8 +661,7 @@ markCodecKind : String -> String -> L2 () -> L2 ()
 markCodecKind name kind model =
     let
         setCodecKindProp val props =
-            --Dict.insert "codec" (PEnum Codec.codecEnum val) props
-            Dict.insert "codec" (PString val) props
+            Dict.insert "jsonCoding" (PEnum Coding.jsonCodingEnum val) props
     in
     Dict.update name
         (Maybe.map (L1.updatePropertiesOfDeclarable (setCodecKindProp kind)))
