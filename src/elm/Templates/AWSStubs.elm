@@ -713,11 +713,11 @@ requestFnRequest propertiesApi model name urlSpec request =
                                         [] ->
                                             ( Nothing, Nothing )
 
-                                        _ ->
+                                        b :: bs ->
                                             Encode.partialEncoder
                                                 { defaultEncoderOptions | namedTypeEncoder = Encode.AssumeCodec }
                                                 requestTypeName
-                                                bodyFields
+                                                (Nonempty b bs)
                                                 |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
                                                 |> Tuple.mapBoth Just Just
 
