@@ -544,16 +544,9 @@ modelOperation name operation =
 -}
 markTopLevelShapes : Dict String Operation -> L2 () -> L2 ()
 markTopLevelShapes operations model =
-    let
-        tlMarked =
-            Dict.foldl markTopLevelShape
-                model
-                operations
-
-        _ =
-            Debug.log "Top Level Marked" (Dict.keys tlMarked)
-    in
-    tlMarked
+    Dict.foldl markTopLevelShape
+        model
+        operations
 
 
 markTopLevelShape : String -> Operation -> L2 () -> L2 ()
@@ -693,6 +686,14 @@ selectClosure :
     -> ResultME L3.L3Error (L2 pos)
 selectClosure propertiesApi model filter =
     Query.filterDictByProps propertiesApi filter model
+        |> ResultME.map
+            (\val ->
+                let
+                    _ =
+                        Debug.log "\nStarting Set" (Dict.keys val)
+                in
+                val
+            )
         |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
 
 
