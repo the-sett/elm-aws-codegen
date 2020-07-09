@@ -31,6 +31,7 @@ import Dict exposing (Dict)
 import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
+import Elm.Json.Coding as Coding
 import Elm.Json.Decode as Decode
 import Elm.Json.Encode as Encode exposing (defaultEncoderOptions)
 import Elm.Json.MinibillCodec as Codec
@@ -328,7 +329,7 @@ generate posFn propertiesApi model =
         (service propertiesApi model)
         (operations propertiesApi model)
         (typeDeclarations propertiesApi model)
-        (jsonCodecs propertiesApi model)
+        (jsonCodings propertiesApi model)
         (kvEncoders propertiesApi model)
         (kvDecoders propertiesApi model)
         (propertiesApi.top.getOptionalStringProperty "documentation"
@@ -1187,8 +1188,8 @@ typeDeclaration propertiesAPI name decl =
 --== JSON Codecs
 
 
-jsonCodecs : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
-jsonCodecs propertiesApi model =
+jsonCodings : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
+jsonCodings propertiesApi model =
     Query.filterDictByProps propertiesApi
         (Query.notPropFilter
             (Query.orPropFilter
@@ -1200,14 +1201,14 @@ jsonCodecs propertiesApi model =
             )
         )
         model.declarations
-        |> ResultME.map (Dict.map jsonCodec)
+        |> ResultME.map (Dict.map jsonCoding)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
         |> ResultME.mapError L3Error
 
 
-jsonCodec : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
-jsonCodec name decl =
+jsonCoding : String -> L1.Declarable pos L2.RefChecked -> ( List Declaration, Linkage )
+jsonCoding name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
