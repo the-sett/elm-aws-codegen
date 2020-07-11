@@ -555,15 +555,19 @@ markTopLevelShape _ operation l2model =
         setTopLevelProp val props =
             Dict.insert "topLevel" (PEnum AWSStubs.topLevelEnum val) props
 
+        markTopLevel : String -> Maybe { a | shape : String } -> L2 () -> L2 ()
         markTopLevel tlPropVal opSide model =
             Maybe.map .shape opSide
-                |> Maybe.andThen (\name -> Dict.get name model |> Maybe.map (\decl -> ( decl, name )))
-                |> Maybe.map (\( decl, name ) -> ( L1.updatePropertiesOfDeclarable (setTopLevelProp tlPropVal) decl, name ))
-                |> Maybe.map (\( decl, name ) -> Dict.insert name decl model)
+                |> Maybe.map
+                    (\name ->
+                        Dict.update name
+                            (Maybe.map (L1.updatePropertiesOfDeclarable (setTopLevelProp tlPropVal)))
+                            model
+                    )
+                |> Maybe.withDefault model
     in
     markTopLevel "request" operation.input l2model
-        |> Maybe.andThen (markTopLevel "response" operation.output)
-        |> Maybe.withDefault l2model
+        |> markTopLevel "response" operation.output
 
 
 
