@@ -707,19 +707,6 @@ requestFnRequest propertiesApi model name urlSpec request =
                 (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map3
                         (\( urlWithParams, urlLinkage ) ( headersFnImpl, headersFnLinkage ) ( queryFnImpl, queryFnLinkage ) ->
-                            let
-                                bodyEncoderAndLinkage =
-                                    case bodyFields of
-                                        [] ->
-                                            ( Nothing, Nothing )
-                                                |> Ok
-
-                                        b :: bs ->
-                                            Coding.partialCoding propertiesApi requestTypeName "Encoder" (Nonempty b bs)
-                                                |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "encoder" })
-                                                |> ResultME.map (Tuple.mapBoth Just Just)
-                                                |> ResultME.mapError JsonCodingError
-                            in
                             ResultME.map
                                 (\( encoder, encoderLinkage ) ->
                                     let
@@ -763,7 +750,17 @@ requestFnRequest propertiesApi model name urlSpec request =
                                     , url = urlWithParams
                                     }
                                 )
-                                bodyEncoderAndLinkage
+                                (case bodyFields of
+                                    [] ->
+                                        ( Nothing, Nothing )
+                                            |> Ok
+
+                                    b :: bs ->
+                                        Coding.partialCoding propertiesApi requestTypeName "Encoder" (Nonempty b bs)
+                                            |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "encoder" })
+                                            |> ResultME.map (Tuple.mapBoth Just Just)
+                                            |> ResultME.mapError JsonCodingError
+                                )
                         )
                         (UrlParser.parseUrlParams urlSpec
                             |> ResultME.fromResult
@@ -1011,18 +1008,6 @@ nameTypedResponseDecoder :
 nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fields =
     ResultME.map3
         (\statusCodeFields headerFields bodyFields ->
-            let
-                bodyDecoderAndLinkage =
-                    case bodyFields of
-                        [] ->
-                            ( CG.val "noBody", CG.emptyLinkage )
-                                |> Ok
-
-                        bf :: bfs ->
-                            Coding.partialCoding propertiesApi "" "Decoder" (Nonempty bf bfs)
-                                |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
-                                |> ResultME.mapError JsonCodingError
-            in
             ResultME.map
                 (\( bodyDecoder, bodyDecoderLinkage ) ->
                     let
@@ -1128,7 +1113,16 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                     in
                     ( loweredType, decoder, linkage )
                 )
-                bodyDecoderAndLinkage
+                (case bodyFields of
+                    [] ->
+                        ( CG.val "noBody", CG.emptyLinkage )
+                            |> Ok
+
+                    bf :: bfs ->
+                        Coding.partialCoding propertiesApi "" "Decoder" (Nonempty bf bfs)
+                            |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
+                            |> ResultME.mapError JsonCodingError
+                )
         )
         (Query.deref responseTypeName model.declarations
             |> ResultME.andThen (filterProductDecl propertiesApi isInStatusCode)
