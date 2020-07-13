@@ -32,7 +32,6 @@ import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Json.Coding as Coding
-import Elm.Json.MinibillCodec as Codec
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
