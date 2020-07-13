@@ -32,7 +32,6 @@ import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Json.Coding as Coding
-import Elm.Json.Decode as Decode
 import Elm.Json.Encode as Encode exposing (defaultEncoderOptions)
 import Elm.Json.MinibillCodec as Codec
 import Elm.Lang
@@ -1009,116 +1008,125 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
     ResultME.map3
         (\statusCodeFields headerFields bodyFields ->
             let
-                ( loweredType, loweredLinkage ) =
-                    Elm.Lang.lowerType l1ResponseType
-
-                ( bodyDecoder, bodyDecoderLinkage ) =
+                bodyDecoderAndLinkage =
                     case bodyFields of
                         [] ->
                             ( CG.val "noBody", CG.emptyLinkage )
+                                |> Ok
 
                         bf :: bfs ->
-                            Decode.partialDecoder { namedTypeDecoder = Decode.AssumeCodec } "" (Nonempty bf bfs)
-                                |> FunDecl.asExpression FunDecl.defaultOptions
-
-                ( headersDecoder, headersDecoderLinkage ) =
-                    KVDecode.partialKVDecoder propertiesApi "requestTypeName" headerFields
-                        |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
-                        |> ResultME.mapError KVDecodeError
-                        |> Result.withDefault ( CG.string "failedKVDecoder", CG.emptyLinkage )
-
-                constructorFn =
-                    CG.lambda
-                        (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
-                            (statusCodeFields ++ headerFields ++ bodyFields)
-                        )
-                        (CG.record
-                            (Nonempty.map
-                                (\( fname, _, _ ) ->
-                                    ( Naming.safeCCL fname, CG.val (Naming.safeCCL (fname ++ "Fld")) )
-                                )
-                                fields
-                                |> Nonempty.toList
-                            )
-                        )
-
-                maybeAppliedToStatusCode =
-                    case statusCodeFields of
-                        [] ->
-                            constructorFn
-
-                        _ ->
-                            CG.apply
-                                [ constructorFn |> CG.parens
-                                , CG.access (CG.val "metadata") "statusCode"
-                                ]
-
-                maybeWithHeaderDecoding =
-                    case headerFields of
-                        [] ->
-                            maybeAppliedToStatusCode
-
-                        _ ->
-                            CG.pipe
-                                (CG.apply
-                                    [ CG.fqFun awsKVDecodeMod "object"
-                                    , maybeAppliedToStatusCode |> CG.parens
-                                    ]
-                                )
-                                [ headersDecoder
-                                , CG.fqFun awsKVDecodeMod "buildObject"
-                                , CG.apply
-                                    [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
-                                    , CG.val "obj"
-                                    , CG.access (CG.val "metadata") "headers"
-                                    ]
-                                    |> CG.lambda [ CG.varPattern "obj" ]
-                                ]
-
-                maybeWithBodyDecoder =
-                    case bodyFields of
-                        [] ->
-                            maybeWithHeaderDecoding
-
-                        _ ->
-                            CG.pipe
-                                (CG.apply
-                                    [ CG.fqFun decodeMod "succeed"
-                                    , maybeWithHeaderDecoding |> CG.parens
-                                    ]
-                                )
-                                [ bodyDecoder ]
-
-                isJustBody =
-                    List.isEmpty statusCodeFields && List.isEmpty headerFields
-
-                decoder =
-                    if isJustBody then
-                        CG.applyBinOp maybeWithBodyDecoder
-                            CG.piper
-                            (CG.fqFun awsHttpMod "jsonBodyDecoder")
-                            |> CG.letVal "decoder"
-
-                    else
-                        CG.applyBinOp
-                            (CG.lambda
-                                [ CG.varPattern "status", CG.varPattern "metadata" ]
-                                maybeWithBodyDecoder
-                            )
-                            CG.piper
-                            (CG.fqFun awsHttpMod "jsonFullDecoder")
-                            |> CG.letVal "decoder"
-
-                linkage =
-                    CG.combineLinkage
-                        [ CG.emptyLinkage
-                            |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
-                        , loweredLinkage
-                        , bodyDecoderLinkage
-                        , headersDecoderLinkage
-                        ]
+                            -- Decode.partialDecoder { namedTypeDecoder = Decode.AssumeCodec } "" (Nonempty bf bfs)
+                            --     |> FunDecl.asExpression FunDecl.defaultOptions
+                            Coding.partialCoding propertiesApi "" "Decoder" (Nonempty bf bfs)
+                                |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
+                                |> ResultME.mapError JsonCodingError
             in
-            ( loweredType, decoder, linkage )
+            ResultME.map
+                (\( bodyDecoder, bodyDecoderLinkage ) ->
+                    let
+                        ( loweredType, loweredLinkage ) =
+                            Elm.Lang.lowerType l1ResponseType
+
+                        ( headersDecoder, headersDecoderLinkage ) =
+                            KVDecode.partialKVDecoder propertiesApi "requestTypeName" headerFields
+                                |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
+                                |> ResultME.mapError KVDecodeError
+                                |> Result.withDefault ( CG.string "failedKVDecoder", CG.emptyLinkage )
+
+                        constructorFn =
+                            CG.lambda
+                                (List.map (\( fname, _, _ ) -> Naming.safeCCL (fname ++ "Fld") |> CG.varPattern)
+                                    (statusCodeFields ++ headerFields ++ bodyFields)
+                                )
+                                (CG.record
+                                    (Nonempty.map
+                                        (\( fname, _, _ ) ->
+                                            ( Naming.safeCCL fname, CG.val (Naming.safeCCL (fname ++ "Fld")) )
+                                        )
+                                        fields
+                                        |> Nonempty.toList
+                                    )
+                                )
+
+                        maybeAppliedToStatusCode =
+                            case statusCodeFields of
+                                [] ->
+                                    constructorFn
+
+                                _ ->
+                                    CG.apply
+                                        [ constructorFn |> CG.parens
+                                        , CG.access (CG.val "metadata") "statusCode"
+                                        ]
+
+                        maybeWithHeaderDecoding =
+                            case headerFields of
+                                [] ->
+                                    maybeAppliedToStatusCode
+
+                                _ ->
+                                    CG.pipe
+                                        (CG.apply
+                                            [ CG.fqFun awsKVDecodeMod "object"
+                                            , maybeAppliedToStatusCode |> CG.parens
+                                            ]
+                                        )
+                                        [ headersDecoder
+                                        , CG.fqFun awsKVDecodeMod "buildObject"
+                                        , CG.apply
+                                            [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
+                                            , CG.val "obj"
+                                            , CG.access (CG.val "metadata") "headers"
+                                            ]
+                                            |> CG.lambda [ CG.varPattern "obj" ]
+                                        ]
+
+                        maybeWithBodyDecoder =
+                            case bodyFields of
+                                [] ->
+                                    maybeWithHeaderDecoding
+
+                                _ ->
+                                    CG.pipe
+                                        (CG.apply
+                                            [ CG.fqFun decodeMod "succeed"
+                                            , maybeWithHeaderDecoding |> CG.parens
+                                            ]
+                                        )
+                                        [ bodyDecoder ]
+
+                        isJustBody =
+                            List.isEmpty statusCodeFields && List.isEmpty headerFields
+
+                        decoder =
+                            if isJustBody then
+                                CG.applyBinOp maybeWithBodyDecoder
+                                    CG.piper
+                                    (CG.fqFun awsHttpMod "jsonBodyDecoder")
+                                    |> CG.letVal "decoder"
+
+                            else
+                                CG.applyBinOp
+                                    (CG.lambda
+                                        [ CG.varPattern "status", CG.varPattern "metadata" ]
+                                        maybeWithBodyDecoder
+                                    )
+                                    CG.piper
+                                    (CG.fqFun awsHttpMod "jsonFullDecoder")
+                                    |> CG.letVal "decoder"
+
+                        linkage =
+                            CG.combineLinkage
+                                [ CG.emptyLinkage
+                                    |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
+                                , loweredLinkage
+                                , bodyDecoderLinkage
+                                , headersDecoderLinkage
+                                ]
+                    in
+                    ( loweredType, decoder, linkage )
+                )
+                bodyDecoderAndLinkage
         )
         (Query.deref responseTypeName model.declarations
             |> ResultME.andThen (filterProductDecl propertiesApi isInStatusCode)
@@ -1132,6 +1140,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
             |> ResultME.andThen (filterProductDecl propertiesApi isInBody)
             |> ResultME.mapError L3Error
         )
+        |> ResultME.flatten
 
 
 
