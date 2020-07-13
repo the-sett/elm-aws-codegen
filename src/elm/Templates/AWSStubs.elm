@@ -1205,14 +1205,6 @@ jsonCodings propertiesApi model =
             )
         )
         model.declarations
-        |> ResultME.map
-            (\val ->
-                let
-                    _ =
-                        Debug.log "\nFiltered out of JSON coding" (Dict.keys (Dict.diff model.declarations val))
-                in
-                val
-            )
         |> ResultME.mapError L3Error
         |> ResultME.andThen (Dict.map (jsonCoding propertiesApi) >> ResultME.combineDict)
         |> ResultME.map Dict.values

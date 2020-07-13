@@ -627,20 +627,20 @@ markCodecs l2 =
                                 |> markCodecKinds jsonCodec "MinibillCodec"
                                 |> markCodecKinds jsonDecode "Decoder"
 
-                        _ =
-                            Debug.log "\nRequest Closure" (Dict.keys left)
-
-                        _ =
-                            Debug.log "\nResponse Closure" (Dict.keys right)
-
-                        _ =
-                            Debug.log "\nJSON Encode" jsonEncode
-
-                        _ =
-                            Debug.log "\nJSON Codec" jsonCodec
-
-                        _ =
-                            Debug.log "\nJSON Decode" jsonDecode
+                        -- _ =
+                        --     Debug.log "\nRequest Closure" (Dict.keys left)
+                        --
+                        -- _ =
+                        --     Debug.log "\nResponse Closure" (Dict.keys right)
+                        --
+                        -- _ =
+                        --     Debug.log "\nJSON Encode" jsonEncode
+                        --
+                        -- _ =
+                        --     Debug.log "\nJSON Codec" jsonCodec
+                        --
+                        -- _ =
+                        --     Debug.log "\nJSON Decode" jsonDecode
                     in
                     result
                 )
@@ -690,14 +690,6 @@ selectClosure :
     -> ResultME L3.L3Error (L2 pos)
 selectClosure propertiesApi model filter =
     Query.filterDictByProps propertiesApi filter model
-        |> ResultME.map
-            (\val ->
-                let
-                    _ =
-                        Debug.log "\nStarting Set" (Dict.keys val)
-                in
-                val
-            )
         |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
 
 
