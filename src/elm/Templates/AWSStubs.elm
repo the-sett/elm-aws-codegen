@@ -1015,8 +1015,6 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                 |> Ok
 
                         bf :: bfs ->
-                            -- Decode.partialDecoder { namedTypeDecoder = Decode.AssumeCodec } "" (Nonempty bf bfs)
-                            --     |> FunDecl.asExpression FunDecl.defaultOptions
                             Coding.partialCoding propertiesApi "" "Decoder" (Nonempty bf bfs)
                                 |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
                                 |> ResultME.mapError JsonCodingError
