@@ -32,7 +32,6 @@ import Documentation
 import Elm.CodeGen as CG exposing (Declaration, Expression, File, Import, LetDeclaration, Linkage, Module, Pattern, TopLevelExpose, TypeAnnotation)
 import Elm.FunDecl as FunDecl exposing (defaultOptions)
 import Elm.Json.Coding as Coding
-import Elm.Json.Encode as Encode exposing (defaultEncoderOptions)
 import Elm.Json.MinibillCodec as Codec
 import Elm.Lang
 import Enum exposing (Enum)
@@ -709,58 +708,62 @@ requestFnRequest propertiesApi model name urlSpec request =
                     ResultME.map3
                         (\( urlWithParams, urlLinkage ) ( headersFnImpl, headersFnLinkage ) ( queryFnImpl, queryFnLinkage ) ->
                             let
-                                ( loweredType, loweredLinkage ) =
-                                    Elm.Lang.lowerType l1RequestType
-
-                                ( encoder, encoderLinkage ) =
+                                bodyEncoderAndLinkage =
                                     case bodyFields of
                                         [] ->
                                             ( Nothing, Nothing )
+                                                |> Ok
 
                                         b :: bs ->
-                                            Encode.partialEncoder
-                                                { defaultEncoderOptions | namedTypeEncoder = Encode.AssumeCodec }
-                                                requestTypeName
-                                                (Nonempty b bs)
-                                                |> FunDecl.asLetDecl { defaultOptions | name = Just "encoder" }
-                                                |> Tuple.mapBoth Just Just
-
-                                jsonBody =
-                                    case bodyFields of
-                                        [] ->
-                                            CG.fqVal awsHttpMod "emptyBody"
-                                                |> CG.letVal "jsonBody"
-
-                                        _ ->
-                                            CG.pipe (CG.val "req")
-                                                [ CG.val "encoder"
-                                                , CG.fqVal awsHttpMod "jsonBody"
-                                                ]
-                                                |> CG.letVal "jsonBody"
-
-                                linkage =
-                                    CG.combineLinkage
-                                        (Maybe.Extra.values
-                                            [ CG.emptyLinkage
-                                                |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
-                                                |> Just
-                                            , loweredLinkage |> Just
-                                            , encoderLinkage
-                                            , queryFnLinkage
-                                            , headersFnLinkage
-                                            , urlLinkage |> Just
-                                            ]
-                                        )
+                                            Coding.partialCoding propertiesApi requestTypeName "Encoder" (Nonempty b bs)
+                                                |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "encoder" })
+                                                |> ResultME.map (Tuple.mapBoth Just Just)
+                                                |> ResultME.mapError JsonCodingError
                             in
-                            { maybeRequestType = Just loweredType
-                            , argPatterns = [ CG.varPattern "req" ]
-                            , encoder = encoder
-                            , setHeaders = headersFnImpl
-                            , setQueryParams = queryFnImpl
-                            , jsonBody = jsonBody
-                            , requestLinkage = linkage
-                            , url = urlWithParams
-                            }
+                            ResultME.map
+                                (\( encoder, encoderLinkage ) ->
+                                    let
+                                        ( loweredType, loweredLinkage ) =
+                                            Elm.Lang.lowerType l1RequestType
+
+                                        jsonBody =
+                                            case bodyFields of
+                                                [] ->
+                                                    CG.fqVal awsHttpMod "emptyBody"
+                                                        |> CG.letVal "jsonBody"
+
+                                                _ ->
+                                                    CG.pipe (CG.val "req")
+                                                        [ CG.val "encoder"
+                                                        , CG.fqVal awsHttpMod "jsonBody"
+                                                        ]
+                                                        |> CG.letVal "jsonBody"
+
+                                        linkage =
+                                            CG.combineLinkage
+                                                (Maybe.Extra.values
+                                                    [ CG.emptyLinkage
+                                                        |> CG.addImport (CG.importStmt awsHttpMod Nothing Nothing)
+                                                        |> Just
+                                                    , loweredLinkage |> Just
+                                                    , encoderLinkage
+                                                    , queryFnLinkage
+                                                    , headersFnLinkage
+                                                    , urlLinkage |> Just
+                                                    ]
+                                                )
+                                    in
+                                    { maybeRequestType = Just loweredType
+                                    , argPatterns = [ CG.varPattern "req" ]
+                                    , encoder = encoder
+                                    , setHeaders = headersFnImpl
+                                    , setQueryParams = queryFnImpl
+                                    , jsonBody = jsonBody
+                                    , requestLinkage = linkage
+                                    , url = urlWithParams
+                                    }
+                                )
+                                bodyEncoderAndLinkage
                         )
                         (UrlParser.parseUrlParams urlSpec
                             |> ResultME.fromResult
@@ -769,6 +772,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                         )
                         (headersFn propertiesApi headerFields)
                         (queryFn propertiesApi queryStringFields)
+                        |> ResultME.flatten
                 )
                 (Query.deref requestTypeName model.declarations
                     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
