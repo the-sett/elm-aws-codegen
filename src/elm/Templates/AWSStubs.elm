@@ -1199,7 +1199,10 @@ typeDeclaration propertiesAPI name decl =
 jsonCodings : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCodings propertiesApi model =
     Query.filterDictByProps propertiesApi
-        (Query.notPropFilter isExcluded)
+        (Query.andPropFilter
+            (Query.notPropFilter isExcluded)
+            hasJsonCoding
+        )
         model.declarations
         |> ResultME.mapError L3Error
         |> ResultME.andThen (Dict.map (jsonCoding propertiesApi model.declarations) >> ResultME.combineDict)
@@ -1377,6 +1380,12 @@ isResponse propertiesAPI decl =
 
         Err err ->
             Err err
+
+
+hasJsonCoding : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+hasJsonCoding propertiesAPI decl =
+    (propertiesAPI.declarable decl).getOptionalEnumProperty Coding.jsonCodingEnum "jsonCoding"
+        |> ResultME.map Maybe.Extra.isJust
 
 
 

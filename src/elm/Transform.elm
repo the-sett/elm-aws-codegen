@@ -589,12 +589,6 @@ Need kv-encoder if query params or request header has something as a dependency.
 Find shapes that need kv-decoder.
 Need kv-decoder if response header has something as a dependency.
 
-Algorithm:
-
-1.  Filter to relevant fields.
-2.  Take transitive closure.
-3.  Mark all in the closure.
-
 -}
 markCodecs : L2 () -> ResultME (TransformError pos) (L2 ())
 markCodecs l2 =
