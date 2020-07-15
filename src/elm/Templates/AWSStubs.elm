@@ -755,7 +755,7 @@ requestFnRequest propertiesApi model name urlSpec request =
                                             |> Ok
 
                                     b :: bs ->
-                                        Coding.partialCoding propertiesApi requestTypeName "Encoder" (Nonempty b bs)
+                                        Coding.partialCoding propertiesApi model.declarations requestTypeName "Encoder" (Nonempty b bs)
                                             |> ResultME.map (FunDecl.asLetDecl { defaultOptions | name = Just "encoder" })
                                             |> ResultME.map (Tuple.mapBoth Just Just)
                                             |> ResultME.mapError JsonCodingError
@@ -1118,7 +1118,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             |> Ok
 
                     bf :: bfs ->
-                        Coding.partialCoding propertiesApi "" "Decoder" (Nonempty bf bfs)
+                        Coding.partialCoding propertiesApi model.declarations "" "Decoder" (Nonempty bf bfs)
                             |> ResultME.map (FunDecl.asExpression FunDecl.defaultOptions)
                             |> ResultME.mapError JsonCodingError
                 )
@@ -1210,24 +1210,25 @@ jsonCodings propertiesApi model =
         )
         model.declarations
         |> ResultME.mapError L3Error
-        |> ResultME.andThen (Dict.map (jsonCoding propertiesApi) >> ResultME.combineDict)
+        |> ResultME.andThen (Dict.map (jsonCoding propertiesApi model.declarations) >> ResultME.combineDict)
         |> ResultME.map Dict.values
         |> ResultME.map combineDeclarations
 
 
 jsonCoding :
     PropertiesAPI pos
+    -> L2 pos
     -> String
     -> L1.Declarable pos L2.RefChecked
     -> ResultME AWSStubsError ( List Declaration, Linkage )
-jsonCoding propertiesApi name decl =
+jsonCoding propertiesApi model name decl =
     case decl of
         DAlias _ _ (TFunction _ _ _ _) ->
             ( [], CG.emptyLinkage )
                 |> Ok
 
         _ ->
-            Coding.coding propertiesApi name decl
+            Coding.coding propertiesApi model name decl
                 |> ResultME.map (FunDecl.asTopLevel FunDecl.defaultOptions)
                 |> ResultME.map (Tuple.mapFirst List.singleton)
                 |> ResultME.mapError JsonCodingError
