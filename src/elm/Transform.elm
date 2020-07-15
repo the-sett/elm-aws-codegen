@@ -674,7 +674,8 @@ markCodecKind name kind model =
 
 {-| Filters out a starting set from the model and then computes its transitive closure.
 
-This allows a set of things to be selected along with all of their dependencies.
+The starting set is not automatically included in the results. This allows a set
+of all dependencies to be calculated.
 
 -}
 selectClosure :
@@ -684,7 +685,7 @@ selectClosure :
     -> ResultME L3.L3Error (L2 pos)
 selectClosure propertiesApi model filter =
     Query.filterDictByProps propertiesApi filter model
-        |> ResultME.andThen (\filtered -> Query.transitiveClosure filtered model)
+        |> ResultME.andThen (\filtered -> Query.transitiveClosureWithoutStartingSet filtered model)
 
 
 
