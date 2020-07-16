@@ -28,6 +28,7 @@ import Maybe.Extra
 import Naming
 import Query exposing (PropertyFilter)
 import ResultME exposing (ResultME)
+import Set exposing (Set)
 import SourcePos exposing (SourceLines)
 import String.Case as Case
 import Templates.AWSStubs as AWSStubs
@@ -641,11 +642,23 @@ markCodecs l2 =
                 requestClosure
                 responseClosure
 
-        -- _ =
-        --     Query.deref requestTypeName model.declarations
-        --         |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
-        --         |> ResultME.mapError L3Error
-        -- Use Dict.update to update matches with properties.
+        kvEncodeSet =
+            selectFields propertiesApi
+                l2
+                AWSStubs.isRequest
+                (Query.orPropFilter
+                    AWSStubs.isInQueryString
+                    AWSStubs.isInHeader
+                )
+
+        _ =
+            Debug.log "kvEncodeSet" kvEncodeSet
+
+        kvDecodeSet =
+            selectFields propertiesApi l2 AWSStubs.isResponse AWSStubs.isInHeader
+
+        _ =
+            Debug.log "kvDecodeSet" kvDecodeSet
     in
     l2WithCodecsMarked
         |> ResultME.mapError L3Error
@@ -693,6 +706,8 @@ selectClosure propertiesApi model filter =
 -- Look up all requests as product decls and filter their fields.
 -- Get header and query fields.
 -- Similarly for responses.
+-- Get fields that are named refs and gather all those names into a set.
+-- Filter the model by the set of names to arrive at the dependencies.
 
 
 selectFields :
@@ -700,29 +715,32 @@ selectFields :
     -> L2 pos
     -> Query.PropertyFilter pos (Declarable pos RefChecked)
     -> Query.PropertyFilter pos (Field pos RefChecked)
-    -> ResultME L3.L3Error (L2 pos)
+    -> ResultME L3.L3Error (Set String)
 selectFields propertiesApi model reqRespfilter locFilter =
+    let
+        matchingFieldRefs : L2 pos -> ResultME L3.L3Error (Set String)
+        matchingFieldRefs filtered =
+            Dict.map (\name decl -> filterProductDecl propertiesApi locFilter decl) filtered
+                |> ResultME.combineDict
+                |> ResultME.map (Dict.map (\name fields -> fieldRefs fields))
+                |> ResultME.map (Dict.values >> List.foldl Set.union Set.empty)
+
+        fieldRefs : List (Field pos L2.RefChecked) -> Set String
+        fieldRefs fields =
+            List.foldl
+                (\( _, ftype, _ ) accum ->
+                    case Debug.log "ftype" ftype of
+                        TNamed _ _ name _ ->
+                            Set.insert name accum
+
+                        _ ->
+                            accum
+                )
+                Set.empty
+                fields
+    in
     Query.filterDictByProps propertiesApi reqRespfilter model
-        |> ResultME.map
-            (\filtered ->
-                Dict.foldl
-                    -- Get fields that are named refs and gather all those names into a set.
-                    -- Filter the model by the set of names to arrive at the dependencies.
-                    (\name decl accum -> filterProductDecl propertiesApi locFilter decl)
-                    Dict.empty
-                    filtered
-            )
-
-
-
--- (Query.deref requestTypeName model.declarations
---     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
---     |> ResultME.mapError L3Error
--- )
--- (Query.deref requestTypeName model.declarations
---     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
---     |> ResultME.mapError L3Error
--- )
+        |> ResultME.andThen matchingFieldRefs
 
 
 {-| Given a product declaration as a type alias of a product type, filters its
