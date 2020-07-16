@@ -691,32 +691,46 @@ selectClosure propertiesApi model filter =
 
 -- Get all requests type names.
 -- Look up all requests as product decls and filter their fields.
--- Get header, query and body field sets.
+-- Get header and query fields.
 -- Similarly for responses.
 
 
-selectRequestFields :
+selectFields :
     L3.PropertiesAPI pos
     -> L2 pos
     -> Query.PropertyFilter pos (Declarable pos RefChecked)
+    -> Query.PropertyFilter pos (Field pos RefChecked)
     -> ResultME L3.L3Error (L2 pos)
-selectRequestFields propertiesApi model filter =
-    Query.filterDictByProps propertiesApi filter model
+selectFields propertiesApi model reqRespfilter locFilter =
+    Query.filterDictByProps propertiesApi reqRespfilter model
         |> ResultME.map
             (\filtered ->
                 Dict.foldl
-                    (\name decl accum -> accum)
+                    -- Get fields that are named refs and gather all those names into a set.
+                    -- Filter the model by the set of names to arrive at the dependencies.
+                    (\name decl accum -> filterProductDecl propertiesApi locFilter decl)
                     Dict.empty
                     filtered
             )
 
 
 
--- Query.deref requestTypeName model.declarations
+-- (Query.deref requestTypeName model.declarations
 --     |> ResultME.andThen (filterProductDecl propertiesApi isInHeader)
 --     |> ResultME.mapError L3Error
+-- )
+-- (Query.deref requestTypeName model.declarations
+--     |> ResultME.andThen (filterProductDecl propertiesApi isInQueryString)
+--     |> ResultME.mapError L3Error
+-- )
 
 
+{-| Given a product declaration as a type alias of a product type, filters its
+fields to get just the ones that match the specified filter.
+
+Note that if no fields pass the filter, an empty list will be returned.
+
+-}
 filterProductDecl :
     PropertiesAPI pos
     -> PropertyFilter pos (Field pos L2.RefChecked)
