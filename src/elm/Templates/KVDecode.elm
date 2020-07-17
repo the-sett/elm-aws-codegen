@@ -366,6 +366,19 @@ restrictedKVDecoder name res =
                 (CG.typed typeName [])
                 (CG.typed "KVPairs" [])
 
+        -- Implementation needs to look like this:
+        --
+        -- AWS.KVDecode.andThen
+        --     (\sval ->
+        --         case Refined.build version sval of
+        --             Ok val ->
+        --                 AWS.KVDecode.succeed val
+        --
+        --             Err err ->
+        --                 Refined.stringErrorToString err |> AWS.KVDecode.fail
+        --     )
+        --     AWS.KVDecode.string
+        --
         ( impl, implLinkage ) =
             basicToKVFun basic
                 |> Tuple.mapFirst
