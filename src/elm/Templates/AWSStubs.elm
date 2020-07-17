@@ -232,6 +232,8 @@ defaultProperties =
             , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
             ]
             [ ( "exclude", PBool False )
+            , ( "kvEncode", PBool False )
+            , ( "kvDecode", PBool False )
             ]
     , sum =
         L1.defineProperties
@@ -1236,14 +1238,9 @@ jsonCoding propertiesApi model name decl =
 kvEncoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoders propertiesApi model =
     Query.filterDictByProps propertiesApi
-        (Query.notPropFilter
-            (Query.orPropFilter
-                (Query.orPropFilter
-                    isRequest
-                    isResponse
-                )
-                isExcluded
-            )
+        (Query.andPropFilter
+            (Query.notPropFilter isExcluded)
+            isKVEncoded
         )
         model.declarations
         |> ResultME.mapError L3Error
@@ -1274,14 +1271,9 @@ kvEncoder propertiesApi name decl =
 kvDecoders : PropertiesAPI pos -> L3 pos -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvDecoders propertiesApi model =
     Query.filterDictByProps propertiesApi
-        (Query.notPropFilter
-            (Query.orPropFilter
-                (Query.orPropFilter
-                    isRequest
-                    isResponse
-                )
-                isExcluded
-            )
+        (Query.andPropFilter
+            (Query.notPropFilter isExcluded)
+            isKVDecoded
         )
         model.declarations
         |> ResultME.mapError L3Error
@@ -1386,6 +1378,16 @@ hasJsonCoding : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
 hasJsonCoding propertiesAPI decl =
     (propertiesAPI.declarable decl).getOptionalEnumProperty Coding.jsonCodingEnum "jsonCoding"
         |> ResultME.map Maybe.Extra.isJust
+
+
+isKVEncoded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+isKVEncoded propertiesAPI decl =
+    (propertiesAPI.declarable decl).getBoolProperty "kvEncode"
+
+
+isKVDecoded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
+isKVDecoded propertiesAPI decl =
+    (propertiesAPI.declarable decl).getBoolProperty "kvDecode"
 
 
 

@@ -642,25 +642,45 @@ markCodecs l2 =
                 requestClosure
                 responseClosure
 
-        kvEncodeSet =
-            selectFields propertiesApi
-                l2
-                AWSStubs.isRequest
-                (Query.orPropFilter
-                    AWSStubs.isInQueryString
-                    AWSStubs.isInHeader
+        l2WithKVCodingsMarked =
+            ResultME.map
+                (\model ->
+                    let
+                        kvEncodeSet =
+                            selectFields propertiesApi
+                                l2
+                                AWSStubs.isRequest
+                                (Query.orPropFilter
+                                    AWSStubs.isInQueryString
+                                    AWSStubs.isInHeader
+                                )
+                                |> ResultME.map Dict.keys
+
+                        kvDecodeSet =
+                            selectFields propertiesApi l2 AWSStubs.isResponse AWSStubs.isInHeader
+                                |> ResultME.map Dict.keys
+
+                        result =
+                            ResultME.map2
+                                (\encode decode ->
+                                    model
+                                        |> markPropsOnDecls markKVEncoder encode
+                                        |> markPropsOnDecls markKVDecoder decode
+                                )
+                                kvEncodeSet
+                                kvDecodeSet
+
+                        _ =
+                            Debug.log "kvDecodeSet" kvDecodeSet
+
+                        _ =
+                            Debug.log "kvEncodeSet" kvEncodeSet
+                    in
+                    model
                 )
-
-        _ =
-            Debug.log "kvEncodeSet" (ResultME.map Dict.keys kvEncodeSet)
-
-        kvDecodeSet =
-            selectFields propertiesApi l2 AWSStubs.isResponse AWSStubs.isInHeader
-
-        _ =
-            Debug.log "kvDecodeSet" (ResultME.map Dict.keys kvDecodeSet)
+                l2WithCodecsMarked
     in
-    l2WithCodecsMarked
+    l2WithKVCodingsMarked
         |> ResultME.mapError L3Error
 
 
