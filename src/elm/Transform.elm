@@ -643,8 +643,8 @@ markCodecs l2 =
                 responseClosure
 
         l2WithKVCodingsMarked =
-            ResultME.map
-                (\model ->
+            ResultME.andThen
+                (\l2ToMark ->
                     let
                         kvEncodeSet =
                             selectFields propertiesApi
@@ -663,7 +663,7 @@ markCodecs l2 =
                         result =
                             ResultME.map2
                                 (\encode decode ->
-                                    model
+                                    l2ToMark
                                         |> markPropsOnDecls markKVEncoder encode
                                         |> markPropsOnDecls markKVDecoder decode
                                 )
@@ -676,7 +676,7 @@ markCodecs l2 =
                         _ =
                             Debug.log "kvEncodeSet" kvEncodeSet
                     in
-                    model
+                    result
                 )
                 l2WithCodecsMarked
     in
