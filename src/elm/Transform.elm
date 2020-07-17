@@ -618,9 +618,9 @@ markCodecs l2 =
 
                         result =
                             l2
-                                |> markCodecKinds jsonEncode "Encoder"
-                                |> markCodecKinds jsonCodec "MinibillCodec"
-                                |> markCodecKinds jsonDecode "Decoder"
+                                |> markPropsOnDecls (markCodecKind "Encoder") jsonEncode
+                                |> markPropsOnDecls (markCodecKind "MinibillCodec") jsonCodec
+                                |> markPropsOnDecls (markCodecKind "Decoder") jsonDecode
 
                         -- _ =
                         --     Debug.log "\nRequest Closure" (Dict.keys left)
@@ -667,21 +667,43 @@ markCodecs l2 =
 {-| Mark declarations in the model as requiring a particular kind of codec to
 be generated for them.
 -}
-markCodecKinds : List String -> String -> L2 () -> L2 ()
-markCodecKinds names kind model =
-    List.foldl (\name accum -> markCodecKind name kind accum)
+markPropsOnDecls : (String -> L2 () -> L2 ()) -> List String -> L2 () -> L2 ()
+markPropsOnDecls markfn names model =
+    List.foldl (\name accum -> markfn name accum)
         model
         names
 
 
 markCodecKind : String -> String -> L2 () -> L2 ()
-markCodecKind name kind model =
+markCodecKind kind name model =
     let
         setCodecKindProp val props =
             Dict.insert "jsonCoding" (PEnum Coding.jsonCodingEnum val) props
     in
     Dict.update name
         (Maybe.map (L1.updatePropertiesOfDeclarable (setCodecKindProp kind)))
+        model
+
+
+markKVEncoder : String -> L2 () -> L2 ()
+markKVEncoder name model =
+    let
+        setProp props =
+            Dict.insert "kvEncode" (PBool True) props
+    in
+    Dict.update name
+        (Maybe.map (L1.updatePropertiesOfDeclarable setProp))
+        model
+
+
+markKVDecoder : String -> L2 () -> L2 ()
+markKVDecoder name model =
+    let
+        setProp props =
+            Dict.insert "kvDecode" (PBool True) props
+    in
+    Dict.update name
+        (Maybe.map (L1.updatePropertiesOfDeclarable setProp))
         model
 
 
