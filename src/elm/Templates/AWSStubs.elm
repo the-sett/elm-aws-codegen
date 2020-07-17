@@ -249,6 +249,8 @@ defaultProperties =
             ]
             [ ( "exclude", PBool False )
             , ( "elmEnumStyle", PEnum elmEnumStyleEnum "customType" )
+            , ( "kvEncode", PBool False )
+            , ( "kvDecode", PBool False )
             ]
     , restricted =
         L1.defineProperties
@@ -256,6 +258,8 @@ defaultProperties =
             , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
             ]
             [ ( "exclude", PBool False )
+            , ( "kvEncode", PBool False )
+            , ( "kvDecode", PBool False )
             ]
     , fields =
         L1.defineProperties
