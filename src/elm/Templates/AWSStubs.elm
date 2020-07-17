@@ -1386,7 +1386,20 @@ hasJsonCoding propertiesAPI decl =
 
 isKVEncoded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)
 isKVEncoded propertiesAPI decl =
-    (propertiesAPI.declarable decl).getBoolProperty "kvEncode"
+    let
+        result =
+            (propertiesAPI.declarable decl).getBoolProperty "kvEncode"
+    in
+    case result of
+        Ok True ->
+            let
+                _ =
+                    Debug.log "isKVEncoded" True
+            in
+            Ok True
+
+        val ->
+            val
 
 
 isKVDecoded : PropertyFilter pos (L1.Declarable pos L2.RefChecked)

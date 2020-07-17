@@ -710,6 +710,7 @@ markKVEncoder name model =
     let
         setProp props =
             Dict.insert "kvEncode" (PBool True) props
+                |> Debug.log "markKVEncoder"
     in
     Dict.update name
         (Maybe.map (L1.updatePropertiesOfDeclarable setProp))
@@ -721,6 +722,7 @@ markKVDecoder name model =
     let
         setProp props =
             Dict.insert "kvDecode" (PBool True) props
+                |> Debug.log "markKVDecoder"
     in
     Dict.update name
         (Maybe.map (L1.updatePropertiesOfDeclarable setProp))
