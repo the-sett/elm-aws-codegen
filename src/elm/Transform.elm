@@ -652,13 +652,13 @@ markCodecs l2 =
                 )
 
         _ =
-            Debug.log "kvEncodeSet" kvEncodeSet
+            Debug.log "kvEncodeSet" (ResultME.map Dict.keys kvEncodeSet)
 
         kvDecodeSet =
             selectFields propertiesApi l2 AWSStubs.isResponse AWSStubs.isInHeader
 
         _ =
-            Debug.log "kvDecodeSet" kvDecodeSet
+            Debug.log "kvDecodeSet" (ResultME.map Dict.keys kvDecodeSet)
     in
     l2WithCodecsMarked
         |> ResultME.mapError L3Error
@@ -715,29 +715,27 @@ selectFields :
     -> L2 pos
     -> Query.PropertyFilter pos (Declarable pos RefChecked)
     -> Query.PropertyFilter pos (Field pos RefChecked)
-    -> ResultME L3.L3Error (Set String)
+    -> ResultME L3.L3Error (L2 pos)
 selectFields propertiesApi model reqRespfilter locFilter =
     let
-        matchingFieldRefs : L2 pos -> ResultME L3.L3Error (Set String)
+        matchingFieldRefs : L2 pos -> ResultME L3.L3Error (L2 pos)
         matchingFieldRefs filtered =
             Dict.map (\name decl -> filterProductDecl propertiesApi locFilter decl) filtered
                 |> ResultME.combineDict
-                |> ResultME.map (Dict.map (\name fields -> fieldRefs fields))
-                |> ResultME.map (Dict.values >> List.foldl Set.union Set.empty)
+                |> ResultME.map (\dict -> Dict.values dict |> List.map fieldRefs |> ResultME.combineList)
+                |> ResultME.flatten
+                |> ResultME.map (List.foldl Dict.union Dict.empty)
 
-        fieldRefs : List (Field pos L2.RefChecked) -> Set String
+        fieldRefs : List (Field pos L2.RefChecked) -> ResultME L3.L3Error (L2 pos)
         fieldRefs fields =
             List.foldl
                 (\( _, ftype, _ ) accum ->
-                    case Debug.log "ftype" ftype of
-                        TNamed _ _ name _ ->
-                            Set.insert name accum
-
-                        _ ->
-                            accum
+                    Query.transitiveClosureOfType ftype model :: accum
                 )
-                Set.empty
+                []
                 fields
+                |> ResultME.combineList
+                |> ResultME.map (List.foldl Dict.union Dict.empty)
     in
     Query.filterDictByProps propertiesApi reqRespfilter model
         |> ResultME.andThen matchingFieldRefs
