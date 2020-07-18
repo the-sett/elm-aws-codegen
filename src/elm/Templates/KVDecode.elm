@@ -269,9 +269,7 @@ typeAliasKVDecoder propertiesApi name l1Type =
                     Naming.safeCCU name
 
                 sig =
-                    CG.funAnn
-                        (CG.typed typeName [])
-                        (CG.typed "KVPairs" [])
+                    CG.typed "KVDecoder" [ CG.typeVar typeName ]
 
                 doc =
                     CG.emptyDocComment
@@ -281,7 +279,7 @@ typeAliasKVDecoder propertiesApi name l1Type =
                 (Just doc)
                 (Just sig)
                 kvDecoderFnName
-                [ CG.varPattern "val" ]
+                []
                 impl
             , CG.emptyLinkage
                 |> CG.addImport awsKVDecodeImport
@@ -304,22 +302,33 @@ enumKVDecoder name constructors =
             Naming.safeCCL name
 
         sig =
-            CG.funAnn
-                (CG.typed typeName [])
-                (CG.typed "KVPairs" [])
+            CG.typed "KVDecoder" [ CG.typeVar typeName ]
 
         ( impl, implLinkage ) =
             basicToKVFun BString
                 |> Tuple.mapFirst
                     (\kvfun ->
-                        CG.pipe
-                            (CG.apply
-                                [ CG.fqFun enumMod "toString"
-                                , CG.val enumName
-                                , CG.val "val"
-                                ]
-                            )
-                            [ kvfun ]
+                        CG.apply
+                            [ CG.fqFun awsKVDecodeMod "andThen"
+                            , CG.lambda [ CG.varPattern "sval" ]
+                                (CG.caseExpr
+                                    (CG.apply
+                                        [ CG.fqFun enumMod "build"
+                                        , CG.val (Naming.safeCCL name)
+                                        , CG.val "sval"
+                                        ]
+                                    )
+                                    [ ( CG.namedPattern "Ok" [ CG.varPattern "val" ]
+                                      , CG.apply [ CG.fqFun awsKVDecodeMod "succeed", CG.val "val" ]
+                                      )
+                                    , ( CG.namedPattern "Err" [ CG.varPattern "err" ]
+                                      , CG.pipe (CG.applyBinOp (CG.string "Could not decode value to enum: ") CG.append (CG.val "val"))
+                                            [ CG.fqVal awsKVDecodeMod "fail" ]
+                                      )
+                                    ]
+                                )
+                            , kvfun
+                            ]
                     )
 
         doc =
@@ -330,7 +339,7 @@ enumKVDecoder name constructors =
         (Just doc)
         (Just sig)
         kvDecoderFnName
-        [ CG.varPattern "val" ]
+        []
         impl
     , CG.combineLinkage
         [ CG.emptyLinkage
@@ -364,19 +373,6 @@ restrictedKVDecoder name res =
         sig =
             CG.typed "KVDecoder" [ CG.typeVar typeName ]
 
-        -- Implementation needs to look like this:
-        --
-        -- AWS.KVDecode.andThen
-        --     (\sval ->
-        --         case Refined.build version sval of
-        --             Ok val ->
-        --                 AWS.KVDecode.succeed val
-        --
-        --             Err err ->
-        --                 Refined.stringErrorToString err |> AWS.KVDecode.fail
-        --     )
-        --     AWS.KVDecode.string
-        --
         ( impl, implLinkage ) =
             basicToKVFun basic
                 |> Tuple.mapFirst
@@ -520,28 +516,16 @@ kvDecoderBasic : Basic -> Expression
 kvDecoderBasic basic =
     case basic of
         BBool ->
-            CG.apply
-                [ awsKVDecodeFn "bool"
-                , CG.val "val"
-                ]
+            awsKVDecodeFn "bool"
 
         BInt ->
-            CG.apply
-                [ awsKVDecodeFn "int"
-                , CG.val "val"
-                ]
+            awsKVDecodeFn "int"
 
         BReal ->
-            CG.apply
-                [ awsKVDecodeFn "float"
-                , CG.val "val"
-                ]
+            awsKVDecodeFn "float"
 
         BString ->
-            CG.apply
-                [ awsKVDecodeFn "string"
-                , CG.val "val"
-                ]
+            awsKVDecodeFn "string"
 
 
 kvDecoderNamed named =
