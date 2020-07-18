@@ -362,9 +362,7 @@ restrictedKVDecoder name res =
             Naming.safeCCL name
 
         sig =
-            CG.funAnn
-                (CG.typed typeName [])
-                (CG.typed "KVPairs" [])
+            CG.typed "KVDecoder" [ CG.typeVar typeName ]
 
         -- Implementation needs to look like this:
         --
@@ -383,14 +381,27 @@ restrictedKVDecoder name res =
             basicToKVFun basic
                 |> Tuple.mapFirst
                     (\kvfun ->
-                        CG.pipe
-                            (CG.apply
-                                [ CG.fqFun refinedMod "unbox"
-                                , enumName |> CG.val
-                                , CG.val "val"
-                                ]
-                            )
-                            [ kvfun ]
+                        CG.apply
+                            [ CG.fqFun awsKVDecodeMod "andThen"
+                            , CG.lambda [ CG.varPattern "sval" ]
+                                (CG.caseExpr
+                                    (CG.apply
+                                        [ CG.fqFun refinedMod "build"
+                                        , CG.val (Naming.safeCCL name)
+                                        , CG.val "sval"
+                                        ]
+                                    )
+                                    [ ( CG.namedPattern "Ok" [ CG.varPattern "val" ]
+                                      , CG.apply [ CG.fqFun awsKVDecodeMod "succeed", CG.val "val" ]
+                                      )
+                                    , ( CG.namedPattern "Err" [ CG.varPattern "err" ]
+                                      , CG.pipe (CG.apply [ CG.fqFun refinedMod "stringErrorToString", CG.val "err" ])
+                                            [ CG.fqVal awsKVDecodeMod "fail" ]
+                                      )
+                                    ]
+                                )
+                            , kvfun
+                            ]
                     )
 
         doc =
@@ -401,7 +412,7 @@ restrictedKVDecoder name res =
         (Just doc)
         (Just sig)
         kvDecoderFnName
-        [ CG.varPattern "val" ]
+        []
         impl
     , CG.combineLinkage
         [ CG.emptyLinkage
@@ -773,7 +784,7 @@ awsKVDecodeFn =
 
 awsKVDecodeImport : Import
 awsKVDecodeImport =
-    CG.importStmt awsKVDecodeMod Nothing Nothing
+    CG.importStmt awsKVDecodeMod Nothing (Just <| CG.exposeExplicit [ CG.typeOrAliasExpose "KVDecoder" ])
 
 
 setImport : Import
