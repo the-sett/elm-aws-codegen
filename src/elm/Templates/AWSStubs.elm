@@ -1076,7 +1076,10 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         maybeWithBodyDecoder =
                             case bodyFields of
                                 [] ->
-                                    maybeWithHeaderDecoding
+                                    CG.apply
+                                        [ CG.fqFun decodeMod "succeed"
+                                        , maybeWithHeaderDecoding |> CG.parens
+                                        ]
 
                                 _ ->
                                     CG.pipe
