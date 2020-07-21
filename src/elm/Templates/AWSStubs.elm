@@ -1048,7 +1048,11 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                                 _ ->
                                     CG.apply
                                         [ constructorFn |> CG.parens
-                                        , CG.access (CG.val "metadata") "statusCode"
+                                        , CG.apply
+                                            [ CG.val "Just"
+                                            , CG.access (CG.val "metadata") "statusCode"
+                                            ]
+                                            |> CG.parens
                                         ]
 
                         maybeWithHeaderDecoding =
