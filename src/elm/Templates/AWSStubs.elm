@@ -1054,21 +1054,24 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         maybeWithHeaderDecoding =
                             case headerFields of
                                 [] ->
-                                    maybeAppliedToStatusCode
+                                    CG.pipe
+                                        maybeAppliedToStatusCode
+                                        [ CG.fqFun decodeMod "succeed" ]
 
                                 _ ->
                                     CG.pipe
-                                        (CG.apply
-                                            [ CG.fqFun awsKVDecodeMod "object"
-                                            , maybeAppliedToStatusCode |> CG.parens
-                                            ]
-                                        )
+                                        (maybeAppliedToStatusCode |> CG.parens)
                                         [ headersDecoder
                                         , CG.fqFun awsKVDecodeMod "buildObject"
-                                        , CG.apply
-                                            [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
-                                            , CG.val "obj"
-                                            , CG.access (CG.val "metadata") "headers"
+                                        , CG.pipe
+                                            (CG.apply
+                                                [ CG.fqFun awsKVDecodeMod "decodeKVPairs"
+                                                , CG.val "obj"
+                                                , CG.access (CG.val "metadata") "headers"
+                                                ]
+                                            )
+                                            [ CG.apply [ CG.fqVal resultMod "map", CG.fqVal decodeMod "succeed" ]
+                                            , CG.apply [ CG.fqVal resultMod "withDefault", CG.apply [ CG.fqVal decodeMod "fail", CG.string "fail" ] |> CG.parens ]
                                             ]
                                             |> CG.lambda [ CG.varPattern "obj" ]
                                         ]
@@ -1076,18 +1079,11 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                         maybeWithBodyDecoder =
                             case bodyFields of
                                 [] ->
-                                    CG.apply
-                                        [ CG.fqFun decodeMod "succeed"
-                                        , maybeWithHeaderDecoding |> CG.parens
-                                        ]
+                                    maybeWithHeaderDecoding |> CG.parens
 
                                 _ ->
                                     CG.pipe
-                                        (CG.apply
-                                            [ CG.fqFun decodeMod "succeed"
-                                            , maybeWithHeaderDecoding |> CG.parens
-                                            ]
-                                        )
+                                        (maybeWithHeaderDecoding |> CG.parens)
                                         [ bodyDecoder ]
 
                         isJustBody =
@@ -1465,6 +1461,11 @@ codecMod =
 refinedMod : List String
 refinedMod =
     [ "Refined" ]
+
+
+resultMod : List String
+resultMod =
+    [ "Result" ]
 
 
 stringMod : List String
