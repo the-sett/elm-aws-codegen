@@ -329,6 +329,8 @@ generate posFn propertiesApi model =
                         |> CG.docTagsFromExposings (Tuple.second codecsLinkage)
                         |> CG.markdown "# Key-Value String encoders for the data model."
                         |> CG.docTagsFromExposings (Tuple.second kvKVEncodersLinkage)
+                        |> CG.markdown "# Key-Value String decoders for the data model."
+                        |> CG.docTagsFromExposings (Tuple.second kvKVDecodersLinkage)
             in
             module_ propertiesApi model exposings
                 |> ResultME.map (\moduleSpec -> CG.file moduleSpec imports declarations (Just doc))
