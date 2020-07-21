@@ -307,9 +307,9 @@ generate posFn propertiesApi model =
                     [ serviceLinkage
                     , operationsLinkage
                     , typeDeclLinkage
-                    , codecsLinkage
-                    , kvKVEncodersLinkage
-                    , kvKVDecodersLinkage
+                    , Tuple.mapSecond (always []) codecsLinkage
+                    , Tuple.mapSecond (always []) kvKVEncodersLinkage
+                    , Tuple.mapSecond (always []) kvKVDecodersLinkage
                     ]
 
                 ( imports, exposings ) =
@@ -325,12 +325,13 @@ generate posFn propertiesApi model =
                         |> CG.docTagsFromExposings (Tuple.second operationsLinkage)
                         |> CG.markdown "# API data model."
                         |> CG.docTagsFromExposings (Tuple.second typeDeclLinkage)
-                        |> CG.markdown "# JSON Codecs for the data model."
-                        |> CG.docTagsFromExposings (Tuple.second codecsLinkage)
-                        |> CG.markdown "# Key-Value String encoders for the data model."
-                        |> CG.docTagsFromExposings (Tuple.second kvKVEncodersLinkage)
-                        |> CG.markdown "# Key-Value String decoders for the data model."
-                        |> CG.docTagsFromExposings (Tuple.second kvKVDecodersLinkage)
+
+                -- |> CG.markdown "# JSON Codecs for the data model."
+                -- |> CG.docTagsFromExposings (Tuple.second codecsLinkage)
+                -- |> CG.markdown "# Key-Value String encoders for the data model."
+                -- |> CG.docTagsFromExposings (Tuple.second kvKVEncodersLinkage)
+                -- |> CG.markdown "# Key-Value String decoders for the data model."
+                -- |> CG.docTagsFromExposings (Tuple.second kvKVDecodersLinkage)
             in
             module_ propertiesApi model exposings
                 |> ResultME.map (\moduleSpec -> CG.file moduleSpec imports declarations (Just doc))
