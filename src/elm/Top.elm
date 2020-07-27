@@ -153,6 +153,10 @@ posFn _ =
 
 -- Figuring out how best to represent errors on endpoints.
 --
+-- Just a String?
+--
+--======
+--
 -- type ErrorCode
 --     = ServiceException
 --     | ResourceNotFoundException
@@ -160,10 +164,20 @@ posFn _ =
 --     | TooManyRequestsException
 --     | InvalidParameterValueException
 --     | PolicyLengthExceededException
+--     | ErrBadCode
 --
 --
--- type ServiceError
---     = Blah
+-- type EndpointError
+--     = ByCode ErrorCode
+--
+--
+-- endpointError : ErrorCode -> EndpointError
+--
+--
+-- endpoint : EndpointInput -> Request (Result EndpointError EndpointResponse)
+--
+--
+-- processError : EndpointError -> Result EndpointError a -> Result EndpointError a
 --
 --
 -- withDefaultOnError : ErrorCode -> a -> Result ServiceError a -> a
