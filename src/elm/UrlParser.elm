@@ -1,4 +1,4 @@
-module UrlParser exposing (parseUrlParams)
+module UrlParser exposing (UrlPart(..), parseUrlParams)
 
 {-| Provides a URL decoder for REST style URLs.
 
@@ -11,23 +11,35 @@ import Parser exposing ((|.), (|=), Parser, Step(..), lazy, loop, oneOf, succeed
 import Set exposing (Set)
 
 
-parseUrlParams : String -> Result String (List String)
+{-| URLs like `/user/{userId}` can be broken down into two kinds of parts. Either a literal
+part of the path like `/user/` or a parameter like `userId`.
+
+A list of such parts when joined together with values substituted for the parameters will
+result in a complete URL like `/user/123`.
+
+-}
+type UrlPart
+    = PathLiteral String
+    | Param String
+
+
+parseUrlParams : String -> Result String (List UrlPart)
 parseUrlParams path =
     Parser.run pathSpecParser path
         |> Result.mapError Parser.deadEndsToString
 
 
-pathSpecParser : Parser (List String)
+pathSpecParser : Parser (List UrlPart)
 pathSpecParser =
     let
         step acc =
             oneOf
                 [ succeed (\param -> Loop (param :: acc))
                     |. symbol "{"
-                    |= pathSegmentParser
+                    |= paramParser
                     |. symbol "}"
-                , succeed (Loop acc)
-                    |. pathSegmentParser
+                , succeed (\path -> Loop (path :: acc))
+                    |= pathLiteralParser
                 , succeed ()
                     |> Parser.map (\_ -> Done (List.reverse acc))
                 ]
@@ -35,10 +47,25 @@ pathSpecParser =
     loop [] step
 
 
-pathSegmentParser : Parser String
-pathSegmentParser =
+pathLiteralParser : Parser UrlPart
+pathLiteralParser =
+    let
+        allowed c =
+            Char.isAlphaNum c || c == '-' || c == '/'
+    in
+    variable
+        { start = allowed
+        , inner = allowed
+        , reserved = Set.empty
+        }
+        |> Parser.map PathLiteral
+
+
+paramParser : Parser UrlPart
+paramParser =
     variable
         { start = Char.isAlpha
         , inner = \c -> Char.isAlpha c || c == '-'
         , reserved = Set.empty
         }
+        |> Parser.map Param
