@@ -155,6 +155,21 @@ posFn _ =
 --
 -- Just a String?
 --
+-- Define:
+--
+-- type alias AWSError a =
+--     { error : a
+--     , message : String
+--     }
+--
+--
+-- someEndpoint : Input -> Request (Result (AWSError String) Response)
+--
+-- Will also need builder for the error type when making requests.
+--
+-- request : (Value -> AWSError a) -> ...
+--
+--
 --======
 --
 -- type ErrorCode
