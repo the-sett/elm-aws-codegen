@@ -148,3 +148,22 @@ posFn _ =
     { lines = Dict.empty
     , highlight = Nothing
     }
+
+
+
+-- Figuring out how best to represent errors on endpoints.
+--
+-- type ErrorCode
+--     = ServiceException
+--     | ResourceNotFoundException
+--     | ResourceConflictException
+--     | TooManyRequestsException
+--     | InvalidParameterValueException
+--     | PolicyLengthExceededException
+--
+--
+-- type ServiceError
+--     = Blah
+--
+--
+-- withDefaultOnError : ErrorCode -> a -> Result ServiceError a -> a
