@@ -161,16 +161,25 @@ posFn _ =
 --     { error : a
 --     , message : String
 --     }
+-- Or maybe that is just 1 of the constructors? Combined with `Http.Error` and
+-- also a few more possibilities.
 --
+-- someEndpoint : Input -> Request (AWSError String) Response
 --
--- someEndpoint : Input -> Request (Result (AWSError String) Response)
+-- Will also need a builder for the error type when making requests.
+-- This may go on the AWS.Http.ResponseDecoder?
 --
--- Will also need builder for the error type when making requests.
+-- The xFullDecoder functions would take a (Value -> AWSError a) argument?
 --
--- request : (Value -> AWSError a) -> ...
+-- Don't use `Http.Error`, define an AWS specific error type and use that.
 --
+-- send : Service -> Credentials -> Request err a -> Task err a
+--
+-- Add an `err` type parameter to `Request`.
 --
 --======
+--
+-- The above scheme can be changed to this on a subsequent release:
 --
 -- type ErrorCode
 --     = ServiceException
@@ -192,7 +201,7 @@ posFn _ =
 -- endpoint : EndpointInput -> Request (Result EndpointError EndpointResponse)
 --
 --
--- processError : EndpointError -> Result EndpointError a -> Result EndpointError a
+-- processError : (EndpointError -> a) -> Result EndpointError a -> Result EndpointError a
 --
 --
 -- withDefaultOnError : ErrorCode -> a -> Result ServiceError a -> a
