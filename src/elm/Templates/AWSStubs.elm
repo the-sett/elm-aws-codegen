@@ -280,7 +280,7 @@ defaultProperties =
             [ ( "url", PSString )
             , ( "httpMethod", PSString )
             ]
-            []
+            [ ( "hasErrors", PBool False ) ]
     }
 
 

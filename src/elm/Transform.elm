@@ -525,6 +525,11 @@ modelOperation name operation =
                     Dict.empty
                         |> Dict.insert "url" (operation.http.requestUri |> Maybe.withDefault "/" |> PString)
                         |> Dict.insert "httpMethod" (httpMethodToString operation.http.method |> PString)
+                        |> Dict.insert "hasErrors"
+                            (Maybe.map (List.isEmpty >> not) operation.errors
+                                |> Maybe.withDefault False
+                                |> PBool
+                            )
 
                 funType =
                     TFunction () funProps request response
