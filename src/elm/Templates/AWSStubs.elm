@@ -1122,7 +1122,7 @@ nameTypedResponseDecoder propertiesApi model responseTypeName l1ResponseType fie
                             else
                                 CG.applyBinOp
                                     (CG.lambda
-                                        [ CG.varPattern "status", CG.varPattern "metadata" ]
+                                        [ CG.varPattern "metadata" ]
                                         maybeWithBodyDecoder
                                     )
                                     CG.piper
