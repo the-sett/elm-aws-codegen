@@ -555,12 +555,15 @@ requestFn :
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 requestFn propertiesApi model declPropertyGet funPropertyGet name pos request response =
-    ResultME.map3
+    ResultME.map4
         (requestFnFromParams propertiesApi model name request response)
         (funPropertyGet.getStringProperty "url"
             |> ResultME.mapError L3Error
         )
         (funPropertyGet.getStringProperty "httpMethod"
+            |> ResultME.mapError L3Error
+        )
+        (funPropertyGet.getBoolProperty "hasErrors"
             |> ResultME.mapError L3Error
         )
         (declPropertyGet.getOptionalStringProperty "documentation"
@@ -577,14 +580,22 @@ requestFnFromParams :
     -> L1.Type pos L2.RefChecked
     -> String
     -> String
+    -> Bool
     -> Maybe String
     -> ResultME AWSStubsError ( List Declaration, Linkage )
-requestFnFromParams propertiesApi model name request response urlSpec httpMethod documentation =
+requestFnFromParams propertiesApi model name request response urlSpec httpMethod hasErrors documentation =
     ResultME.map2
         (\{ maybeRequestType, argPatterns, encoder, setHeaders, setQueryParams, jsonBody, requestLinkage, url } ( responseType, responseDecoder, responseLinkage ) ->
             let
+                errType =
+                    if hasErrors then
+                        CG.fqTyped awsHttpMod "AWSAppError" []
+
+                    else
+                        CG.typed "Never" []
+
                 wrappedResponseType =
-                    CG.fqTyped awsHttpMod "Request" [ responseType ]
+                    CG.fqTyped awsHttpMod "Request" [ errType, responseType ]
 
                 requestSig =
                     case maybeRequestType of
