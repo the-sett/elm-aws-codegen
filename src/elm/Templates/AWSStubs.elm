@@ -649,6 +649,11 @@ requestFnFromParams propertiesApi model name request response urlSpec httpMethod
                         , CG.val "url"
                         , CG.val "jsonBody"
                         , CG.val "decoder"
+                        , if hasErrors then
+                            CG.fqFun awsHttpMod "awsAppErrDecoder"
+
+                          else
+                            CG.fqFun awsHttpMod "neverAppErrDecoder"
                         ]
 
                 requestImpl =
