@@ -38,43 +38,43 @@ ${formatLocations.join('\n')}`);
 
 //---=== Find API specs and process them.
 
-// glob("api/*.normal.json", function(er, files) {
-//   files.forEach(function(file) {
-//       var filename = file.slice('api/'.length);
-//
-//       fs.readFile(file, 'utf8', function(err, contents) {
-//         app.ports.modelInPort.send([filename, contents]);
-//       });
-//     });
-// });
+glob("api/*.normal.json", function(er, files) {
+  files.forEach(function(file) {
+      var filename = file.slice('api/'.length);
 
-const specs = [
-  "athena-2017-05-18.normal.json",
-  "batch-2016-08-10.normal.json",
-  "ce-2017-10-25.normal.json",
-  "cloudformation-2010-05-15.normal.json",
-  "cloudfront-2019-03-26.normal.json",
-  "cloudtrail-2013-11-01.normal.json",
-  "cognito-identity-2014-06-30.normal.json",
-  "cognito-idp-2016-04-18.normal.json",
-  "dynamodb-2012-08-10.normal.json",
-  "ec2-2016-11-15.normal.json",
-  "extra-2018-08-02.normal.json",
-  "iam-2010-05-08.normal.json",
-  "iot-2015-05-28.normal.json",
-  "lambda-2015-03-31.normal.json",
-  "rds-2014-10-31.normal.json",
-  "route53-2013-04-01.normal.json",
-  "s3-2006-03-01.normal.json"
-]
-
-specs.forEach(function(item, index) {
-  var filename = 'api/' + item;
-
-  fs.readFile(filename, 'utf8', function(err, contents) {
-    app.ports.modelInPort.send([filename, contents]);
-  });
+      fs.readFile(file, 'utf8', function(err, contents) {
+        app.ports.modelInPort.send([filename, contents]);
+      });
+    });
 });
+
+// const specs = [
+//   "athena-2017-05-18.normal.json",
+//   "batch-2016-08-10.normal.json",
+//   "ce-2017-10-25.normal.json",
+//   "cloudformation-2010-05-15.normal.json",
+//   "cloudfront-2019-03-26.normal.json",
+//   "cloudtrail-2013-11-01.normal.json",
+//   "cognito-identity-2014-06-30.normal.json",
+//   "cognito-idp-2016-04-18.normal.json",
+//   "dynamodb-2012-08-10.normal.json",
+//   "ec2-2016-11-15.normal.json",
+//   "extra-2018-08-02.normal.json",
+//   "iam-2010-05-08.normal.json",
+//   "iot-2015-05-28.normal.json",
+//   "lambda-2015-03-31.normal.json",
+//   "rds-2014-10-31.normal.json",
+//   "route53-2013-04-01.normal.json",
+//   "s3-2006-03-01.normal.json"
+// ]
+//
+// specs.forEach(function(item, index) {
+//   var filename = 'api/' + item;
+//
+//   fs.readFile(filename, 'utf8', function(err, contents) {
+//     app.ports.modelInPort.send([filename, contents]);
+//   });
+// });
 
 app.ports.codeOutPort.subscribe(request => {
   console.log("=== Processed ===: " + request[0] + "\n");
