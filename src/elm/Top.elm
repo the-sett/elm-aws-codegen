@@ -14,6 +14,7 @@ import List.Nonempty
 import Pretty
 import Random exposing (Seed)
 import ResultME exposing (ResultME)
+import Salix.Pretty
 import String.Case as Case
 import Task
 import Templates.AWSStubs
@@ -94,6 +95,7 @@ processServiceModel : String -> ResultME Error ( AWSService, String )
 processServiceModel val =
     decodeServiceModel val
         |> ResultME.andThen transformToApiModel
+        |> ResultME.map prettyPrintApiModel
         |> ResultME.andThen generateAWSStubs
         |> ResultME.map prettyPrint
 
@@ -118,6 +120,18 @@ transformToApiModel : AWSService -> ResultME Error ( AWSService, L3.L3 () )
 transformToApiModel service =
     Transform.transform posFn service
         |> ResultME.map (Tuple.pair service)
+
+
+prettyPrintApiModel : ( AWSService, L3.L3 () ) -> ( AWSService, L3.L3 () )
+prettyPrintApiModel ( service, apiModel ) =
+    let
+        _ =
+            Dict.toList apiModel.declarations
+                |> Salix.Pretty.prepareLayout
+                |> Pretty.pretty 120
+                |> Debug.log "model"
+    in
+    ( service, apiModel )
 
 
 generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.File )
