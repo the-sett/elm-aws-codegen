@@ -129,7 +129,7 @@ prettyPrintApiModel ( service, apiModel ) =
             Dict.toList apiModel.declarations
                 |> Salix.Pretty.prepareLayout
                 |> Pretty.pretty 120
-                |> Debug.log "model"
+                |> (\doc -> Debug.log doc "")
     in
     ( service, apiModel )
 
