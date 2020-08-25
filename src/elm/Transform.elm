@@ -1,7 +1,7 @@
 module Transform exposing (transform)
 
 import AWS.Config exposing (Protocol(..), Signer(..))
-import AWSService exposing (AWSService, AWSType(..), HttpMethod(..), Location(..), Operation, Shape, ShapeRef)
+import AWS.ServiceSpec as ServiceSpec exposing (AWSType(..), HttpMethod(..), Location(..), Operation, ServiceSpec, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
 import Elm.Json.Coding as Coding
@@ -136,7 +136,7 @@ errorBuilder posFn err =
                 []
 
 
-transform : (() -> SourceLines) -> AWSService -> ResultME Error (L3 ())
+transform : (() -> SourceLines) -> ServiceSpec -> ResultME Error (L3 ())
 transform posFn service =
     let
         errorMapFn =

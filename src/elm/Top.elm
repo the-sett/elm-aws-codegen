@@ -1,6 +1,6 @@
 port module Top exposing (main)
 
-import AWSService exposing (AWSService)
+import AWS.ServiceSpec as ServiceSpec exposing (ServiceSpec)
 import Codec
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -91,7 +91,7 @@ update msg model =
                     ( Ready, ( name, printableErrors ) |> errorOutPort )
 
 
-processServiceModel : String -> ResultME Error ( AWSService, String )
+processServiceModel : String -> ResultME Error ( ServiceSpec, String )
 processServiceModel val =
     decodeServiceModel val
         |> ResultME.andThen transformToApiModel
@@ -100,7 +100,7 @@ processServiceModel val =
         |> ResultME.map prettyPrint
 
 
-decodeServiceModel : String -> ResultME Error AWSService
+decodeServiceModel : String -> ResultME Error ServiceSpec
 decodeServiceModel val =
     let
         decodeErrorFn err =
@@ -111,18 +111,18 @@ decodeServiceModel val =
             , sources = []
             }
     in
-    Codec.decodeString AWSService.awsServiceCodec val
+    Codec.decodeString ServiceSpec.awsServiceCodec val
         |> ResultME.fromResult
         |> ResultME.mapError decodeErrorFn
 
 
-transformToApiModel : AWSService -> ResultME Error ( AWSService, L3.L3 () )
+transformToApiModel : ServiceSpec -> ResultME Error ( ServiceSpec, L3.L3 () )
 transformToApiModel service =
     Transform.transform posFn service
         |> ResultME.map (Tuple.pair service)
 
 
-prettyPrintApiModel : ( AWSService, L3.L3 () ) -> ( AWSService, L3.L3 () )
+prettyPrintApiModel : ( ServiceSpec, L3.L3 () ) -> ( ServiceSpec, L3.L3 () )
 prettyPrintApiModel ( service, apiModel ) =
     let
         _ =
@@ -134,7 +134,7 @@ prettyPrintApiModel ( service, apiModel ) =
     ( service, apiModel )
 
 
-generateAWSStubs : ( AWSService, L3.L3 () ) -> ResultME Error ( AWSService, CG.File )
+generateAWSStubs : ( ServiceSpec, L3.L3 () ) -> ResultME Error ( ServiceSpec, CG.File )
 generateAWSStubs ( service, apiModel ) =
     let
         l3StubProcessor =
@@ -147,7 +147,7 @@ generateAWSStubs ( service, apiModel ) =
         |> ResultME.map (Tuple.pair service)
 
 
-prettyPrint : ( AWSService, CG.File ) -> ( AWSService, String )
+prettyPrint : ( ServiceSpec, CG.File ) -> ( ServiceSpec, String )
 prettyPrint ( service, stubFile ) =
     ( service, Elm.Pretty.pretty 120 stubFile )
 

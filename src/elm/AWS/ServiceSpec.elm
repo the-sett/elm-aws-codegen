@@ -1,18 +1,18 @@
-module AWSService exposing
-    ( AWSService
-    , AWSType(..)
+module AWS.ServiceSpec exposing
+    ( AWSType(..)
     , AuthorizationStrategy
     , Authorizers
     , HttpMethod(..)
     , Location(..)
     , MetaData
     , Operation
+    , ServiceSpec
     , Shape
     , ShapeRef
     , awsServiceCodec
     )
 
-{-| AWS Service2 Descriptor. This module provides the data model and decoders.
+{-| AWS Service Descriptor. This module provides the data model and decoders.
 -}
 
 import AWS.Config exposing (Protocol(..), Signer(..), TimestampFormat(..))
@@ -23,7 +23,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 
 
-type alias AWSService =
+type alias ServiceSpec =
     { metaData : MetaData
     , operations : Dict String Operation
     , shapes : Dict String Shape
@@ -34,7 +34,7 @@ type alias AWSService =
 
 
 awsServiceCodec =
-    Codec.object AWSService
+    Codec.object ServiceSpec
         |> Codec.field "metadata" .metaData metaDataCodec
         |> Codec.field "operations" .operations (Codec.dict operationCodec)
         |> Codec.field "shapes" .shapes (Codec.dict shapeCodec)
