@@ -1,13 +1,12 @@
 module Transform exposing (transform)
 
 import AWS.Config exposing (Protocol(..), Signer(..))
-import AWSService exposing (AWSService, AWSType(..), Location(..), Operation, Shape, ShapeRef)
+import AWSService exposing (AWSService, AWSType(..), HttpMethod(..), Location(..), Operation, Shape, ShapeRef)
 import Checker
 import Dict exposing (Dict)
 import Elm.Json.Coding as Coding
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
-import HttpMethod exposing (HttpMethod(..))
 import L1
     exposing
         ( Basic(..)

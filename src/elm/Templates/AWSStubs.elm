@@ -35,7 +35,6 @@ import Elm.Json.Coding as Coding
 import Elm.Lang
 import Enum exposing (Enum)
 import Errors exposing (Error, ErrorBuilder)
-import HttpMethod exposing (HttpMethod)
 import L1 exposing (Declarable(..), Field, PropSpec(..), Properties, Property(..), Type(..))
 import L2 exposing (L2)
 import L3 exposing (DefaultProperties, L3, L3Error(..), ProcessorImpl, PropertiesAPI)

@@ -3,6 +3,7 @@ module AWSService exposing
     , AWSType(..)
     , AuthorizationStrategy
     , Authorizers
+    , HttpMethod(..)
     , Location(..)
     , MetaData
     , Operation
@@ -15,11 +16,9 @@ module AWSService exposing
 -}
 
 import AWS.Config exposing (Protocol(..), Signer(..), TimestampFormat(..))
-import AWSEnums
 import Codec exposing (Codec)
 import Dict exposing (Dict)
 import Enum exposing (Enum)
-import HttpMethod exposing (HttpMethod)
 import Json.Decode as Decode
 import Json.Encode as Encode
 
@@ -65,14 +64,14 @@ type alias MetaData =
 
 protocolCodec =
     Codec.build
-        (Enum.encoder AWSEnums.protocolEnum)
-        (Enum.decoder AWSEnums.protocolEnum)
+        (Enum.encoder protocolEnum)
+        (Enum.decoder protocolEnum)
 
 
 signerCodec =
     Codec.build
-        (Enum.encoder AWSEnums.signerEnum)
-        (Enum.decoder AWSEnums.signerEnum)
+        (Enum.encoder signerEnum)
+        (Enum.decoder signerEnum)
 
 
 metaDataCodec =
@@ -189,7 +188,7 @@ type alias Http =
 
 httpCodec =
     Codec.object Http
-        |> Codec.field "method" .method HttpMethod.httpMethodCodec
+        |> Codec.field "method" .method httpMethodCodec
         |> Codec.optionalField "requestUri" .requestUri Codec.string
         |> Codec.optionalField "requireUri" .requireUri Codec.bool
         |> Codec.optionalField "responseCode" .responseCode Codec.int
@@ -234,8 +233,8 @@ type alias ShapeRef =
 
 timestampFormatCodec =
     Codec.build
-        (Enum.encoder AWSEnums.timestampFormatEnum)
-        (Enum.decoder AWSEnums.timestampFormatEnum)
+        (Enum.encoder timestampFormatEnum)
+        (Enum.decoder timestampFormatEnum)
 
 
 shapeRefCodec =
@@ -478,3 +477,113 @@ awsTypeEnum =
 typesCodec : Codec AWSType
 typesCodec =
     Codec.build (Enum.encoder awsTypeEnum) (Enum.decoder awsTypeEnum)
+
+
+timestampFormatEnum : Enum TimestampFormat
+timestampFormatEnum =
+    Enum.define
+        [ ISO8601
+        , RFC822
+        , UnixTimestamp
+        ]
+        (\val ->
+            case val of
+                ISO8601 ->
+                    "iso8601"
+
+                RFC822 ->
+                    "rfc822"
+
+                UnixTimestamp ->
+                    "unixTimestamp"
+        )
+
+
+protocolEnum : Enum Protocol
+protocolEnum =
+    Enum.define
+        [ EC2
+        , JSON
+        , QUERY
+        , REST_JSON
+        , REST_XML
+        ]
+        (\val ->
+            case val of
+                EC2 ->
+                    "ec2"
+
+                JSON ->
+                    "json"
+
+                QUERY ->
+                    "query"
+
+                REST_JSON ->
+                    "rest-json"
+
+                REST_XML ->
+                    "rest-xml"
+        )
+
+
+signerEnum : Enum Signer
+signerEnum =
+    Enum.define
+        [ SignV4
+        , SignS3
+        ]
+        (\val ->
+            case val of
+                SignV4 ->
+                    "v4"
+
+                SignS3 ->
+                    "s3"
+        )
+
+
+type HttpMethod
+    = DELETE
+    | GET
+    | HEAD
+    | OPTIONS
+    | POST
+    | PUT
+
+
+httpMethodEnum : Enum HttpMethod
+httpMethodEnum =
+    Enum.define
+        [ DELETE
+        , GET
+        , HEAD
+        , OPTIONS
+        , POST
+        , PUT
+        ]
+        (\val ->
+            case val of
+                DELETE ->
+                    "DELETE"
+
+                GET ->
+                    "GET"
+
+                HEAD ->
+                    "HEAD"
+
+                OPTIONS ->
+                    "OPTIONS"
+
+                POST ->
+                    "POST"
+
+                PUT ->
+                    "PUT"
+        )
+
+
+httpMethodCodec : Codec HttpMethod
+httpMethodCodec =
+    Codec.build (Enum.encoder httpMethodEnum) (Enum.decoder httpMethodEnum)
