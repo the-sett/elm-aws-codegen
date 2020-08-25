@@ -111,7 +111,7 @@ decodeServiceModel val =
             , sources = []
             }
     in
-    Codec.decodeString ServiceSpec.awsServiceCodec val
+    Decode.decodeString ServiceSpec.awsServiceDecoder val
         |> ResultME.fromResult
         |> ResultME.mapError decodeErrorFn
 
