@@ -95,7 +95,6 @@ processServiceModel : String -> ResultME Error ( ServiceSpec, String )
 processServiceModel val =
     decodeServiceModel val
         |> ResultME.andThen transformToApiModel
-        |> ResultME.map prettyPrintApiModel
         |> ResultME.andThen generateAWSStubs
         |> ResultME.map prettyPrint
 
@@ -120,18 +119,6 @@ transformToApiModel : ServiceSpec -> ResultME Error ( ServiceSpec, L3.L3 () )
 transformToApiModel service =
     Transform.transform posFn service
         |> ResultME.map (Tuple.pair service)
-
-
-prettyPrintApiModel : ( ServiceSpec, L3.L3 () ) -> ( ServiceSpec, L3.L3 () )
-prettyPrintApiModel ( service, apiModel ) =
-    let
-        _ =
-            Dict.toList apiModel.declarations
-                |> Salix.Pretty.prepareLayout
-                |> Pretty.pretty 120
-                |> (\doc -> Debug.log doc "")
-    in
-    ( service, apiModel )
 
 
 generateAWSStubs : ( ServiceSpec, L3.L3 () ) -> ResultME Error ( ServiceSpec, CG.File )

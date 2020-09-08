@@ -83,13 +83,6 @@ defaultProperties =
         L1.defineProperties
             [ ( "serializedName", PSOptional PSString ) ]
             []
-    , unit = L1.defineProperties [] []
-    , basic = L1.defineProperties [] []
-    , named = L1.defineProperties [] []
-    , product = L1.defineProperties [] []
-    , emptyProduct = L1.defineProperties [] []
-    , container = L1.defineProperties [] []
-    , function = L1.defineProperties [] []
     }
 
 
@@ -148,11 +141,11 @@ and will produce `Nothing`.
 typeToString : Type pos L2.RefChecked -> Expression -> Result KVEncodeError ( Expression, Linkage )
 typeToString l2type expr =
     case l2type of
-        TBasic _ _ basic ->
+        TBasic _ basic ->
             basicToString basic expr
                 |> Ok
 
-        TNamed _ _ refName ref ->
+        TNamed _ refName ref ->
             case ref of
                 L2.RcTBasic basic ->
                     basicToString basic expr
@@ -403,25 +396,25 @@ restrictedKVEncoder name res =
 kvEncoderNamedType : PropertiesAPI pos -> String -> Type pos RefChecked -> ResultME KVEncodeError Expression
 kvEncoderNamedType propertiesApi name l1Type =
     case l1Type of
-        TUnit _ _ ->
+        TUnit _ ->
             kvEncoderUnit |> Ok
 
-        TBasic _ _ basic ->
+        TBasic _ basic ->
             kvEncoderType l1Type |> Ok
 
-        TNamed _ _ named _ ->
+        TNamed _ named _ ->
             CG.string "kvEncoderNamedType_TNamed" |> Ok
 
-        TProduct _ _ fields ->
+        TProduct _ fields ->
             kvEncoderNamedProduct propertiesApi name (List.Nonempty.toList fields)
 
-        TEmptyProduct _ _ ->
+        TEmptyProduct _ ->
             kvEncoderNamedProduct propertiesApi name []
 
-        TContainer _ _ container ->
+        TContainer _ container ->
             kvEncoderType l1Type |> Ok
 
-        TFunction _ _ arg res ->
+        TFunction _ arg res ->
             CG.unit |> Ok
 
 
@@ -430,16 +423,16 @@ kvEncoderNamedType propertiesApi name l1Type =
 kvEncoderType : Type pos RefChecked -> Expression
 kvEncoderType l1Type =
     case l1Type of
-        TBasic _ _ basic ->
+        TBasic _ basic ->
             kvEncoderBasic basic
 
-        TNamed _ _ named _ ->
+        TNamed _ named _ ->
             kvEncoderNamed named
 
-        TProduct _ _ fields ->
+        TProduct _ fields ->
             kvEncoderProduct (List.Nonempty.toList fields)
 
-        TContainer _ _ container ->
+        TContainer _ container ->
             kvEncoderContainer container
 
         _ ->
@@ -451,29 +444,29 @@ kvEncoderType l1Type =
 kvEncoderTypeField : String -> String -> Type pos RefChecked -> Expression
 kvEncoderTypeField name serializedName l1Type =
     case l1Type of
-        TUnit _ _ ->
+        TUnit _ ->
             kvEncoderUnit |> kvEncoderField name serializedName
 
-        TBasic _ _ basic ->
+        TBasic _ basic ->
             kvEncoderBasic basic
                 |> kvEncoderField name serializedName
 
-        TNamed _ _ named _ ->
+        TNamed _ named _ ->
             kvEncoderNamed named
                 |> kvEncoderField name serializedName
 
-        TProduct _ _ fields ->
+        TProduct _ fields ->
             kvEncoderProduct (List.Nonempty.toList fields)
                 |> kvEncoderField name serializedName
 
-        TEmptyProduct _ _ ->
+        TEmptyProduct _ ->
             kvEncoderProduct []
                 |> kvEncoderField name serializedName
 
-        TContainer _ _ container ->
+        TContainer _ container ->
             kvEncoderContainerField name serializedName container
 
-        TFunction _ _ arg res ->
+        TFunction _ arg res ->
             CG.unit
 
 
@@ -545,7 +538,7 @@ kvEncoderContainer container =
 kvEncoderDict : Type pos RefChecked -> Type pos RefChecked -> Expression
 kvEncoderDict l1keyType l1valType =
     case l1keyType of
-        TNamed _ _ name (RcRestricted basic) ->
+        TNamed _ name (RcRestricted basic) ->
             CG.apply
                 [ awsKVEncodeFn "dict"
                 , kvEncoderType l1valType
@@ -558,7 +551,7 @@ kvEncoderDict l1keyType l1valType =
                     |> CG.parens
                 ]
 
-        TNamed _ _ name RcEnum ->
+        TNamed _ name RcEnum ->
             CG.apply
                 [ awsKVEncodeFn "dict"
                 , kvEncoderType l1valType

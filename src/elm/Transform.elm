@@ -258,7 +258,7 @@ httpMethodToString method =
 
 shapeRefToL1Type : ShapeRef -> Type () Unchecked
 shapeRefToL1Type ref =
-    TNamed () Dict.empty ref.shape Unchecked
+    TNamed () ref.shape Unchecked
 
 
 
@@ -286,22 +286,22 @@ modelShape shape name =
             modelString shape name
 
         ABoolean ->
-            (BBool |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BBool |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         AInteger ->
             modelInt shape name
 
         ALong ->
-            (BInt |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BInt |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         AFloat ->
-            (BReal |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BReal |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         ADouble ->
-            (BReal |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BReal |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         ABlob ->
-            (BString |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BString |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         AStructure ->
             modelStructure shape name
@@ -313,7 +313,7 @@ modelShape shape name =
             modelMap shape name
 
         ATimestamp ->
-            (BString |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BString |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
         AUnknown ->
             UnknownNotImplemented () |> ResultME.error
@@ -345,7 +345,7 @@ modelString shape name =
                 |> Ok
 
         ( _, _ ) ->
-            TBasic () L1.emptyProperties BString
+            TBasic () BString
                 |> DAlias () L1.emptyProperties
                 |> Ok
 
@@ -360,7 +360,7 @@ modelInt shape name =
                 |> Ok
 
         _ ->
-            (BInt |> TBasic () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (BInt |> TBasic ()) |> DAlias () L1.emptyProperties |> Ok
 
 
 modelStructure : Shape -> String -> ResultME (TransformError ()) (Declarable () Unchecked)
@@ -405,7 +405,7 @@ modelStructure shape name =
 
                 optionalField =
                     ( memberName
-                    , type_ |> COptional |> TContainer () L1.emptyProperties
+                    , type_ |> COptional |> TContainer ()
                     , fieldProperties
                     )
 
@@ -436,12 +436,12 @@ modelStructure shape name =
                 Just nonemptyFields ->
                     nonemptyFields
                         |> Naming.sortNonemptyNamed
-                        |> TProduct () L1.emptyProperties
+                        |> TProduct ()
                         |> DAlias () L1.emptyProperties
                         |> Ok
 
                 Nothing ->
-                    TEmptyProduct () L1.emptyProperties
+                    TEmptyProduct ()
                         |> DAlias () L1.emptyProperties
                         |> Ok
 
@@ -453,7 +453,7 @@ modelList shape name =
             ListMemberEmpty () |> ResultME.error
 
         Just ref ->
-            (shapeRefToL1Type ref |> CList |> TContainer () L1.emptyProperties) |> DAlias () L1.emptyProperties |> Ok
+            (shapeRefToL1Type ref |> CList |> TContainer ()) |> DAlias () L1.emptyProperties |> Ok
 
 
 modelMap : Shape -> String -> ResultME (TransformError ()) (Declarable () Unchecked)
@@ -476,7 +476,7 @@ modelMap shape name =
                     shapeRefToL1Type valRef |> Ok
     in
     ResultME.map2
-        (\keyType valType -> TContainer () L1.emptyProperties (CDict keyType valType) |> DAlias () L1.emptyProperties)
+        (\keyType valType -> TContainer () (CDict keyType valType) |> DAlias () L1.emptyProperties)
         keyTypeRes
         valTypeRes
 
@@ -502,10 +502,10 @@ modelOperation name operation =
         paramType opShapeRef =
             case opShapeRef of
                 Nothing ->
-                    TUnit () L1.emptyProperties |> Ok
+                    TUnit () |> Ok
 
                 Just shapeRef ->
-                    TNamed () L1.emptyProperties shapeRef.shape Unchecked |> Ok
+                    TNamed () shapeRef.shape Unchecked |> Ok
 
         requestRes =
             paramType operation.input
@@ -519,9 +519,6 @@ modelOperation name operation =
                 declProps =
                     Dict.empty
                         |> Dict.update "documentation" (always (Maybe.map PString operation.documentation))
-
-                funProps =
-                    Dict.empty
                         |> Dict.insert "url" (operation.http.requestUri |> Maybe.withDefault "/" |> PString)
                         |> Dict.insert "httpMethod" (httpMethodToString operation.http.method |> PString)
                         |> Dict.insert "hasErrors"
@@ -531,7 +528,7 @@ modelOperation name operation =
                             )
 
                 funType =
-                    TFunction () funProps request response
+                    TFunction () request response
             in
             DAlias () declProps funType
         )
@@ -802,5 +799,5 @@ filterProductDecl propertiesApi filter decl =
     Query.expectAlias decl
         |> ResultME.map Tuple3.third
         |> ResultME.andThen Query.expectProductOrEmpty
-        |> ResultME.map Tuple3.third
+        |> ResultME.map Tuple.second
         |> ResultME.andThen (Query.filterListByProps propertiesApi filter)

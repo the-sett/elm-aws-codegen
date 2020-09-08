@@ -229,10 +229,13 @@ defaultProperties =
         L1.defineProperties
             [ ( "documentation", PSOptional PSString )
             , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
+            , ( "url", PSString )
+            , ( "httpMethod", PSString )
             ]
             [ ( "exclude", PBool False )
             , ( "kvEncode", PBool False )
             , ( "kvDecode", PBool False )
+            , ( "hasErrors", PBool False )
             ]
     , sum =
         L1.defineProperties
@@ -268,18 +271,6 @@ defaultProperties =
             , ( "topLevel", PSOptional (PSEnum topLevelEnum) )
             ]
             []
-    , unit = L1.defineProperties [] []
-    , basic = L1.defineProperties [] []
-    , named = L1.defineProperties [] []
-    , product = L1.defineProperties [] []
-    , emptyProduct = L1.defineProperties [] []
-    , container = L1.defineProperties [] []
-    , function =
-        L1.defineProperties
-            [ ( "url", PSString )
-            , ( "httpMethod", PSString )
-            ]
-            [ ( "hasErrors", PBool False ) ]
     }
 
 
@@ -528,12 +519,11 @@ operation :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 operation propertiesApi model name decl =
     case decl of
-        DAlias pos _ (TFunction funpos props request response) ->
+        DAlias pos _ (TFunction funpos request response) ->
             requestFn
                 propertiesApi
                 model
                 (propertiesApi.declarable decl)
-                (propertiesApi.type_ (TFunction funpos props request response))
                 name
                 pos
                 request
@@ -547,22 +537,21 @@ requestFn :
     PropertiesAPI pos
     -> L3 pos
     -> L3.PropertyGet
-    -> L3.PropertyGet
     -> String
     -> pos
     -> L1.Type pos L2.RefChecked
     -> L1.Type pos L2.RefChecked
     -> ResultME AWSStubsError ( List Declaration, Linkage )
-requestFn propertiesApi model declPropertyGet funPropertyGet name pos request response =
+requestFn propertiesApi model declPropertyGet name pos request response =
     ResultME.map4
         (requestFnFromParams propertiesApi model name request response)
-        (funPropertyGet.getStringProperty "url"
+        (declPropertyGet.getStringProperty "url"
             |> ResultME.mapError L3Error
         )
-        (funPropertyGet.getStringProperty "httpMethod"
+        (declPropertyGet.getStringProperty "httpMethod"
             |> ResultME.mapError L3Error
         )
-        (funPropertyGet.getBoolProperty "hasErrors"
+        (declPropertyGet.getBoolProperty "hasErrors"
             |> ResultME.mapError L3Error
         )
         (declPropertyGet.getOptionalStringProperty "documentation"
@@ -725,7 +714,7 @@ requestFnRequest :
             }
 requestFnRequest propertiesApi model name urlSpec request =
     case request of
-        (L1.TNamed _ _ requestTypeName _) as l1RequestType ->
+        (L1.TNamed _ requestTypeName _) as l1RequestType ->
             ResultME.map4
                 (\headerFields queryStringFields uriFields bodyFields ->
                     ResultME.map3
@@ -848,7 +837,7 @@ filterProductDecl propertiesApi filter decl =
     Query.expectAlias decl
         |> ResultME.map Tuple3.third
         |> ResultME.andThen Query.expectProductOrEmpty
-        |> ResultME.map Tuple3.third
+        |> ResultME.map Tuple.second
         |> ResultME.andThen (Query.filterListByProps propertiesApi filter)
 
 
@@ -971,11 +960,11 @@ requestFnResponse :
     -> ResultME AWSStubsError ( TypeAnnotation, LetDeclaration, Linkage )
 requestFnResponse propertiesApi model name responseType =
     case responseType of
-        L1.TNamed _ _ responseTypeName L2.RcTProduct ->
+        L1.TNamed _ responseTypeName L2.RcTProduct ->
             ResultME.andThen
                 (\responseDecl ->
                     case responseDecl of
-                        L1.DAlias _ _ (L1.TProduct _ _ fields) ->
+                        L1.DAlias _ _ (L1.TProduct _ fields) ->
                             nameTypedResponseDecoder propertiesApi model responseTypeName responseType fields
 
                         _ ->
@@ -985,10 +974,10 @@ requestFnResponse propertiesApi model name responseType =
                     |> ResultME.mapError L3Error
                 )
 
-        L1.TNamed _ _ responseTypeName L2.RcTEmptyProduct ->
+        L1.TNamed _ responseTypeName L2.RcTEmptyProduct ->
             fixedResponseDecoder CG.unit |> Ok
 
-        TUnit _ _ ->
+        TUnit _ ->
             fixedResponseDecoder CG.unit |> Ok
 
         _ ->
@@ -1207,7 +1196,7 @@ typeDeclaration :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 typeDeclaration propertiesAPI name decl =
     case decl of
-        DAlias _ _ (TFunction _ _ _ _) ->
+        DAlias _ _ (TFunction _ _ _) ->
             ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
@@ -1245,7 +1234,7 @@ jsonCoding :
     -> ResultME AWSStubsError ( List Declaration, Linkage )
 jsonCoding propertiesApi model name decl =
     case decl of
-        DAlias _ _ (TFunction _ _ _ _) ->
+        DAlias _ _ (TFunction _ _ _) ->
             ( [], CG.emptyLinkage )
                 |> Ok
 
@@ -1279,7 +1268,7 @@ kvEncoders propertiesApi model =
 kvEncoder : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvEncoder propertiesApi name decl =
     case decl of
-        DAlias _ _ (TFunction _ _ _ _) ->
+        DAlias _ _ (TFunction _ _ _) ->
             ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
@@ -1312,7 +1301,7 @@ kvDecoders propertiesApi model =
 kvDecoder : PropertiesAPI pos -> String -> L1.Declarable pos L2.RefChecked -> ResultME AWSStubsError ( List Declaration, Linkage )
 kvDecoder propertiesApi name decl =
     case decl of
-        DAlias _ _ (TFunction _ _ _ _) ->
+        DAlias _ _ (TFunction _ _ _) ->
             ( [], CG.emptyLinkage ) |> Ok
 
         _ ->
