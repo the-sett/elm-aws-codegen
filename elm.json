@@ -2,7 +2,8 @@
     "type": "application",
     "source-directories": [
         "src/elm",
-        "/home/rupert/sc/github/the-sett/salix/src"
+        "/home/rupert/sc/github/the-sett/salix/src",
+        "/home/rupert/sc/github/the-sett/salix-aws-spec/src"
     ],
     "elm-version": "0.19.1",
     "dependencies": {

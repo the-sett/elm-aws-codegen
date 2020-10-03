@@ -1,6 +1,7 @@
 port module Top exposing (main)
 
 import AWS.ServiceSpec as ServiceSpec exposing (ServiceSpec)
+import AWS.TransformServiceSpec as Transform
 import Codec
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
@@ -19,7 +20,6 @@ import String.Case as Case
 import Task
 import Templates.AWSStubs
 import Time exposing (Posix)
-import Transform
 
 
 
