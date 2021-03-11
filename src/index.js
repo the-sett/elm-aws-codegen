@@ -50,6 +50,7 @@ ${formatLocations.join('\n')}`);
 
 const specs = [
   "ecs-2014-11-13.normal.json",
+  "ecr-2015-09-21.normal.json",
   "sqs-2012-11-05.normal.json",
   "athena-2017-05-18.normal.json",
   "batch-2016-08-10.normal.json",
