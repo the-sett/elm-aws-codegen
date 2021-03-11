@@ -49,6 +49,7 @@ ${formatLocations.join('\n')}`);
 // });
 
 const specs = [
+  "ecs-2014-11-13.normal.json",
   "athena-2017-05-18.normal.json",
   "batch-2016-08-10.normal.json",
   "ce-2017-10-25.normal.json",
