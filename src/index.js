@@ -64,11 +64,19 @@ const specs = [
   "ec2-2016-11-15.normal.json",
   "extra-2018-08-02.normal.json",
   "iam-2010-05-08.normal.json",
-  "iot-2015-05-28.normal.json",
   "lambda-2015-03-31.normal.json",
   "rds-2014-10-31.normal.json",
   "route53-2013-04-01.normal.json",
-  "s3-2006-03-01.normal.json"
+  "s3-2006-03-01.normal.json",
+  "iotevents-2018-07-27.normal.json",
+  "iot1click-devices-2018-05-14.normal.json",
+  "iotthingsgraph-2018-09-06.normal.json",
+  "iotevents-data-2018-10-23.normal.json",
+  "iot-jobs-data-2017-09-29.normal.json",
+  "iot1click-projects-2018-05-14.normal.json",
+  "iot-2015-05-28.normal.json",
+  "iotanalytics-2017-11-27.normal.json",
+  "iot-data-2015-05-28.normal.json"
 ]
 
 specs.forEach(function(item, index) {
