@@ -3,7 +3,8 @@
     "source-directories": [
         "src/elm",
         "/home/rupert/sc/github/the-sett/salix/src",
-        "/home/rupert/sc/github/the-sett/salix-aws-spec/src"
+        "/home/rupert/sc/github/the-sett/salix-aws-spec/src",
+        "/home/rupert/sc/github/the-sett/elm-aws-core/src"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -29,7 +30,6 @@
             "stil4m/elm-syntax": "7.1.3",
             "the-sett/ai-search": "5.0.0",
             "the-sett/decode-generic": "1.0.0",
-            "the-sett/elm-aws-core": "8.1.0",
             "the-sett/elm-error-handling": "2.2.0",
             "the-sett/elm-pretty-printer": "2.2.3",
             "the-sett/elm-refine": "1.4.0",
