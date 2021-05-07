@@ -12,6 +12,7 @@ import Json.Decode as Decode
 import Json.Decode.Generic as Generic
 import L3
 import List.Nonempty
+import Lower
 import Pretty
 import Random exposing (Seed)
 import ResultME exposing (ResultME)
