@@ -1,13 +1,21 @@
 module Lower exposing (..)
 
-{-| The AWS service model uses refined type to describe restrictions on parameters
-in requests and responses of AWS services. For the purposes of generated stub code,
-those are ignored, and the underlying base type, such as String or Int is used.
+{-|
 
-If bad parametes are passed to an AWS service, the service will response with an
-HTTP error code.
+1.  The AWS service model uses refined type to describe restrictions on parameters
+    in requests and responses of AWS services. For the purposes of generated stub
+    code,those are ignored, and the underlying base type, such as String or Int
+    is used.
 
-This lowering tranforms all restricted types into their underlying base types.
+    If bad parametes are passed to an AWS service, the service will response with an
+    HTTP error code.
+
+    This lowering tranforms all restricted types into their underlying base types.
+
+2.  Shorten aliases to basic types. Sometimes basic types are declared in the AWS
+    stubs and sometimes aliases to basic types are created by 1. Aliases to basic
+    types are removed,and usages of them as types are replaced by the basic type
+    directly.
 
 -}
 
