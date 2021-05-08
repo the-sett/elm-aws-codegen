@@ -12,6 +12,7 @@ import Json.Decode as Decode
 import Json.Decode.Generic as Generic
 import L3
 import List.Nonempty
+import Lower
 import Pretty
 import Random exposing (Seed)
 import ResultME exposing (ResultME)
@@ -95,6 +96,7 @@ processServiceModel : String -> ResultME Error ( ServiceSpec, String )
 processServiceModel val =
     decodeServiceModel val
         |> ResultME.andThen transformToApiModel
+        |> ResultME.map lowerToStubModel
         |> ResultME.andThen generateAWSStubs
         |> ResultME.map prettyPrint
 
@@ -119,6 +121,11 @@ transformToApiModel : ServiceSpec -> ResultME Error ( ServiceSpec, L3.L3 () )
 transformToApiModel service =
     Transform.transform posFn service
         |> ResultME.map (Tuple.pair service)
+
+
+lowerToStubModel : ( ServiceSpec, L3.L3 () ) -> ( ServiceSpec, L3.L3 () )
+lowerToStubModel ( service, apiModel ) =
+    ( service, Lower.transform apiModel )
 
 
 generateAWSStubs : ( ServiceSpec, L3.L3 () ) -> ResultME Error ( ServiceSpec, CG.File )
