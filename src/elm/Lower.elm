@@ -19,16 +19,23 @@ the following things:
 -}
 
 import Dict exposing (Dict)
-import L1 exposing (Basic(..), Declarable(..), Restricted(..), Type(..))
+import L1 exposing (Basic(..), Container(..), Declarable(..), Field, Restricted(..), Type(..))
+import List.Nonempty as Nonempty
 
 
 transform awsModel =
     { properties = awsModel.properties
-    , declarations = deRestrictDecls awsModel.declarations
+    , declarations =
+        deRestrict awsModel.declarations
+            |> deAlias
     }
 
 
-deRestrictDecls decls =
+
+-- Replace restricted types by Int and String.
+
+
+deRestrict decls =
     Dict.map (\k v -> deRestrictDecl v) decls
 
 
@@ -54,3 +61,93 @@ deRestrictRestricted pos res =
 
         RString _ ->
             TBasic pos BString
+
+
+
+-- Remove aliases to basic types.
+
+
+deAlias decls =
+    let
+        ( declsWithoutBasicAliases, basicAliases ) =
+            findBasicAliases decls
+    in
+    deAliasDecls basicAliases declsWithoutBasicAliases
+
+
+findBasicAliases decls =
+    Dict.foldl
+        (\name decl ( accumDecls, accumBasicAliases ) ->
+            case decl of
+                DAlias pos props (TUnit upos) ->
+                    ( accumDecls, Dict.insert name (TUnit upos) accumBasicAliases )
+
+                DAlias pos props (TBasic bpos basic) ->
+                    ( accumDecls, Dict.insert name (TBasic bpos basic) accumBasicAliases )
+
+                _ ->
+                    ( Dict.insert name decl accumDecls, accumBasicAliases )
+        )
+        ( Dict.empty, Dict.empty )
+        decls
+
+
+deAliasDecls basicAliases decls =
+    Dict.map (\name decl -> deAliasDecl basicAliases decl) decls
+
+
+deAliasDecl basicAliases decl =
+    case decl of
+        DAlias pos props alias ->
+            DAlias pos props (deAliasType basicAliases alias)
+
+        DSum pos props constructors ->
+            DSum pos props (Nonempty.map (deAliasConstructor basicAliases) constructors)
+
+        DEnum pos props val ->
+            DEnum pos props val
+
+        DRestricted pos props res ->
+            DRestricted pos props res
+
+
+deAliasConstructor basicAliases ( name, fields ) =
+    ( name, List.map (deAliasField basicAliases) fields )
+
+
+deAliasType basicAliases type_ =
+    case type_ of
+        TNamed pos name ref ->
+            Dict.get name basicAliases
+                |> Maybe.withDefault (TNamed pos name ref)
+
+        TProduct pos fields ->
+            TProduct pos (Nonempty.map (deAliasField basicAliases) fields)
+
+        TContainer pos container ->
+            TContainer pos (deAliasContainer basicAliases container)
+
+        TFunction pos argType resType ->
+            TFunction pos (deAliasType basicAliases argType) (deAliasType basicAliases resType)
+
+        _ ->
+            type_
+
+
+deAliasField basicAliases ( name, ftype, props ) =
+    ( name, deAliasType basicAliases ftype, props )
+
+
+deAliasContainer basicAliases container =
+    case container of
+        CList ltype ->
+            CList (deAliasType basicAliases ltype)
+
+        CSet stype ->
+            CSet (deAliasType basicAliases stype)
+
+        CDict ktype vtype ->
+            CDict (deAliasType basicAliases ktype) (deAliasType basicAliases vtype)
+
+        COptional otype ->
+            COptional (deAliasType basicAliases otype)
