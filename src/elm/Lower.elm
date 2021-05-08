@@ -9,6 +9,8 @@ the following things:
     code,those are ignored, and the underlying base type, such as String or Int
     is used.
 
+    (Note: Enums are left in since they can be represented by custom types.)
+
 2.  Shorten aliases to basic types. Sometimes basic types are declared in the AWS
     stubs and sometimes aliases to basic types are created by 1. Aliases to basic
     types are removed,and usages of them as types are replaced by the basic type
