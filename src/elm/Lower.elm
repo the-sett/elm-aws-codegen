@@ -1,16 +1,13 @@
 module Lower exposing (..)
 
-{-|
+{-| Lower defines a transformation to lower the AWS API model into a model that
+is better suited to code generation of stubs for calling the AWS APIs. This does
+the following things:
 
 1.  The AWS service model uses refined type to describe restrictions on parameters
     in requests and responses of AWS services. For the purposes of generated stub
     code,those are ignored, and the underlying base type, such as String or Int
     is used.
-
-    If bad parametes are passed to an AWS service, the service will response with an
-    HTTP error code.
-
-    This lowering tranforms all restricted types into their underlying base types.
 
 2.  Shorten aliases to basic types. Sometimes basic types are declared in the AWS
     stubs and sometimes aliases to basic types are created by 1. Aliases to basic
@@ -25,15 +22,15 @@ import L1 exposing (Basic(..), Declarable(..), Restricted(..), Type(..))
 
 transform awsModel =
     { properties = awsModel.properties
-    , declarations = lowerDecls awsModel.declarations
+    , declarations = deRestrictDecls awsModel.declarations
     }
 
 
-lowerDecls decls =
-    Dict.map (\k v -> lowerDecl v) decls
+deRestrictDecls decls =
+    Dict.map (\k v -> deRestrictDecl v) decls
 
 
-lowerDecl decl =
+deRestrictDecl decl =
     case decl of
         DAlias pos props alias ->
             DAlias pos props alias
@@ -45,10 +42,10 @@ lowerDecl decl =
             DEnum pos props val
 
         DRestricted pos props res ->
-            DAlias pos props (lowerRestricted pos res)
+            DAlias pos props (deRestrictRestricted pos res)
 
 
-lowerRestricted pos res =
+deRestrictRestricted pos res =
     case res of
         RInt _ ->
             TBasic pos BInt
