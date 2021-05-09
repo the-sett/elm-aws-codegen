@@ -2,21 +2,17 @@ port module Top exposing (main)
 
 import AWS.ServiceSpec as ServiceSpec exposing (ServiceSpec)
 import AWS.TransformServiceSpec as Transform
-import Codec
 import Dict exposing (Dict)
 import Elm.CodeGen as CG
 import Elm.Pretty
-import Elm.Writer
 import Errors exposing (Error)
 import Json.Decode as Decode
-import Json.Decode.Generic as Generic
 import L3
 import List.Nonempty
 import Lower
 import Pretty
 import Random exposing (Seed)
 import ResultME exposing (ResultME)
-import Salix.Pretty
 import String.Case as Case
 import Task
 import Templates.AWSStubs

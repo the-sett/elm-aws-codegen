@@ -20,9 +20,12 @@ the following things:
 
 import Dict exposing (Dict)
 import L1 exposing (Basic(..), Container(..), Declarable(..), Field, Restricted(..), Type(..))
+import L2 exposing (RefChecked)
+import L3
 import List.Nonempty as Nonempty
 
 
+transform : L3.L3 () -> L3.L3 ()
 transform awsModel =
     { properties = awsModel.properties
     , declarations =
@@ -35,10 +38,12 @@ transform awsModel =
 -- Replace restricted types by Int and String.
 
 
+deRestrict : Dict String (Declarable () RefChecked) -> Dict String (Declarable () RefChecked)
 deRestrict decls =
     Dict.map (\k v -> deRestrictDecl v) decls
 
 
+deRestrictDecl : Declarable () RefChecked -> Declarable () RefChecked
 deRestrictDecl decl =
     case decl of
         DAlias pos props alias ->
@@ -54,6 +59,7 @@ deRestrictDecl decl =
             DAlias pos props (deRestrictRestricted pos res)
 
 
+deRestrictRestricted : () -> Restricted -> Type () RefChecked
 deRestrictRestricted pos res =
     case res of
         RInt _ ->
@@ -67,6 +73,7 @@ deRestrictRestricted pos res =
 -- Remove aliases to basic types.
 
 
+deAlias : Dict String (Declarable () RefChecked) -> Dict String (Declarable () RefChecked)
 deAlias decls =
     let
         ( declsWithoutBasicAliases, basicAliases ) =
@@ -75,6 +82,7 @@ deAlias decls =
     deAliasDecls basicAliases declsWithoutBasicAliases
 
 
+findBasicAliases : Dict String (Declarable () RefChecked) -> ( Dict String (Declarable () RefChecked), Dict String (Type () RefChecked) )
 findBasicAliases decls =
     Dict.foldl
         (\name decl ( accumDecls, accumBasicAliases ) ->
@@ -92,10 +100,12 @@ findBasicAliases decls =
         decls
 
 
+deAliasDecls : Dict String (Type () RefChecked) -> Dict String (Declarable () RefChecked) -> Dict String (Declarable () RefChecked)
 deAliasDecls basicAliases decls =
     Dict.map (\name decl -> deAliasDecl basicAliases decl) decls
 
 
+deAliasDecl : Dict String (Type () RefChecked) -> Declarable () RefChecked -> Declarable () RefChecked
 deAliasDecl basicAliases decl =
     case decl of
         DAlias pos props alias ->
@@ -111,10 +121,12 @@ deAliasDecl basicAliases decl =
             DRestricted pos props res
 
 
+deAliasConstructor : Dict String (Type () RefChecked) -> ( String, List (Field () RefChecked) ) -> ( String, List (Field () RefChecked) )
 deAliasConstructor basicAliases ( name, fields ) =
     ( name, List.map (deAliasField basicAliases) fields )
 
 
+deAliasType : Dict String (Type () RefChecked) -> Type () RefChecked -> Type () RefChecked
 deAliasType basicAliases type_ =
     case type_ of
         TNamed pos name ref ->
@@ -134,10 +146,12 @@ deAliasType basicAliases type_ =
             type_
 
 
+deAliasField : Dict String (Type () RefChecked) -> Field () RefChecked -> Field () RefChecked
 deAliasField basicAliases ( name, ftype, props ) =
     ( name, deAliasType basicAliases ftype, props )
 
 
+deAliasContainer : Dict String (Type () RefChecked) -> Container () RefChecked -> Container () RefChecked
 deAliasContainer basicAliases container =
     case container of
         CList ltype ->
