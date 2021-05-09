@@ -1,10 +1,5 @@
 port module Top exposing (main)
 
---import Elm.Writer
---import Salix.Pretty
---import Codec
---import Json.Decode.Generic as Generic
-
 import AWS.ServiceSpec as ServiceSpec exposing (ServiceSpec)
 import AWS.TransformServiceSpec as Transform
 import Dict exposing (Dict)
