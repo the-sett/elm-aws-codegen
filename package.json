@@ -10,7 +10,7 @@
   "scripts": {
     "clobber": "rm -rf elm-stuff",
     "rebuild": "npm run clobber && npm install && npm run build",
-    "build": "elm make --output=src/elm.js src/elm/Top.elm",
+    "build": "elm make --optimize --output=src/elm.js src/elm/Top.elm",
     "start": "npm run build && node src/index.js"
   },
   "dependencies": {
