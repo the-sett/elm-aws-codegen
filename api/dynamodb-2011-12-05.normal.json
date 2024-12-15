@@ -5,12 +5,18 @@
     "endpointPrefix": "dynamodb",
     "jsonVersion": "1.0",
     "protocol": "json",
+    "protocols": [
+      "json"
+    ],
     "serviceAbbreviation": "DynamoDB",
     "serviceFullName": "Amazon DynamoDB",
     "serviceId": "DynamoDB",
     "signatureVersion": "v4",
     "targetPrefix": "DynamoDB_20111205",
-    "uid": "dynamodb-2011-12-05"
+    "uid": "dynamodb-2011-12-05",
+    "auth": [
+      "aws.auth#sigv4"
+    ]
   },
   "operations": {
     "BatchGetItem": {
@@ -31,6 +37,9 @@
         },
         {
           "shape": "ResourceNotFoundException"
+        },
+        {
+          "shape": "RequestLimitExceeded"
         },
         {
           "shape": "InternalServerError"
@@ -59,6 +68,9 @@
         },
         {
           "shape": "LimitExceededException"
+        },
+        {
+          "shape": "RequestLimitExceeded"
         },
         {
           "shape": "InternalServerError"
@@ -115,6 +127,9 @@
         },
         {
           "shape": "LimitExceededException"
+        },
+        {
+          "shape": "RequestLimitExceeded"
         },
         {
           "shape": "InternalServerError"
@@ -192,6 +207,9 @@
           "shape": "ResourceNotFoundException"
         },
         {
+          "shape": "RequestLimitExceeded"
+        },
+        {
           "shape": "InternalServerError"
         }
       ],
@@ -242,6 +260,9 @@
           "shape": "LimitExceededException"
         },
         {
+          "shape": "RequestLimitExceeded"
+        },
+        {
           "shape": "InternalServerError"
         }
       ],
@@ -267,6 +288,9 @@
           "shape": "ResourceNotFoundException"
         },
         {
+          "shape": "RequestLimitExceeded"
+        },
+        {
           "shape": "InternalServerError"
         }
       ],
@@ -290,6 +314,9 @@
         },
         {
           "shape": "ResourceNotFoundException"
+        },
+        {
+          "shape": "RequestLimitExceeded"
         },
         {
           "shape": "InternalServerError"
@@ -321,6 +348,9 @@
         },
         {
           "shape": "LimitExceededException"
+        },
+        {
+          "shape": "RequestLimitExceeded"
         },
         {
           "shape": "InternalServerError"

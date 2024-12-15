@@ -45,7 +45,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Specifies a domain to be associated to Amazon WorkLink.</p>"
+      "documentation": "<p>Specifies a domain to be associated to Amazon WorkLink.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "AssociateWebsiteAuthorizationProvider": {
       "name": "AssociateWebsiteAuthorizationProvider",
@@ -79,7 +81,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Associates a website authorization provider with a specified fleet. This is used to authorize users against associated websites in the company network.</p>"
+      "documentation": "<p>Associates a website authorization provider with a specified fleet. This is used to authorize users against associated websites in the company network.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "AssociateWebsiteCertificateAuthority": {
       "name": "AssociateWebsiteCertificateAuthority",
@@ -113,7 +117,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Imports the root certificate of a certificate authority (CA) used to obtain TLS certificates used by associated websites within the company network.</p>"
+      "documentation": "<p>Imports the root certificate of a certificate authority (CA) used to obtain TLS certificates used by associated websites within the company network.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "CreateFleet": {
       "name": "CreateFleet",
@@ -147,7 +153,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Creates a fleet. A fleet consists of resources and the configuration that delivers associated websites to authorized users who download and set up the Amazon WorkLink app.</p>"
+      "documentation": "<p>Creates a fleet. A fleet consists of resources and the configuration that delivers associated websites to authorized users who download and set up the Amazon WorkLink app.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DeleteFleet": {
       "name": "DeleteFleet",
@@ -178,7 +186,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Deletes a fleet. Prevents users from accessing previously associated websites. </p>"
+      "documentation": "<p>Deletes a fleet. Prevents users from accessing previously associated websites. </p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeAuditStreamConfiguration": {
       "name": "DescribeAuditStreamConfiguration",
@@ -209,7 +219,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Describes the configuration for delivering audit streams to the customer account.</p>"
+      "documentation": "<p>Describes the configuration for delivering audit streams to the customer account.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeCompanyNetworkConfiguration": {
       "name": "DescribeCompanyNetworkConfiguration",
@@ -240,7 +252,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Describes the networking configuration to access the internal websites associated with the specified fleet.</p>"
+      "documentation": "<p>Describes the networking configuration to access the internal websites associated with the specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeDevice": {
       "name": "DescribeDevice",
@@ -271,7 +285,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Provides information about a user's device.</p>"
+      "documentation": "<p>Provides information about a user's device.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeDevicePolicyConfiguration": {
       "name": "DescribeDevicePolicyConfiguration",
@@ -302,7 +318,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Describes the device policy configuration for the specified fleet.</p>"
+      "documentation": "<p>Describes the device policy configuration for the specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeDomain": {
       "name": "DescribeDomain",
@@ -333,7 +351,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Provides information about the domain.</p>"
+      "documentation": "<p>Provides information about the domain.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeFleetMetadata": {
       "name": "DescribeFleetMetadata",
@@ -364,7 +384,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Provides basic information for the specified fleet, excluding identity provider, networking, and device configuration details.</p>"
+      "documentation": "<p>Provides basic information for the specified fleet, excluding identity provider, networking, and device configuration details.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeIdentityProviderConfiguration": {
       "name": "DescribeIdentityProviderConfiguration",
@@ -395,7 +417,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Describes the identity provider configuration of the specified fleet.</p>"
+      "documentation": "<p>Describes the identity provider configuration of the specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DescribeWebsiteCertificateAuthority": {
       "name": "DescribeWebsiteCertificateAuthority",
@@ -426,7 +450,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Provides information about the certificate authority.</p>"
+      "documentation": "<p>Provides information about the certificate authority.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DisassociateDomain": {
       "name": "DisassociateDomain",
@@ -457,7 +483,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Disassociates a domain from Amazon WorkLink. End users lose the ability to access the domain with Amazon WorkLink. </p>"
+      "documentation": "<p>Disassociates a domain from Amazon WorkLink. End users lose the ability to access the domain with Amazon WorkLink. </p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DisassociateWebsiteAuthorizationProvider": {
       "name": "DisassociateWebsiteAuthorizationProvider",
@@ -491,7 +519,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Disassociates a website authorization provider from a specified fleet. After the disassociation, users can't load any associated websites that require this authorization provider.</p>"
+      "documentation": "<p>Disassociates a website authorization provider from a specified fleet. After the disassociation, users can't load any associated websites that require this authorization provider.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "DisassociateWebsiteCertificateAuthority": {
       "name": "DisassociateWebsiteCertificateAuthority",
@@ -522,7 +552,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Removes a certificate authority (CA).</p>"
+      "documentation": "<p>Removes a certificate authority (CA).</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "ListDevices": {
       "name": "ListDevices",
@@ -553,7 +585,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Retrieves a list of devices registered with the specified fleet.</p>"
+      "documentation": "<p>Retrieves a list of devices registered with the specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "ListDomains": {
       "name": "ListDomains",
@@ -578,10 +612,15 @@
           "shape": "InvalidRequestException"
         },
         {
+          "shape": "ResourceNotFoundException"
+        },
+        {
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Retrieves a list of domains associated to a specified fleet.</p>"
+      "documentation": "<p>Retrieves a list of domains associated to a specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "ListFleets": {
       "name": "ListFleets",
@@ -609,7 +648,30 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Retrieves a list of fleets for the current account and Region.</p>"
+      "documentation": "<p>Retrieves a list of fleets for the current account and Region.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
+    },
+    "ListTagsForResource": {
+      "name": "ListTagsForResource",
+      "http": {
+        "method": "GET",
+        "requestUri": "/tags/{ResourceArn}"
+      },
+      "input": {
+        "shape": "ListTagsForResourceRequest"
+      },
+      "output": {
+        "shape": "ListTagsForResourceResponse"
+      },
+      "errors": [
+        {
+          "shape": "InvalidRequestException"
+        }
+      ],
+      "documentation": "<p>Retrieves a list of tags for the specified resource.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "ListWebsiteAuthorizationProviders": {
       "name": "ListWebsiteAuthorizationProviders",
@@ -640,7 +702,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Retrieves a list of website authorization providers associated with a specified fleet.</p>"
+      "documentation": "<p>Retrieves a list of website authorization providers associated with a specified fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "ListWebsiteCertificateAuthorities": {
       "name": "ListWebsiteCertificateAuthorities",
@@ -668,7 +732,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Retrieves a list of certificate authorities added for the current account and Region.</p>"
+      "documentation": "<p>Retrieves a list of certificate authorities added for the current account and Region.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "RestoreDomainAccess": {
       "name": "RestoreDomainAccess",
@@ -699,7 +765,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Moves a domain to ACTIVE status if it was in the INACTIVE status.</p>"
+      "documentation": "<p>Moves a domain to ACTIVE status if it was in the INACTIVE status.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "RevokeDomainAccess": {
       "name": "RevokeDomainAccess",
@@ -730,7 +798,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Moves a domain to INACTIVE status if it was in the ACTIVE status.</p>"
+      "documentation": "<p>Moves a domain to INACTIVE status if it was in the ACTIVE status.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "SignOutUser": {
       "name": "SignOutUser",
@@ -761,7 +831,51 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Signs the user out from all of their devices. The user can sign in again if they have valid credentials.</p>"
+      "documentation": "<p>Signs the user out from all of their devices. The user can sign in again if they have valid credentials.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
+    },
+    "TagResource": {
+      "name": "TagResource",
+      "http": {
+        "method": "POST",
+        "requestUri": "/tags/{ResourceArn}"
+      },
+      "input": {
+        "shape": "TagResourceRequest"
+      },
+      "output": {
+        "shape": "TagResourceResponse"
+      },
+      "errors": [
+        {
+          "shape": "InvalidRequestException"
+        }
+      ],
+      "documentation": "<p>Adds or overwrites one or more tags for the specified resource, such as a fleet. Each tag consists of a key and an optional value. If a resource already has a tag with the same key, this operation updates its value.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
+    },
+    "UntagResource": {
+      "name": "UntagResource",
+      "http": {
+        "method": "DELETE",
+        "requestUri": "/tags/{ResourceArn}"
+      },
+      "input": {
+        "shape": "UntagResourceRequest"
+      },
+      "output": {
+        "shape": "UntagResourceResponse"
+      },
+      "errors": [
+        {
+          "shape": "InvalidRequestException"
+        }
+      ],
+      "documentation": "<p>Removes one or more tags from the specified resource.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateAuditStreamConfiguration": {
       "name": "UpdateAuditStreamConfiguration",
@@ -792,7 +906,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates the audit stream configuration for the fleet.</p>"
+      "documentation": "<p>Updates the audit stream configuration for the fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateCompanyNetworkConfiguration": {
       "name": "UpdateCompanyNetworkConfiguration",
@@ -823,7 +939,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates the company network configuration for the fleet.</p>"
+      "documentation": "<p>Updates the company network configuration for the fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateDevicePolicyConfiguration": {
       "name": "UpdateDevicePolicyConfiguration",
@@ -854,7 +972,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates the device policy configuration for the fleet.</p>"
+      "documentation": "<p>Updates the device policy configuration for the fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateDomainMetadata": {
       "name": "UpdateDomainMetadata",
@@ -885,7 +1005,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates domain metadata, such as DisplayName.</p>"
+      "documentation": "<p>Updates domain metadata, such as DisplayName.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateFleetMetadata": {
       "name": "UpdateFleetMetadata",
@@ -916,7 +1038,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates fleet metadata, such as DisplayName.</p>"
+      "documentation": "<p>Updates fleet metadata, such as DisplayName.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     },
     "UpdateIdentityProviderConfiguration": {
       "name": "UpdateIdentityProviderConfiguration",
@@ -947,7 +1071,9 @@
           "shape": "TooManyRequestsException"
         }
       ],
-      "documentation": "<p>Updates the identity provider configuration for the fleet.</p>"
+      "documentation": "<p>Updates the identity provider configuration for the fleet.</p>",
+      "deprecated": true,
+      "deprecatedMessage": "Amazon WorkLink is no longer supported. This will be removed in a future version of the SDK."
     }
   },
   "shapes": {
@@ -1046,7 +1172,8 @@
       }
     },
     "AuditStreamArn": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^arn:aws:kinesis:.+:[0-9]{12}:stream/AmazonWorkLink-.*$"
     },
     "AuthorizationProviderType": {
       "type": "string",
@@ -1091,6 +1218,10 @@
         "OptimizeForEndUserLocation": {
           "shape": "Boolean",
           "documentation": "<p>The option to optimize for better performance by routing traffic through the closest AWS Region to users, which may be outside of your home Region.</p>"
+        },
+        "Tags": {
+          "shape": "TagMap",
+          "documentation": "<p> The tags to add to the resource. A tag is a key-value pair.</p>"
         }
       }
     },
@@ -1099,7 +1230,7 @@
       "members": {
         "FleetArn": {
           "shape": "FleetArn",
-          "documentation": "<p>The ARN of the fleet.</p>"
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>"
         }
       }
     },
@@ -1301,7 +1432,7 @@
       "members": {
         "FleetArn": {
           "shape": "FleetArn",
-          "documentation": "<p>The ARN of the fleet.</p>"
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>"
         }
       }
     },
@@ -1335,6 +1466,10 @@
         "FleetStatus": {
           "shape": "FleetStatus",
           "documentation": "<p>The current state of the fleet.</p>"
+        },
+        "Tags": {
+          "shape": "TagMap",
+          "documentation": "<p>The tags attached to the resource. A tag is a key-value pair.</p>"
         }
       }
     },
@@ -1599,7 +1734,7 @@
       "members": {
         "FleetArn": {
           "shape": "FleetArn",
-          "documentation": "<p>The ARN of the fleet.</p>"
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>"
         },
         "CreatedTime": {
           "shape": "DateTime",
@@ -1615,7 +1750,7 @@
         },
         "DisplayName": {
           "shape": "DisplayName",
-          "documentation": "<p>The name to display.</p>"
+          "documentation": "<p>The name of the fleet to display.</p>"
         },
         "CompanyCode": {
           "shape": "CompanyCode",
@@ -1624,6 +1759,10 @@
         "FleetStatus": {
           "shape": "FleetStatus",
           "documentation": "<p>The status of the fleet.</p>"
+        },
+        "Tags": {
+          "shape": "TagMap",
+          "documentation": "<p>The tags attached to the resource. A tag is a key-value pair.</p>"
         }
       },
       "documentation": "<p>The summary of the fleet.</p>"
@@ -1734,6 +1873,29 @@
         "NextToken": {
           "shape": "NextToken",
           "documentation": "<p>The pagination token used to retrieve the next page of results for this operation. If there are no more pages, this value is null.</p>"
+        }
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "type": "structure",
+      "required": [
+        "ResourceArn"
+      ],
+      "members": {
+        "ResourceArn": {
+          "shape": "FleetArn",
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>",
+          "location": "uri",
+          "locationName": "ResourceArn"
+        }
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "type": "structure",
+      "members": {
+        "Tags": {
+          "shape": "TagMap",
+          "documentation": "<p>The tags attached to the resource. A tag is a key-value pair.</p>"
         }
       }
     },
@@ -1901,6 +2063,83 @@
       "member": {
         "shape": "SubnetId"
       }
+    },
+    "TagKey": {
+      "type": "string",
+      "max": 128,
+      "min": 1,
+      "pattern": "^(?!aws:)[a-zA-Z+-=._:/]+$"
+    },
+    "TagKeyList": {
+      "type": "list",
+      "member": {
+        "shape": "TagKey"
+      },
+      "max": 50,
+      "min": 1
+    },
+    "TagMap": {
+      "type": "map",
+      "key": {
+        "shape": "TagKey"
+      },
+      "value": {
+        "shape": "TagValue"
+      },
+      "max": 50,
+      "min": 1
+    },
+    "TagResourceRequest": {
+      "type": "structure",
+      "required": [
+        "ResourceArn",
+        "Tags"
+      ],
+      "members": {
+        "ResourceArn": {
+          "shape": "FleetArn",
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>",
+          "location": "uri",
+          "locationName": "ResourceArn"
+        },
+        "Tags": {
+          "shape": "TagMap",
+          "documentation": "<p>The tags to add to the resource. A tag is a key-value pair.</p>"
+        }
+      }
+    },
+    "TagResourceResponse": {
+      "type": "structure",
+      "members": {}
+    },
+    "TagValue": {
+      "type": "string",
+      "max": 256
+    },
+    "UntagResourceRequest": {
+      "type": "structure",
+      "required": [
+        "ResourceArn",
+        "TagKeys"
+      ],
+      "members": {
+        "ResourceArn": {
+          "shape": "FleetArn",
+          "documentation": "<p>The Amazon Resource Name (ARN) of the fleet.</p>",
+          "location": "uri",
+          "locationName": "ResourceArn"
+        },
+        "TagKeys": {
+          "shape": "TagKeyList",
+          "documentation": "<p>The list of tag keys to remove from the resource.</p>",
+          "location": "querystring",
+          "locationName": "tagKeys"
+        }
+      }
+    },
+    "UntagResourceResponse": {
+      "type": "structure",
+      "members": {}
     },
     "UpdateAuditStreamConfigurationRequest": {
       "type": "structure",
@@ -2112,5 +2351,5 @@
       }
     }
   },
-  "documentation": "<p>Amazon WorkLink is a cloud-based service that provides secure access to internal websites and web apps from iOS phones. In a single step, your users, such as employees, can access internal websites as efficiently as they access any other public website. They enter a URL in their web browser, or choose a link to an internal website in an email. Amazon WorkLink authenticates the user's access and securely renders authorized internal web content in a secure rendering service in the AWS cloud. Amazon WorkLink doesn't download or store any internal web content on mobile devices.</p>"
+  "documentation": "<p>Amazon WorkLink is a cloud-based service that provides secure access to internal websites and web apps from iOS and Android phones. In a single step, your users, such as employees, can access internal websites as efficiently as they access any other public website. They enter a URL in their web browser, or choose a link to an internal website in an email. Amazon WorkLink authenticates the user's access and securely renders authorized internal web content in a secure rendering service in the AWS cloud. Amazon WorkLink doesn't download or store any internal web content on mobile devices.</p>"
 }

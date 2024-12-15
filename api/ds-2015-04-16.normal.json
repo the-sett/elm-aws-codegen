@@ -5,12 +5,18 @@
     "endpointPrefix": "ds",
     "jsonVersion": "1.1",
     "protocol": "json",
+    "protocols": [
+      "json"
+    ],
     "serviceAbbreviation": "Directory Service",
     "serviceFullName": "AWS Directory Service",
     "serviceId": "Directory Service",
     "signatureVersion": "v4",
     "targetPrefix": "DirectoryService_20150416",
-    "uid": "ds-2015-04-16"
+    "uid": "ds-2015-04-16",
+    "auth": [
+      "aws.auth#sigv4"
+    ]
   },
   "operations": {
     "AcceptSharedDirectory": {
@@ -79,7 +85,53 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>If the DNS server for your on-premises domain uses a publicly addressable IP address, you must add a CIDR address block to correctly route traffic to and from your Microsoft AD on Amazon Web Services. <i>AddIpRoutes</i> adds this address block. You can also use <i>AddIpRoutes</i> to facilitate routing traffic that uses public IP ranges from your Microsoft AD on AWS to a peer VPC. </p> <p>Before you call <i>AddIpRoutes</i>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <i>AddIpRoutes</i> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">AWS Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+      "documentation": "<p>If the DNS server for your self-managed domain uses a publicly addressable IP address, you must add a CIDR address block to correctly route traffic to and from your Microsoft AD on Amazon Web Services. <i>AddIpRoutes</i> adds this address block. You can also use <i>AddIpRoutes</i> to facilitate routing traffic that uses public IP ranges from your Microsoft AD on Amazon Web Services to a peer VPC. </p> <p>Before you call <i>AddIpRoutes</i>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <i>AddIpRoutes</i> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+    },
+    "AddRegion": {
+      "name": "AddRegion",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AddRegionRequest"
+      },
+      "output": {
+        "shape": "AddRegionResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "EntityDoesNotExistException"
+        },
+        {
+          "shape": "DirectoryAlreadyInRegionException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "RegionLimitExceededException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Adds two domain controllers in the specified Region for the specified directory.</p>"
     },
     "AddTagsToResource": {
       "name": "AddTagsToResource",
@@ -163,7 +215,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates an AD Connector to connect to an on-premises directory.</p> <p>Before you call <code>ConnectDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>ConnectDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">AWS Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+      "documentation": "<p>Creates an AD Connector to connect to a self-managed directory.</p> <p>Before you call <code>ConnectDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>ConnectDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
     },
     "CreateAlias": {
       "name": "CreateAlias",
@@ -234,7 +286,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates a computer account in the specified directory, and joins the computer to the directory.</p>"
+      "documentation": "<p>Creates an Active Directory computer object in the specified directory.</p>"
     },
     "CreateConditionalForwarder": {
       "name": "CreateConditionalForwarder",
@@ -271,7 +323,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates a conditional forwarder associated with your AWS directory. Conditional forwarders are required in order to set up a trust relationship with another domain. The conditional forwarder points to the trusted domain.</p>"
+      "documentation": "<p>Creates a conditional forwarder associated with your Amazon Web Services directory. Conditional forwarders are required in order to set up a trust relationship with another domain. The conditional forwarder points to the trusted domain.</p>"
     },
     "CreateDirectory": {
       "name": "CreateDirectory",
@@ -299,7 +351,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates a Simple AD directory.</p> <p>Before you call <code>CreateDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>CreateDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">AWS Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+      "documentation": "<p>Creates a Simple AD directory. For more information, see <a href=\"https://docs.aws.amazon.com/directoryservice/latest/admin-guide/directory_simple_ad.html\">Simple Active Directory</a> in the <i>Directory Service Admin Guide</i>.</p> <p>Before you call <code>CreateDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>CreateDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
     },
     "CreateLogSubscription": {
       "name": "CreateLogSubscription",
@@ -333,7 +385,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates a subscription to forward real time Directory Service domain controller security logs to the specified CloudWatch log group in your AWS account.</p>"
+      "documentation": "<p>Creates a subscription to forward real-time Directory Service domain controller security logs to the specified Amazon CloudWatch log group in your Amazon Web Services account.</p>"
     },
     "CreateMicrosoftAD": {
       "name": "CreateMicrosoftAD",
@@ -364,7 +416,7 @@
           "shape": "UnsupportedOperationException"
         }
       ],
-      "documentation": "<p>Creates an AWS Managed Microsoft AD directory.</p> <p>Before you call <i>CreateMicrosoftAD</i>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <i>CreateMicrosoftAD</i> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">AWS Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+      "documentation": "<p>Creates a Microsoft AD directory in the Amazon Web Services Cloud. For more information, see <a href=\"https://docs.aws.amazon.com/directoryservice/latest/admin-guide/directory_microsoft_ad.html\">Managed Microsoft AD</a> in the <i>Directory Service Admin Guide</i>.</p> <p>Before you call <i>CreateMicrosoftAD</i>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <i>CreateMicrosoftAD</i> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
     },
     "CreateSnapshot": {
       "name": "CreateSnapshot",
@@ -395,7 +447,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Creates a snapshot of a Simple AD or Microsoft AD directory in the AWS cloud.</p> <note> <p>You cannot take snapshots of AD Connector directories.</p> </note>"
+      "documentation": "<p>Creates a snapshot of a Simple AD or Microsoft AD directory in the Amazon Web Services cloud.</p> <note> <p>You cannot take snapshots of AD Connector directories.</p> </note>"
     },
     "CreateTrust": {
       "name": "CreateTrust",
@@ -429,7 +481,7 @@
           "shape": "UnsupportedOperationException"
         }
       ],
-      "documentation": "<p>AWS Directory Service for Microsoft Active Directory allows you to configure trust relationships. For example, you can establish a trust between your AWS Managed Microsoft AD directory, and your existing on-premises Microsoft Active Directory. This would allow you to provide users and groups access to resources in either domain, with a single set of credentials.</p> <p>This action initiates the creation of the AWS side of a trust relationship between an AWS Managed Microsoft AD directory and an external domain. You can create either a forest trust or an external trust.</p>"
+      "documentation": "<p>Directory Service for Microsoft Active Directory allows you to configure trust relationships. For example, you can establish a trust between your Managed Microsoft AD directory, and your existing self-managed Microsoft Active Directory. This would allow you to provide users and groups access to resources in either domain, with a single set of credentials.</p> <p>This action initiates the creation of the Amazon Web Services side of a trust relationship between an Managed Microsoft AD directory and an external domain. You can create either a forest trust or an external trust.</p>"
     },
     "DeleteConditionalForwarder": {
       "name": "DeleteConditionalForwarder",
@@ -463,7 +515,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Deletes a conditional forwarder that has been set up for your AWS directory.</p>"
+      "documentation": "<p>Deletes a conditional forwarder that has been set up for your Amazon Web Services directory.</p>"
     },
     "DeleteDirectory": {
       "name": "DeleteDirectory",
@@ -488,7 +540,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Deletes an AWS Directory Service directory.</p> <p>Before you call <code>DeleteDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>DeleteDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">AWS Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
+      "documentation": "<p>Deletes an Directory Service directory.</p> <p>Before you call <code>DeleteDirectory</code>, ensure that all of the required permissions have been explicitly granted through a policy. For details about what permissions are required to run the <code>DeleteDirectory</code> operation, see <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/UsingWithDS_IAM_ResourcePermissions.html\">Directory Service API Permissions: Actions, Resources, and Conditions Reference</a>.</p>"
     },
     "DeleteLogSubscription": {
       "name": "DeleteLogSubscription",
@@ -575,7 +627,47 @@
           "shape": "UnsupportedOperationException"
         }
       ],
-      "documentation": "<p>Deletes an existing trust relationship between your AWS Managed Microsoft AD directory and an external domain.</p>"
+      "documentation": "<p>Deletes an existing trust relationship between your Managed Microsoft AD directory and an external domain.</p>"
+    },
+    "DeregisterCertificate": {
+      "name": "DeregisterCertificate",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DeregisterCertificateRequest"
+      },
+      "output": {
+        "shape": "DeregisterCertificateResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "CertificateDoesNotExistException"
+        },
+        {
+          "shape": "CertificateInUseException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Deletes from the system the certificate that was registered for secure LDAP or client certificate authentication.</p>"
     },
     "DeregisterEventTopic": {
       "name": "DeregisterEventTopic",
@@ -603,7 +695,75 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Removes the specified directory as a publisher to the specified SNS topic.</p>"
+      "documentation": "<p>Removes the specified directory as a publisher to the specified Amazon SNS topic.</p>"
+    },
+    "DescribeCertificate": {
+      "name": "DescribeCertificate",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeCertificateRequest"
+      },
+      "output": {
+        "shape": "DescribeCertificateResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "CertificateDoesNotExistException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Displays information about the certificate registered for secure LDAP or client certificate authentication.</p>"
+    },
+    "DescribeClientAuthenticationSettings": {
+      "name": "DescribeClientAuthenticationSettings",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeClientAuthenticationSettingsRequest"
+      },
+      "output": {
+        "shape": "DescribeClientAuthenticationSettingsResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Retrieves information about the type of client authentication for the specified directory, if the type is specified. If no type is specified, information about all client authentication types that are supported for the specified directory is retrieved. Currently, only <code>SmartCard</code> is supported. </p>"
     },
     "DescribeConditionalForwarders": {
       "name": "DescribeConditionalForwarders",
@@ -730,7 +890,112 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Obtains information about which SNS topics receive status messages from the specified directory.</p> <p>If no input parameters are provided, such as DirectoryId or TopicName, this request describes all of the associations in the account.</p>"
+      "documentation": "<p>Obtains information about which Amazon SNS topics receive status messages from the specified directory.</p> <p>If no input parameters are provided, such as DirectoryId or TopicName, this request describes all of the associations in the account.</p>"
+    },
+    "DescribeLDAPSSettings": {
+      "name": "DescribeLDAPSSettings",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeLDAPSSettingsRequest"
+      },
+      "output": {
+        "shape": "DescribeLDAPSSettingsResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidNextTokenException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Describes the status of LDAP security for the specified directory.</p>"
+    },
+    "DescribeRegions": {
+      "name": "DescribeRegions",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeRegionsRequest"
+      },
+      "output": {
+        "shape": "DescribeRegionsResult"
+      },
+      "errors": [
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidNextTokenException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Provides information about the Regions that are configured for multi-Region replication.</p>"
+    },
+    "DescribeSettings": {
+      "name": "DescribeSettings",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeSettingsRequest"
+      },
+      "output": {
+        "shape": "DescribeSettingsResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "InvalidNextTokenException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Retrieves information about the configurable settings for the specified directory.</p>"
     },
     "DescribeSharedDirectories": {
       "name": "DescribeSharedDirectories",
@@ -831,6 +1096,111 @@
       ],
       "documentation": "<p>Obtains information about the trust relationships for this account.</p> <p>If no input parameters are provided, such as DirectoryId or TrustIds, this request describes all the trust relationships belonging to the account.</p>"
     },
+    "DescribeUpdateDirectory": {
+      "name": "DescribeUpdateDirectory",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DescribeUpdateDirectoryRequest"
+      },
+      "output": {
+        "shape": "DescribeUpdateDirectoryResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        },
+        {
+          "shape": "InvalidNextTokenException"
+        }
+      ],
+      "documentation": "<p> Describes the updates of a directory for a particular update type. </p>"
+    },
+    "DisableClientAuthentication": {
+      "name": "DisableClientAuthentication",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DisableClientAuthenticationRequest"
+      },
+      "output": {
+        "shape": "DisableClientAuthenticationResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidClientAuthStatusException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Disables alternative client authentication methods for the specified directory. </p>"
+    },
+    "DisableLDAPS": {
+      "name": "DisableLDAPS",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "DisableLDAPSRequest"
+      },
+      "output": {
+        "shape": "DisableLDAPSResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "InvalidLDAPSStatusException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Deactivates LDAP secure calls for the specified directory.</p>"
+    },
     "DisableRadius": {
       "name": "DisableRadius",
       "http": {
@@ -886,6 +1256,83 @@
         }
       ],
       "documentation": "<p>Disables single-sign on for a directory.</p>"
+    },
+    "EnableClientAuthentication": {
+      "name": "EnableClientAuthentication",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "EnableClientAuthenticationRequest"
+      },
+      "output": {
+        "shape": "EnableClientAuthenticationResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidClientAuthStatusException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "NoAvailableCertificateException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Enables alternative client authentication methods for the specified directory.</p>"
+    },
+    "EnableLDAPS": {
+      "name": "EnableLDAPS",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "EnableLDAPSRequest"
+      },
+      "output": {
+        "shape": "EnableLDAPSResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "NoAvailableCertificateException"
+        },
+        {
+          "shape": "InvalidLDAPSStatusException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Activates the switch for the specific directory to always use LDAP secure calls.</p>"
     },
     "EnableRadius": {
       "name": "EnableRadius",
@@ -947,7 +1394,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Enables single sign-on for a directory.</p>"
+      "documentation": "<p>Enables single sign-on for a directory. Single sign-on allows users in your directory to access certain Amazon Web Services services from a computer joined to the directory without having to enter their credentials separately.</p>"
     },
     "GetDirectoryLimits": {
       "name": "GetDirectoryLimits",
@@ -972,7 +1419,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Obtains directory limit information for the current region.</p>"
+      "documentation": "<p>Obtains directory limit information for the current Region.</p>"
     },
     "GetSnapshotLimits": {
       "name": "GetSnapshotLimits",
@@ -998,6 +1445,40 @@
         }
       ],
       "documentation": "<p>Obtains the manual snapshot limits for a directory.</p>"
+    },
+    "ListCertificates": {
+      "name": "ListCertificates",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "ListCertificatesRequest"
+      },
+      "output": {
+        "shape": "ListCertificatesResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "InvalidNextTokenException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>For the specified directory, lists all the certificates registered for a secure LDAP or client certificate authentication.</p>"
     },
     "ListIpRoutes": {
       "name": "ListIpRoutes",
@@ -1056,7 +1537,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Lists the active log subscriptions for the AWS account.</p>"
+      "documentation": "<p>Lists the active log subscriptions for the Amazon Web Services account.</p>"
     },
     "ListSchemaExtensions": {
       "name": "ListSchemaExtensions",
@@ -1117,6 +1598,49 @@
       ],
       "documentation": "<p>Lists all tags on a directory.</p>"
     },
+    "RegisterCertificate": {
+      "name": "RegisterCertificate",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "RegisterCertificateRequest"
+      },
+      "output": {
+        "shape": "RegisterCertificateResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "InvalidCertificateException"
+        },
+        {
+          "shape": "CertificateLimitExceededException"
+        },
+        {
+          "shape": "CertificateAlreadyExistsException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Registers a certificate for a secure LDAP or client certificate authentication.</p>"
+    },
     "RegisterEventTopic": {
       "name": "RegisterEventTopic",
       "http": {
@@ -1143,7 +1667,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Associates a directory with an SNS topic. This establishes the directory as a publisher to the specified SNS topic. You can then receive email or text (SMS) messages when the status of your directory changes. You get notified if your directory goes from an Active status to an Impaired or Inoperable status. You also receive a notification when the directory returns to an Active status.</p>"
+      "documentation": "<p>Associates a directory with an Amazon SNS topic. This establishes the directory as a publisher to the specified Amazon SNS topic. You can then receive email or text (SMS) messages when the status of your directory changes. You get notified if your directory goes from an Active status to an Impaired or Inoperable status. You also receive a notification when the directory returns to an Active status.</p>"
     },
     "RejectSharedDirectory": {
       "name": "RejectSharedDirectory",
@@ -1206,6 +1730,40 @@
         }
       ],
       "documentation": "<p>Removes IP address blocks from a directory.</p>"
+    },
+    "RemoveRegion": {
+      "name": "RemoveRegion",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "RemoveRegionRequest"
+      },
+      "output": {
+        "shape": "RemoveRegionResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Stops all replication and removes the domain controllers from the specified Region. You cannot remove the primary Region with this operation. Instead, use the <code>DeleteDirectory</code> API.</p>"
     },
     "RemoveTagsFromResource": {
       "name": "RemoveTagsFromResource",
@@ -1270,7 +1828,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Resets the password for any user in your AWS Managed Microsoft AD or Simple AD directory.</p>"
+      "documentation": "<p>Resets the password for any user in your Managed Microsoft AD or Simple AD directory.</p> <p>You can reset the password for any user in your directory with the following exceptions:</p> <ul> <li> <p>For Simple AD, you cannot reset the password for any user that is a member of either the <b>Domain Admins</b> or <b>Enterprise Admins</b> group except for the administrator user.</p> </li> <li> <p>For Managed Microsoft AD, you can only reset the password for a user that is in an OU based off of the NetBIOS name that you typed when you created your directory. For example, you cannot reset the password for a user in the <b>Amazon Web Services Reserved</b> OU. For more information about the OU structure for an Managed Microsoft AD directory, see <a href=\"https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created.html\">What Gets Created</a> in the <i>Directory Service Administration Guide</i>.</p> </li> </ul>"
     },
     "RestoreFromSnapshot": {
       "name": "RestoreFromSnapshot",
@@ -1344,7 +1902,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Shares a specified directory (<code>DirectoryId</code>) in your AWS account (directory owner) with another AWS account (directory consumer). With this operation you can use your directory from any AWS account and from any Amazon VPC within an AWS Region.</p> <p>When you share your AWS Managed Microsoft AD directory, AWS Directory Service creates a shared directory in the directory consumer account. This shared directory contains the metadata to provide access to the directory within the directory owner account. The shared directory is visible in all VPCs in the directory consumer account.</p> <p>The <code>ShareMethod</code> parameter determines whether the specified directory can be shared between AWS accounts inside the same AWS organization (<code>ORGANIZATIONS</code>). It also determines whether you can share the directory with any other AWS account either inside or outside of the organization (<code>HANDSHAKE</code>).</p> <p>The <code>ShareNotes</code> parameter is only used when <code>HANDSHAKE</code> is called, which sends a directory sharing request to the directory consumer. </p>"
+      "documentation": "<p>Shares a specified directory (<code>DirectoryId</code>) in your Amazon Web Services account (directory owner) with another Amazon Web Services account (directory consumer). With this operation you can use your directory from any Amazon Web Services account and from any Amazon VPC within an Amazon Web Services Region.</p> <p>When you share your Managed Microsoft AD directory, Directory Service creates a shared directory in the directory consumer account. This shared directory contains the metadata to provide access to the directory within the directory owner account. The shared directory is visible in all VPCs in the directory consumer account.</p> <p>The <code>ShareMethod</code> parameter determines whether the specified directory can be shared between Amazon Web Services accounts inside the same Amazon Web Services organization (<code>ORGANIZATIONS</code>). It also determines whether you can share the directory with any other Amazon Web Services account either inside or outside of the organization (<code>HANDSHAKE</code>).</p> <p>The <code>ShareNotes</code> parameter is only used when <code>HANDSHAKE</code> is called, which sends a directory sharing request to the directory consumer. </p>"
     },
     "StartSchemaExtension": {
       "name": "StartSchemaExtension",
@@ -1443,7 +2001,50 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Updates a conditional forwarder that has been set up for your AWS directory.</p>"
+      "documentation": "<p>Updates a conditional forwarder that has been set up for your Amazon Web Services directory.</p>"
+    },
+    "UpdateDirectorySetup": {
+      "name": "UpdateDirectorySetup",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "UpdateDirectorySetupRequest"
+      },
+      "output": {
+        "shape": "UpdateDirectorySetupResult"
+      },
+      "errors": [
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "DirectoryInDesiredStateException"
+        },
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "SnapshotLimitExceededException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "AccessDeniedException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p> Updates the directory for a particular update type. </p>"
     },
     "UpdateNumberOfDomainControllers": {
       "name": "UpdateNumberOfDomainControllers",
@@ -1510,6 +2111,46 @@
       ],
       "documentation": "<p>Updates the Remote Authentication Dial In User Service (RADIUS) server information for an AD Connector or Microsoft AD directory.</p>"
     },
+    "UpdateSettings": {
+      "name": "UpdateSettings",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "UpdateSettingsRequest"
+      },
+      "output": {
+        "shape": "UpdateSettingsResult"
+      },
+      "errors": [
+        {
+          "shape": "DirectoryDoesNotExistException"
+        },
+        {
+          "shape": "UnsupportedOperationException"
+        },
+        {
+          "shape": "DirectoryUnavailableException"
+        },
+        {
+          "shape": "IncompatibleSettingsException"
+        },
+        {
+          "shape": "UnsupportedSettingsException"
+        },
+        {
+          "shape": "InvalidParameterException"
+        },
+        {
+          "shape": "ClientException"
+        },
+        {
+          "shape": "ServiceException"
+        }
+      ],
+      "documentation": "<p>Updates the configurable settings for the specified directory.</p>"
+    },
     "UpdateTrust": {
       "name": "UpdateTrust",
       "http": {
@@ -1536,7 +2177,7 @@
           "shape": "ServiceException"
         }
       ],
-      "documentation": "<p>Updates the trust that has been set up between your AWS Managed Microsoft AD directory and an on-premises Active Directory.</p>"
+      "documentation": "<p>Updates the trust that has been set up between your Managed Microsoft AD directory and an self-managed Active Directory.</p>"
     },
     "VerifyTrust": {
       "name": "VerifyTrust",
@@ -1567,7 +2208,7 @@
           "shape": "UnsupportedOperationException"
         }
       ],
-      "documentation": "<p>AWS Directory Service for Microsoft Active Directory allows you to configure and verify trust relationships.</p> <p>This action verifies a trust relationship between your AWS Managed Microsoft AD directory and an external domain.</p>"
+      "documentation": "<p>Directory Service for Microsoft Active Directory allows you to configure and verify trust relationships.</p> <p>This action verifies a trust relationship between your Managed Microsoft AD directory and an external domain.</p>"
     }
   },
   "shapes": {
@@ -1610,15 +2251,40 @@
         },
         "IpRoutes": {
           "shape": "IpRoutes",
-          "documentation": "<p>IP address blocks, using CIDR format, of the traffic to route. This is often the IP address block of the DNS server used for your on-premises domain.</p>"
+          "documentation": "<p>IP address blocks, using CIDR format, of the traffic to route. This is often the IP address block of the DNS server used for your self-managed domain.</p>"
         },
         "UpdateSecurityGroupForDirectoryControllers": {
           "shape": "UpdateSecurityGroupForDirectoryControllers",
-          "documentation": "<p>If set to true, updates the inbound and outbound rules of the security group that has the description: \"AWS created security group for <i>directory ID</i> directory controllers.\" Following are the new rules: </p> <p>Inbound:</p> <ul> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 88, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 123, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 138, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 389, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 464, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 445, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 88, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 135, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 445, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 464, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 636, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 1024-65535, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 3268-33269, Source: 0.0.0.0/0</p> </li> <li> <p>Type: DNS (UDP), Protocol: UDP, Range: 53, Source: 0.0.0.0/0</p> </li> <li> <p>Type: DNS (TCP), Protocol: TCP, Range: 53, Source: 0.0.0.0/0</p> </li> <li> <p>Type: LDAP, Protocol: TCP, Range: 389, Source: 0.0.0.0/0</p> </li> <li> <p>Type: All ICMP, Protocol: All, Range: N/A, Source: 0.0.0.0/0</p> </li> </ul> <p/> <p>Outbound:</p> <ul> <li> <p>Type: All traffic, Protocol: All, Range: All, Destination: 0.0.0.0/0</p> </li> </ul> <p>These security rules impact an internal network interface that is not exposed publicly.</p>"
+          "documentation": "<p>If set to true, updates the inbound and outbound rules of the security group that has the description: \"Amazon Web Services created security group for <i>directory ID</i> directory controllers.\" Following are the new rules: </p> <p>Inbound:</p> <ul> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 88, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 123, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 138, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 389, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 464, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom UDP Rule, Protocol: UDP, Range: 445, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 88, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 135, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 445, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 464, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 636, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 1024-65535, Source: 0.0.0.0/0</p> </li> <li> <p>Type: Custom TCP Rule, Protocol: TCP, Range: 3268-33269, Source: 0.0.0.0/0</p> </li> <li> <p>Type: DNS (UDP), Protocol: UDP, Range: 53, Source: 0.0.0.0/0</p> </li> <li> <p>Type: DNS (TCP), Protocol: TCP, Range: 53, Source: 0.0.0.0/0</p> </li> <li> <p>Type: LDAP, Protocol: TCP, Range: 389, Source: 0.0.0.0/0</p> </li> <li> <p>Type: All ICMP, Protocol: All, Range: N/A, Source: 0.0.0.0/0</p> </li> </ul> <p/> <p>Outbound:</p> <ul> <li> <p>Type: All traffic, Protocol: All, Range: All, Destination: 0.0.0.0/0</p> </li> </ul> <p>These security rules impact an internal network interface that is not exposed publicly.</p>"
         }
       }
     },
     "AddIpRoutesResult": {
+      "type": "structure",
+      "members": {}
+    },
+    "AddRegionRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "RegionName",
+        "VPCSettings"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory to which you want to add Region replication.</p>"
+        },
+        "RegionName": {
+          "shape": "RegionName",
+          "documentation": "<p>The name of the Region where you want to add domain controllers for replication. For example, <code>us-east-1</code>.</p>"
+        },
+        "VPCSettings": {
+          "shape": "DirectoryVpcSettings"
+        }
+      }
+    },
+    "AddRegionResult": {
       "type": "structure",
       "members": {}
     },
@@ -1646,11 +2312,17 @@
     "AddedDateTime": {
       "type": "timestamp"
     },
+    "AdditionalRegions": {
+      "type": "list",
+      "member": {
+        "shape": "RegionName"
+      }
+    },
     "AliasName": {
       "type": "string",
       "max": 62,
       "min": 1,
-      "pattern": "^(?!d-)([\\da-zA-Z]+)([-]*[\\da-zA-Z])*"
+      "pattern": "^(?!D-|d-)([\\da-zA-Z]+)([-]*[\\da-zA-Z])*"
     },
     "Attribute": {
       "type": "structure",
@@ -1709,6 +2381,115 @@
       "type": "structure",
       "members": {}
     },
+    "Certificate": {
+      "type": "structure",
+      "members": {
+        "CertificateId": {
+          "shape": "CertificateId",
+          "documentation": "<p>The identifier of the certificate.</p>"
+        },
+        "State": {
+          "shape": "CertificateState",
+          "documentation": "<p>The state of the certificate.</p>"
+        },
+        "StateReason": {
+          "shape": "CertificateStateReason",
+          "documentation": "<p>Describes a state change for the certificate.</p>"
+        },
+        "CommonName": {
+          "shape": "CertificateCN",
+          "documentation": "<p>The common name for the certificate.</p>"
+        },
+        "RegisteredDateTime": {
+          "shape": "CertificateRegisteredDateTime",
+          "documentation": "<p>The date and time that the certificate was registered.</p>"
+        },
+        "ExpiryDateTime": {
+          "shape": "CertificateExpiryDateTime",
+          "documentation": "<p>The date and time when the certificate will expire.</p>"
+        },
+        "Type": {
+          "shape": "CertificateType",
+          "documentation": "<p>The function that the registered certificate performs. Valid values include <code>ClientLDAPS</code> or <code>ClientCertAuth</code>. The default value is <code>ClientLDAPS</code>.</p>"
+        },
+        "ClientCertAuthSettings": {
+          "shape": "ClientCertAuthSettings",
+          "documentation": "<p>A <code>ClientCertAuthSettings</code> object that contains client certificate authentication settings.</p>"
+        }
+      },
+      "documentation": "<p>Information about the certificate.</p>"
+    },
+    "CertificateCN": {
+      "type": "string"
+    },
+    "CertificateData": {
+      "type": "string",
+      "max": 8192,
+      "min": 1
+    },
+    "CertificateExpiryDateTime": {
+      "type": "timestamp"
+    },
+    "CertificateId": {
+      "type": "string",
+      "pattern": "^c-[0-9a-f]{10}$"
+    },
+    "CertificateInfo": {
+      "type": "structure",
+      "members": {
+        "CertificateId": {
+          "shape": "CertificateId",
+          "documentation": "<p>The identifier of the certificate.</p>"
+        },
+        "CommonName": {
+          "shape": "CertificateCN",
+          "documentation": "<p>The common name for the certificate.</p>"
+        },
+        "State": {
+          "shape": "CertificateState",
+          "documentation": "<p>The state of the certificate.</p>"
+        },
+        "ExpiryDateTime": {
+          "shape": "CertificateExpiryDateTime",
+          "documentation": "<p>The date and time when the certificate will expire.</p>"
+        },
+        "Type": {
+          "shape": "CertificateType",
+          "documentation": "<p>The function that the registered certificate performs. Valid values include <code>ClientLDAPS</code> or <code>ClientCertAuth</code>. The default value is <code>ClientLDAPS</code>.</p>"
+        }
+      },
+      "documentation": "<p>Contains general information about a certificate.</p>"
+    },
+    "CertificateRegisteredDateTime": {
+      "type": "timestamp"
+    },
+    "CertificateState": {
+      "type": "string",
+      "enum": [
+        "Registering",
+        "Registered",
+        "RegisterFailed",
+        "Deregistering",
+        "Deregistered",
+        "DeregisterFailed"
+      ]
+    },
+    "CertificateStateReason": {
+      "type": "string"
+    },
+    "CertificateType": {
+      "type": "string",
+      "enum": [
+        "ClientCertAuth",
+        "ClientLDAPS"
+      ]
+    },
+    "CertificatesInfo": {
+      "type": "list",
+      "member": {
+        "shape": "CertificateInfo"
+      }
+    },
     "CidrIp": {
       "type": "string",
       "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/([1-9]|[1-2][0-9]|3[0-2]))$"
@@ -1718,6 +2499,54 @@
       "member": {
         "shape": "CidrIp"
       }
+    },
+    "ClientAuthenticationSettingInfo": {
+      "type": "structure",
+      "members": {
+        "Type": {
+          "shape": "ClientAuthenticationType",
+          "documentation": "<p>The type of client authentication for the specified directory. If no type is specified, a list of all client authentication types that are supported for the directory is retrieved. </p>"
+        },
+        "Status": {
+          "shape": "ClientAuthenticationStatus",
+          "documentation": "<p>Whether the client authentication type is enabled or disabled for the specified directory.</p>"
+        },
+        "LastUpdatedDateTime": {
+          "shape": "LastUpdatedDateTime",
+          "documentation": "<p>The date and time when the status of the client authentication type was last updated.</p>"
+        }
+      },
+      "documentation": "<p>Contains information about a client authentication method for a directory.</p>"
+    },
+    "ClientAuthenticationSettingsInfo": {
+      "type": "list",
+      "member": {
+        "shape": "ClientAuthenticationSettingInfo"
+      }
+    },
+    "ClientAuthenticationStatus": {
+      "type": "string",
+      "enum": [
+        "Enabled",
+        "Disabled"
+      ]
+    },
+    "ClientAuthenticationType": {
+      "type": "string",
+      "enum": [
+        "SmartCard",
+        "SmartCardOrPassword"
+      ]
+    },
+    "ClientCertAuthSettings": {
+      "type": "structure",
+      "members": {
+        "OCSPUrl": {
+          "shape": "OCSPUrl",
+          "documentation": "<p>Specifies the URL of the default OCSP server used to check for revocation status. A secondary value to any OCSP address found in the AIA extension of the user certificate.</p>"
+        }
+      },
+      "documentation": "<p>Contains information about the client certificate authentication settings for the <code>RegisterCertificate</code> and <code>DescribeCertificate</code> operations. </p>"
     },
     "CloudOnlyDirectoriesLimitReached": {
       "type": "boolean"
@@ -1765,7 +2594,7 @@
         },
         "ReplicationScope": {
           "shape": "ReplicationScope",
-          "documentation": "<p>The replication scope of the conditional forwarder. The only allowed value is <code>Domain</code>, which will replicate the conditional forwarder to all of the domain controllers for your AWS directory.</p>"
+          "documentation": "<p>The replication scope of the conditional forwarder. The only allowed value is <code>Domain</code>, which will replicate the conditional forwarder to all of the domain controllers for your Amazon Web Services directory.</p>"
         }
       },
       "documentation": "<p>Points to a remote domain with which you are setting up a trust relationship. Conditional forwarders are required in order to set up a trust relationship with another domain.</p>"
@@ -1787,19 +2616,19 @@
       "members": {
         "Name": {
           "shape": "DirectoryName",
-          "documentation": "<p>The fully qualified name of the on-premises directory, such as <code>corp.example.com</code>.</p>"
+          "documentation": "<p>The fully qualified name of your self-managed directory, such as <code>corp.example.com</code>.</p>"
         },
         "ShortName": {
           "shape": "DirectoryShortName",
-          "documentation": "<p>The NetBIOS name of the on-premises directory, such as <code>CORP</code>.</p>"
+          "documentation": "<p>The NetBIOS name of your self-managed directory, such as <code>CORP</code>.</p>"
         },
         "Password": {
           "shape": "ConnectPassword",
-          "documentation": "<p>The password for the on-premises user account.</p>"
+          "documentation": "<p>The password for your self-managed user account.</p>"
         },
         "Description": {
           "shape": "Description",
-          "documentation": "<p>A textual description for the directory.</p>"
+          "documentation": "<p>A description for the directory.</p>"
         },
         "Size": {
           "shape": "DirectorySize",
@@ -1848,7 +2677,7 @@
         },
         "Alias": {
           "shape": "AliasName",
-          "documentation": "<p>The requested alias.</p> <p>The alias must be unique amongst all aliases in AWS. This operation throws an <code>EntityAlreadyExistsException</code> error if the alias already exists.</p>"
+          "documentation": "<p>The requested alias.</p> <p>The alias must be unique amongst all aliases in Amazon Web Services. This operation throws an <code>EntityAlreadyExistsException</code> error if the alias already exists.</p>"
         }
       },
       "documentation": "<p>Contains the inputs for the <a>CreateAlias</a> operation.</p>"
@@ -1918,7 +2747,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The directory ID of the AWS directory for which you are creating the conditional forwarder.</p>"
+          "documentation": "<p>The directory ID of the Amazon Web Services directory for which you are creating the conditional forwarder.</p>"
         },
         "RemoteDomainName": {
           "shape": "RemoteDomainName",
@@ -1929,7 +2758,7 @@
           "documentation": "<p>The IP addresses of the remote DNS server associated with RemoteDomainName.</p>"
         }
       },
-      "documentation": "<p>Initiates the creation of a conditional forwarder for your AWS Directory Service for Microsoft Active Directory. Conditional forwarders are required in order to set up a trust relationship with another domain.</p>"
+      "documentation": "<p>Initiates the creation of a conditional forwarder for your Directory Service for Microsoft Active Directory. Conditional forwarders are required in order to set up a trust relationship with another domain.</p>"
     },
     "CreateConditionalForwarderResult": {
       "type": "structure",
@@ -1950,15 +2779,15 @@
         },
         "ShortName": {
           "shape": "DirectoryShortName",
-          "documentation": "<p>The short name of the directory, such as <code>CORP</code>.</p>"
+          "documentation": "<p>The NetBIOS name of the directory, such as <code>CORP</code>.</p>"
         },
         "Password": {
           "shape": "Password",
-          "documentation": "<p>The password for the directory administrator. The directory creation process creates a directory administrator account with the user name <code>Administrator</code> and this password.</p>"
+          "documentation": "<p>The password for the directory administrator. The directory creation process creates a directory administrator account with the user name <code>Administrator</code> and this password.</p> <p>If you need to change the password for the administrator account, you can use the <a>ResetUserPassword</a> API call.</p> <p>The regex pattern for this string is made up of the following conditions:</p> <ul> <li> <p>Length (?=^.{8,64}$) – Must be between 8 and 64 characters</p> </li> </ul> <p>AND any 3 of the following password complexity rules required by Active Directory:</p> <ul> <li> <p>Numbers and upper case and lowercase (?=.*\\d)(?=.*[A-Z])(?=.*[a-z])</p> </li> <li> <p>Numbers and special characters and lower case (?=.*\\d)(?=.*[^A-Za-z0-9\\s])(?=.*[a-z])</p> </li> <li> <p>Special characters and upper case and lower case (?=.*[^A-Za-z0-9\\s])(?=.*[A-Z])(?=.*[a-z])</p> </li> <li> <p>Numbers and upper case and special characters (?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9\\s])</p> </li> </ul> <p>For additional information about how Active Directory passwords are enforced, see <a href=\"https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements\">Password must meet complexity requirements</a> on the Microsoft website.</p>"
         },
         "Description": {
           "shape": "Description",
-          "documentation": "<p>A textual description for the directory.</p>"
+          "documentation": "<p>A description for the directory.</p>"
         },
         "Size": {
           "shape": "DirectorySize",
@@ -1994,7 +2823,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>Identifier (ID) of the directory to which you want to subscribe and receive real-time logs to your specified CloudWatch log group.</p>"
+          "documentation": "<p>Identifier of the directory to which you want to subscribe and receive real-time logs to your specified CloudWatch log group.</p>"
         },
         "LogGroupName": {
           "shape": "LogGroupName",
@@ -2016,19 +2845,19 @@
       "members": {
         "Name": {
           "shape": "DirectoryName",
-          "documentation": "<p>The fully qualified domain name for the directory, such as <code>corp.example.com</code>. This name will resolve inside your VPC only. It does not need to be publicly resolvable.</p>"
+          "documentation": "<p>The fully qualified domain name for the Managed Microsoft AD directory, such as <code>corp.example.com</code>. This name will resolve inside your VPC only. It does not need to be publicly resolvable.</p>"
         },
         "ShortName": {
           "shape": "DirectoryShortName",
-          "documentation": "<p>The NetBIOS name for your domain. A short identifier for your domain, such as <code>CORP</code>. If you don't specify a NetBIOS name, it will default to the first part of your directory DNS. For example, <code>CORP</code> for the directory DNS <code>corp.example.com</code>. </p>"
+          "documentation": "<p>The NetBIOS name for your domain, such as <code>CORP</code>. If you don't specify a NetBIOS name, it will default to the first part of your directory DNS. For example, <code>CORP</code> for the directory DNS <code>corp.example.com</code>. </p>"
         },
         "Password": {
           "shape": "Password",
-          "documentation": "<p>The password for the default administrative user named <code>Admin</code>.</p>"
+          "documentation": "<p>The password for the default administrative user named <code>Admin</code>.</p> <p>If you need to change the password for the administrator account, you can use the <a>ResetUserPassword</a> API call.</p>"
         },
         "Description": {
           "shape": "Description",
-          "documentation": "<p>A textual description for the directory. This label will appear on the AWS console <code>Directory Details</code> page after the directory is created.</p>"
+          "documentation": "<p>A description for the directory. This label will appear on the Amazon Web Services console <code>Directory Details</code> page after the directory is created.</p>"
         },
         "VpcSettings": {
           "shape": "DirectoryVpcSettings",
@@ -2036,14 +2865,14 @@
         },
         "Edition": {
           "shape": "DirectoryEdition",
-          "documentation": "<p>AWS Managed Microsoft AD is available in two editions: Standard and Enterprise. Enterprise is the default.</p>"
+          "documentation": "<p>Managed Microsoft AD is available in two editions: <code>Standard</code> and <code>Enterprise</code>. <code>Enterprise</code> is the default.</p>"
         },
         "Tags": {
           "shape": "Tags",
-          "documentation": "<p>The tags to be assigned to the AWS Managed Microsoft AD directory.</p>"
+          "documentation": "<p>The tags to be assigned to the Managed Microsoft AD directory.</p>"
         }
       },
-      "documentation": "<p>Creates an AWS Managed Microsoft AD directory.</p>"
+      "documentation": "<p>Creates an Managed Microsoft AD directory.</p>"
     },
     "CreateMicrosoftADResult": {
       "type": "structure",
@@ -2056,6 +2885,9 @@
       "documentation": "<p>Result of a CreateMicrosoftAD request.</p>"
     },
     "CreateSnapshotBeforeSchemaExtension": {
+      "type": "boolean"
+    },
+    "CreateSnapshotBeforeUpdate": {
       "type": "boolean"
     },
     "CreateSnapshotRequest": {
@@ -2096,7 +2928,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID of the AWS Managed Microsoft AD directory for which to establish the trust relationship.</p>"
+          "documentation": "<p>The Directory ID of the Managed Microsoft AD directory for which to establish the trust relationship.</p>"
         },
         "RemoteDomainName": {
           "shape": "RemoteDomainName",
@@ -2123,7 +2955,7 @@
           "documentation": "<p>Optional parameter to enable selective authentication for the trust.</p>"
         }
       },
-      "documentation": "<p>AWS Directory Service for Microsoft Active Directory allows you to configure trust relationships. For example, you can establish a trust between your AWS Managed Microsoft AD directory, and your existing on-premises Microsoft Active Directory. This would allow you to provide users and groups access to resources in either domain, with a single set of credentials.</p> <p>This action initiates the creation of the AWS side of a trust relationship between an AWS Managed Microsoft AD directory and an external domain.</p>"
+      "documentation": "<p>Directory Service for Microsoft Active Directory allows you to configure trust relationships. For example, you can establish a trust between your Managed Microsoft AD directory, and your existing self-managed Microsoft Active Directory. This would allow you to provide users and groups access to resources in either domain, with a single set of credentials.</p> <p>This action initiates the creation of the Amazon Web Services side of a trust relationship between an Managed Microsoft AD directory and an external domain.</p>"
     },
     "CreateTrustResult": {
       "type": "structure",
@@ -2205,7 +3037,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>Identifier (ID) of the directory whose log subscription you want to delete.</p>"
+          "documentation": "<p>Identifier of the directory whose log subscription you want to delete.</p>"
         }
       }
     },
@@ -2251,7 +3083,7 @@
           "documentation": "<p>Delete a conditional forwarder as part of a DeleteTrustRequest.</p>"
         }
       },
-      "documentation": "<p>Deletes the local side of an existing trust relationship between the AWS Managed Microsoft AD directory and the external domain.</p>"
+      "documentation": "<p>Deletes the local side of an existing trust relationship between the Managed Microsoft AD directory and the external domain.</p>"
     },
     "DeleteTrustResult": {
       "type": "structure",
@@ -2263,6 +3095,27 @@
       },
       "documentation": "<p>The result of a DeleteTrust request.</p>"
     },
+    "DeregisterCertificateRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "CertificateId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "CertificateId": {
+          "shape": "CertificateId",
+          "documentation": "<p>The identifier of the certificate.</p>"
+        }
+      }
+    },
+    "DeregisterCertificateResult": {
+      "type": "structure",
+      "members": {}
+    },
     "DeregisterEventTopicRequest": {
       "type": "structure",
       "required": [
@@ -2272,19 +3125,82 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID to remove as a publisher. This directory will no longer send messages to the specified SNS topic.</p>"
+          "documentation": "<p>The Directory ID to remove as a publisher. This directory will no longer send messages to the specified Amazon SNS topic.</p>"
         },
         "TopicName": {
           "shape": "TopicName",
-          "documentation": "<p>The name of the SNS topic from which to remove the directory as a publisher.</p>"
+          "documentation": "<p>The name of the Amazon SNS topic from which to remove the directory as a publisher.</p>"
         }
       },
-      "documentation": "<p>Removes the specified directory as a publisher to the specified SNS topic.</p>"
+      "documentation": "<p>Removes the specified directory as a publisher to the specified Amazon SNS topic.</p>"
     },
     "DeregisterEventTopicResult": {
       "type": "structure",
       "members": {},
       "documentation": "<p>The result of a DeregisterEventTopic request.</p>"
+    },
+    "DescribeCertificateRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "CertificateId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "CertificateId": {
+          "shape": "CertificateId",
+          "documentation": "<p>The identifier of the certificate.</p>"
+        }
+      }
+    },
+    "DescribeCertificateResult": {
+      "type": "structure",
+      "members": {
+        "Certificate": {
+          "shape": "Certificate",
+          "documentation": "<p>Information about the certificate, including registered date time, certificate state, the reason for the state, expiration date time, and certificate common name.</p>"
+        }
+      }
+    },
+    "DescribeClientAuthenticationSettingsRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory for which to retrieve information.</p>"
+        },
+        "Type": {
+          "shape": "ClientAuthenticationType",
+          "documentation": "<p>The type of client authentication for which to retrieve information. If no type is specified, a list of all client authentication types that are supported for the specified directory is retrieved.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The <i>DescribeClientAuthenticationSettingsResult.NextToken</i> value from a previous call to <a>DescribeClientAuthenticationSettings</a>. Pass null if this is the first call.</p>"
+        },
+        "Limit": {
+          "shape": "PageLimit",
+          "documentation": "<p>The maximum number of items to return. If this value is zero, the maximum number of items is specified by the limitations of the operation. </p>"
+        }
+      }
+    },
+    "DescribeClientAuthenticationSettingsResult": {
+      "type": "structure",
+      "members": {
+        "ClientAuthenticationSettingsInfo": {
+          "shape": "ClientAuthenticationSettingsInfo",
+          "documentation": "<p>Information about the type of client authentication for the specified directory. The following information is retrieved: The date and time when the status of the client authentication type was last updated, whether the client authentication type is enabled or disabled, and the type of client authentication.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The next token used to retrieve the client authentication settings if the number of setting types exceeds page limit and there is another page.</p>"
+        }
+      }
     },
     "DescribeConditionalForwardersRequest": {
       "type": "structure",
@@ -2387,11 +3303,11 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID for which to get the list of associated SNS topics. If this member is null, associations for all Directory IDs are returned.</p>"
+          "documentation": "<p>The Directory ID for which to get the list of associated Amazon SNS topics. If this member is null, associations for all Directory IDs are returned.</p>"
         },
         "TopicNames": {
           "shape": "TopicNames",
-          "documentation": "<p>A list of SNS topic names for which to obtain the information. If this member is null, all associations for the specified Directory ID are returned.</p> <p>An empty list results in an <code>InvalidParameterException</code> being thrown.</p>"
+          "documentation": "<p>A list of Amazon SNS topic names for which to obtain the information. If this member is null, all associations for the specified Directory ID are returned.</p> <p>An empty list results in an <code>InvalidParameterException</code> being thrown.</p>"
         }
       },
       "documentation": "<p>Describes event topics.</p>"
@@ -2401,10 +3317,117 @@
       "members": {
         "EventTopics": {
           "shape": "EventTopics",
-          "documentation": "<p>A list of SNS topic names that receive status messages from the specified Directory ID.</p>"
+          "documentation": "<p>A list of Amazon SNS topic names that receive status messages from the specified Directory ID.</p>"
         }
       },
       "documentation": "<p>The result of a DescribeEventTopic request.</p>"
+    },
+    "DescribeLDAPSSettingsRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "Type": {
+          "shape": "LDAPSType",
+          "documentation": "<p>The type of LDAP security to enable. Currently only the value <code>Client</code> is supported.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The type of next token used for pagination.</p>"
+        },
+        "Limit": {
+          "shape": "PageLimit",
+          "documentation": "<p>Specifies the number of items that should be displayed on one page.</p>"
+        }
+      }
+    },
+    "DescribeLDAPSSettingsResult": {
+      "type": "structure",
+      "members": {
+        "LDAPSSettingsInfo": {
+          "shape": "LDAPSSettingsInfo",
+          "documentation": "<p>Information about LDAP security for the specified directory, including status of enablement, state last updated date time, and the reason for the state.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The next token used to retrieve the LDAPS settings if the number of setting types exceeds page limit and there is another page.</p>"
+        }
+      }
+    },
+    "DescribeRegionsRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "RegionName": {
+          "shape": "RegionName",
+          "documentation": "<p>The name of the Region. For example, <code>us-east-1</code>.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The <code>DescribeRegionsResult.NextToken</code> value from a previous call to <a>DescribeRegions</a>. Pass null if this is the first call.</p>"
+        }
+      }
+    },
+    "DescribeRegionsResult": {
+      "type": "structure",
+      "members": {
+        "RegionsDescription": {
+          "shape": "RegionsDescription",
+          "documentation": "<p>List of Region information related to the directory for each replicated Region.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>If not null, more results are available. Pass this value for the <code>NextToken</code> parameter in a subsequent call to <a>DescribeRegions</a> to retrieve the next set of items.</p>"
+        }
+      }
+    },
+    "DescribeSettingsRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory for which to retrieve information.</p>"
+        },
+        "Status": {
+          "shape": "DirectoryConfigurationStatus",
+          "documentation": "<p>The status of the directory settings for which to retrieve information.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>The <code>DescribeSettingsResult.NextToken</code> value from a previous call to <a>DescribeSettings</a>. Pass null if this is the first call.</p>"
+        }
+      }
+    },
+    "DescribeSettingsResult": {
+      "type": "structure",
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "SettingEntries": {
+          "shape": "SettingEntries",
+          "documentation": "<p>The list of <a>SettingEntry</a> objects that were retrieved.</p> <p>It is possible that this list contains less than the number of items specified in the <code>Limit</code> member of the request. This occurs if there are less than the requested number of items left to retrieve, or if the limitations of the operation have been exceeded.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>If not null, token that indicates that more results are available. Pass this value for the <code>NextToken</code> parameter in a subsequent call to <code>DescribeSettings</code> to retrieve the next set of items. </p>"
+        }
+      }
     },
     "DescribeSharedDirectoriesRequest": {
       "type": "structure",
@@ -2484,7 +3507,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID of the AWS directory that is a part of the requested trust relationship.</p>"
+          "documentation": "<p>The Directory ID of the Amazon Web Services directory that is a part of the requested trust relationship.</p>"
         },
         "TrustIds": {
           "shape": "TrustIds",
@@ -2499,7 +3522,7 @@
           "documentation": "<p>The maximum number of objects to return.</p>"
         }
       },
-      "documentation": "<p>Describes the trust relationships for a particular AWS Managed Microsoft AD directory. If no input parameters are are provided, such as directory ID or trust ID, this request describes all the trust relationships.</p>"
+      "documentation": "<p>Describes the trust relationships for a particular Managed Microsoft AD directory. If no input parameters are provided, such as directory ID or trust ID, this request describes all the trust relationships.</p>"
     },
     "DescribeTrustsResult": {
       "type": "structure",
@@ -2515,6 +3538,44 @@
       },
       "documentation": "<p>The result of a DescribeTrust request.</p>"
     },
+    "DescribeUpdateDirectoryRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "UpdateType"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p> The unique identifier of the directory. </p>"
+        },
+        "UpdateType": {
+          "shape": "UpdateType",
+          "documentation": "<p> The type of updates you want to describe for the directory. </p>"
+        },
+        "RegionName": {
+          "shape": "RegionName",
+          "documentation": "<p> The name of the Region. </p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p> The <code>DescribeUpdateDirectoryResult</code>. NextToken value from a previous call to <a>DescribeUpdateDirectory</a>. Pass null if this is the first call. </p>"
+        }
+      }
+    },
+    "DescribeUpdateDirectoryResult": {
+      "type": "structure",
+      "members": {
+        "UpdateActivities": {
+          "shape": "UpdateActivities",
+          "documentation": "<p> The list of update activities on a directory for the requested update type. </p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p> If not null, more results are available. Pass this value for the <code>NextToken</code> parameter. </p>"
+        }
+      }
+    },
     "Description": {
       "type": "string",
       "max": 128,
@@ -2524,6 +3585,55 @@
     "DesiredNumberOfDomainControllers": {
       "type": "integer",
       "min": 2
+    },
+    "DirectoryConfigurationSettingAllowedValues": {
+      "type": "string"
+    },
+    "DirectoryConfigurationSettingDataType": {
+      "type": "string"
+    },
+    "DirectoryConfigurationSettingLastRequestedDateTime": {
+      "type": "timestamp"
+    },
+    "DirectoryConfigurationSettingLastUpdatedDateTime": {
+      "type": "timestamp"
+    },
+    "DirectoryConfigurationSettingName": {
+      "type": "string",
+      "max": 255,
+      "min": 1,
+      "pattern": "^[a-zA-Z0-9-/. _]*$"
+    },
+    "DirectoryConfigurationSettingRequestDetailedStatus": {
+      "type": "map",
+      "key": {
+        "shape": "RegionName"
+      },
+      "value": {
+        "shape": "DirectoryConfigurationStatus"
+      }
+    },
+    "DirectoryConfigurationSettingRequestStatusMessage": {
+      "type": "string"
+    },
+    "DirectoryConfigurationSettingType": {
+      "type": "string"
+    },
+    "DirectoryConfigurationSettingValue": {
+      "type": "string",
+      "max": 255,
+      "min": 1,
+      "pattern": "^[a-zA-Z0-9_]*$"
+    },
+    "DirectoryConfigurationStatus": {
+      "type": "string",
+      "enum": [
+        "Requested",
+        "Updating",
+        "Updated",
+        "Failed",
+        "Default"
+      ]
     },
     "DirectoryConnectSettings": {
       "type": "structure",
@@ -2544,11 +3654,11 @@
         },
         "CustomerDnsIps": {
           "shape": "DnsIpAddrs",
-          "documentation": "<p>A list of one or more IP addresses of DNS servers or domain controllers in the on-premises directory.</p>"
+          "documentation": "<p>A list of one or more IP addresses of DNS servers or domain controllers in your self-managed directory.</p>"
         },
         "CustomerUserName": {
           "shape": "UserName",
-          "documentation": "<p>The user name of an account in the on-premises directory that is used to connect to the directory. This account must have the following permissions:</p> <ul> <li> <p>Read users and groups</p> </li> <li> <p>Create computer objects</p> </li> <li> <p>Join computers to the domain</p> </li> </ul>"
+          "documentation": "<p>The user name of an account in your self-managed directory that is used to connect to the directory. This account must have the following permissions:</p> <ul> <li> <p>Read users and groups</p> </li> <li> <p>Create computer objects</p> </li> <li> <p>Join computers to the domain</p> </li> </ul>"
         }
       },
       "documentation": "<p>Contains information for the <a>ConnectDirectory</a> operation when an AD Connector directory is being created.</p>"
@@ -2562,11 +3672,11 @@
         },
         "SubnetIds": {
           "shape": "SubnetIds",
-          "documentation": "<p>A list of subnet identifiers in the VPC that the AD connector is in.</p>"
+          "documentation": "<p>A list of subnet identifiers in the VPC that the AD Connector is in.</p>"
         },
         "CustomerUserName": {
           "shape": "UserName",
-          "documentation": "<p>The user name of the service account in the on-premises directory.</p>"
+          "documentation": "<p>The user name of the service account in your self-managed directory.</p>"
         },
         "SecurityGroupId": {
           "shape": "SecurityGroupId",
@@ -2616,11 +3726,11 @@
         },
         "Description": {
           "shape": "Description",
-          "documentation": "<p>The textual description for the directory.</p>"
+          "documentation": "<p>The description for the directory.</p>"
         },
         "DnsIpAddrs": {
           "shape": "DnsIpAddrs",
-          "documentation": "<p>The IP addresses of the DNS servers for the directory. For a Simple AD or Microsoft AD directory, these are the IP addresses of the Simple AD or Microsoft AD directory servers. For an AD Connector directory, these are the IP addresses of the DNS servers or domain controllers in the on-premises directory to which the AD Connector is connected.</p>"
+          "documentation": "<p>The IP addresses of the DNS servers for the directory. For a Simple AD or Microsoft AD directory, these are the IP addresses of the Simple AD or Microsoft AD directory servers. For an AD Connector directory, these are the IP addresses of the DNS servers or domain controllers in your self-managed directory to which the AD Connector is connected.</p>"
         },
         "Stage": {
           "shape": "DirectoryStage",
@@ -2628,11 +3738,11 @@
         },
         "ShareStatus": {
           "shape": "ShareStatus",
-          "documentation": "<p>Current directory status of the shared AWS Managed Microsoft AD directory.</p>"
+          "documentation": "<p>Current directory status of the shared Managed Microsoft AD directory.</p>"
         },
         "ShareMethod": {
           "shape": "ShareMethod",
-          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your AWS organization (<code>ORGANIZATIONS</code>) or with any AWS account by sending a shared directory request (<code>HANDSHAKE</code>).</p>"
+          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your Amazon Web Services organization (<code>ORGANIZATIONS</code>) or with any Amazon Web Services account by sending a shared directory request (<code>HANDSHAKE</code>).</p>"
         },
         "ShareNotes": {
           "shape": "Notes",
@@ -2652,7 +3762,7 @@
         },
         "VpcSettings": {
           "shape": "DirectoryVpcSettingsDescription",
-          "documentation": "<p>A <a>DirectoryVpcSettingsDescription</a> object that contains additional information about a directory. This member is only present if the directory is a Simple AD or Managed AD directory.</p>"
+          "documentation": "<p>A <a>DirectoryVpcSettingsDescription</a> object that contains additional information about a directory. This member is only present if the directory is a Simple AD or Managed Microsoft AD directory.</p>"
         },
         "ConnectSettings": {
           "shape": "DirectoryConnectSettingsDescription",
@@ -2680,10 +3790,18 @@
         },
         "OwnerDirectoryDescription": {
           "shape": "OwnerDirectoryDescription",
-          "documentation": "<p>Describes the AWS Managed Microsoft AD directory in the directory owner account.</p>"
+          "documentation": "<p>Describes the Managed Microsoft AD directory in the directory owner account.</p>"
+        },
+        "RegionsInfo": {
+          "shape": "RegionsInfo",
+          "documentation": "<p>Lists the Regions where the directory has replicated.</p>"
+        },
+        "OsVersion": {
+          "shape": "OSVersion",
+          "documentation": "<p>The operating system (OS) version of the directory.</p>"
         }
       },
-      "documentation": "<p>Contains information about an AWS Directory Service directory.</p>"
+      "documentation": "<p>Contains information about an Directory Service directory.</p>"
     },
     "DirectoryDescriptions": {
       "type": "list",
@@ -2715,11 +3833,11 @@
       "members": {
         "CloudOnlyDirectoriesLimit": {
           "shape": "Limit",
-          "documentation": "<p>The maximum number of cloud directories allowed in the region.</p>"
+          "documentation": "<p>The maximum number of cloud directories allowed in the Region.</p>"
         },
         "CloudOnlyDirectoriesCurrentCount": {
           "shape": "Limit",
-          "documentation": "<p>The current number of cloud directories in the region.</p>"
+          "documentation": "<p>The current number of cloud directories in the Region.</p>"
         },
         "CloudOnlyDirectoriesLimitReached": {
           "shape": "CloudOnlyDirectoriesLimitReached",
@@ -2727,30 +3845,30 @@
         },
         "CloudOnlyMicrosoftADLimit": {
           "shape": "Limit",
-          "documentation": "<p>The maximum number of AWS Managed Microsoft AD directories allowed in the region.</p>"
+          "documentation": "<p>The maximum number of Managed Microsoft AD directories allowed in the region.</p>"
         },
         "CloudOnlyMicrosoftADCurrentCount": {
           "shape": "Limit",
-          "documentation": "<p>The current number of AWS Managed Microsoft AD directories in the region.</p>"
+          "documentation": "<p>The current number of Managed Microsoft AD directories in the region.</p>"
         },
         "CloudOnlyMicrosoftADLimitReached": {
           "shape": "CloudOnlyDirectoriesLimitReached",
-          "documentation": "<p>Indicates if the AWS Managed Microsoft AD directory limit has been reached.</p>"
+          "documentation": "<p>Indicates if the Managed Microsoft AD directory limit has been reached.</p>"
         },
         "ConnectedDirectoriesLimit": {
           "shape": "Limit",
-          "documentation": "<p>The maximum number of connected directories allowed in the region.</p>"
+          "documentation": "<p>The maximum number of connected directories allowed in the Region.</p>"
         },
         "ConnectedDirectoriesCurrentCount": {
           "shape": "Limit",
-          "documentation": "<p>The current number of connected directories in the region.</p>"
+          "documentation": "<p>The current number of connected directories in the Region.</p>"
         },
         "ConnectedDirectoriesLimitReached": {
           "shape": "ConnectedDirectoriesLimitReached",
           "documentation": "<p>Indicates if the connected directory limit has been reached.</p>"
         }
       },
-      "documentation": "<p>Contains directory limit information for a region.</p>"
+      "documentation": "<p>Contains directory limit information for a Region.</p>"
     },
     "DirectoryName": {
       "type": "string",
@@ -2758,7 +3876,7 @@
     },
     "DirectoryShortName": {
       "type": "string",
-      "pattern": "^[^\\\\/:*?\\\"\\<\\>|.]+[^\\\\/:*?\\\"<>|]*$"
+      "pattern": "^[^\\\\/:*?\"<>|.]+[^\\\\/:*?\"<>|]*$"
     },
     "DirectorySize": {
       "type": "string",
@@ -2805,7 +3923,7 @@
         },
         "SubnetIds": {
           "shape": "SubnetIds",
-          "documentation": "<p>The identifiers of the subnets for the directory servers. The two subnets must be in different Availability Zones. AWS Directory Service creates a directory server and a DNS server in each of these subnets.</p>"
+          "documentation": "<p>The identifiers of the subnets for the directory servers. The two subnets must be in different Availability Zones. Directory Service creates a directory server and a DNS server in each of these subnets.</p>"
         }
       },
       "documentation": "<p>Contains VPC information for the <a>CreateDirectory</a> or <a>CreateMicrosoftAD</a> operation.</p>"
@@ -2831,6 +3949,48 @@
         }
       },
       "documentation": "<p>Contains information about the directory.</p>"
+    },
+    "DisableClientAuthenticationRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "Type"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory </p>"
+        },
+        "Type": {
+          "shape": "ClientAuthenticationType",
+          "documentation": "<p>The type of client authentication to disable. Currently, only the parameter, <code>SmartCard</code> is supported.</p>"
+        }
+      }
+    },
+    "DisableClientAuthenticationResult": {
+      "type": "structure",
+      "members": {}
+    },
+    "DisableLDAPSRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "Type"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "Type": {
+          "shape": "LDAPSType",
+          "documentation": "<p>The type of LDAP security to enable. Currently only the value <code>Client</code> is supported.</p>"
+        }
+      }
+    },
+    "DisableLDAPSResult": {
+      "type": "structure",
+      "members": {}
     },
     "DisableRadiusRequest": {
       "type": "structure",
@@ -2959,6 +4119,48 @@
         "shape": "DomainController"
       }
     },
+    "EnableClientAuthenticationRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "Type"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the specified directory. </p>"
+        },
+        "Type": {
+          "shape": "ClientAuthenticationType",
+          "documentation": "<p>The type of client authentication to enable. Currently only the value <code>SmartCard</code> is supported. Smart card authentication in AD Connector requires that you enable Kerberos Constrained Delegation for the Service User to the LDAP service in your self-managed AD. </p>"
+        }
+      }
+    },
+    "EnableClientAuthenticationResult": {
+      "type": "structure",
+      "members": {}
+    },
+    "EnableLDAPSRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "Type"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "Type": {
+          "shape": "LDAPSType",
+          "documentation": "<p>The type of LDAP security to enable. Currently only the value <code>Client</code> is supported.</p>"
+        }
+      }
+    },
+    "EnableLDAPSResult": {
+      "type": "structure",
+      "members": {}
+    },
     "EnableRadiusRequest": {
       "type": "structure",
       "required": [
@@ -3016,26 +4218,26 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID of an AWS Directory Service directory that will publish status messages to an SNS topic.</p>"
+          "documentation": "<p>The Directory ID of an Directory Service directory that will publish status messages to an Amazon SNS topic.</p>"
         },
         "TopicName": {
           "shape": "TopicName",
-          "documentation": "<p>The name of an AWS SNS topic the receives status messages from the directory.</p>"
+          "documentation": "<p>The name of an Amazon SNS topic the receives status messages from the directory.</p>"
         },
         "TopicArn": {
           "shape": "TopicArn",
-          "documentation": "<p>The SNS topic ARN (Amazon Resource Name).</p>"
+          "documentation": "<p>The Amazon SNS topic ARN (Amazon Resource Name).</p>"
         },
         "CreatedDateTime": {
           "shape": "CreatedDateTime",
-          "documentation": "<p>The date and time of when you associated your directory with the SNS topic.</p>"
+          "documentation": "<p>The date and time of when you associated your directory with the Amazon SNS topic.</p>"
         },
         "Status": {
           "shape": "TopicStatus",
           "documentation": "<p>The topic registration status.</p>"
         }
       },
-      "documentation": "<p>Information about SNS topic and AWS Directory Service directory associations.</p>"
+      "documentation": "<p>Information about Amazon SNS topic and Directory Service directory associations.</p>"
     },
     "EventTopics": {
       "type": "list",
@@ -3053,7 +4255,7 @@
       "members": {
         "DirectoryLimits": {
           "shape": "DirectoryLimits",
-          "documentation": "<p>A <a>DirectoryLimits</a> object that contains the directory limits for the current region.</p>"
+          "documentation": "<p>A <a>DirectoryLimits</a> object that contains the directory limits for the current Region.</p>"
         }
       },
       "documentation": "<p>Contains the results of the <a>GetDirectoryLimits</a> operation.</p>"
@@ -3081,6 +4283,9 @@
       },
       "documentation": "<p>Contains the results of the <a>GetSnapshotLimits</a> operation.</p>"
     },
+    "InitiatedBy": {
+      "type": "string"
+    },
     "IpAddr": {
       "type": "string",
       "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
@@ -3096,14 +4301,14 @@
       "members": {
         "CidrIp": {
           "shape": "CidrIp",
-          "documentation": "<p>IP address block using CIDR format, for example 10.0.0.0/24. This is often the address block of the DNS server used for your on-premises domain. For a single IP address use a CIDR address block with /32. For example 10.0.0.0/32.</p>"
+          "documentation": "<p>IP address block using CIDR format, for example 10.0.0.0/24. This is often the address block of the DNS server used for your self-managed domain. For a single IP address use a CIDR address block with /32. For example 10.0.0.0/32.</p>"
         },
         "Description": {
           "shape": "Description",
           "documentation": "<p>Description of the address block.</p>"
         }
       },
-      "documentation": "<p>IP address block. This is often the address block of the DNS server used for your on-premises domain. </p>"
+      "documentation": "<p>IP address block. This is often the address block of the DNS server used for your self-managed domain. </p>"
     },
     "IpRouteInfo": {
       "type": "structure",
@@ -3161,6 +4366,48 @@
         "shape": "IpRouteInfo"
       }
     },
+    "LDAPSSettingInfo": {
+      "type": "structure",
+      "members": {
+        "LDAPSStatus": {
+          "shape": "LDAPSStatus",
+          "documentation": "<p>The state of the LDAPS settings.</p>"
+        },
+        "LDAPSStatusReason": {
+          "shape": "LDAPSStatusReason",
+          "documentation": "<p>Describes a state change for LDAPS.</p>"
+        },
+        "LastUpdatedDateTime": {
+          "shape": "LastUpdatedDateTime",
+          "documentation": "<p>The date and time when the LDAPS settings were last updated.</p>"
+        }
+      },
+      "documentation": "<p>Contains general information about the LDAPS settings.</p>"
+    },
+    "LDAPSSettingsInfo": {
+      "type": "list",
+      "member": {
+        "shape": "LDAPSSettingInfo"
+      }
+    },
+    "LDAPSStatus": {
+      "type": "string",
+      "enum": [
+        "Enabling",
+        "Enabled",
+        "EnableFailed",
+        "Disabled"
+      ]
+    },
+    "LDAPSStatusReason": {
+      "type": "string"
+    },
+    "LDAPSType": {
+      "type": "string",
+      "enum": [
+        "Client"
+      ]
+    },
     "LastUpdatedDateTime": {
       "type": "timestamp"
     },
@@ -3175,6 +4422,39 @@
     "Limit": {
       "type": "integer",
       "min": 0
+    },
+    "ListCertificatesRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>A token for requesting another page of certificates if the <code>NextToken</code> response element indicates that more certificates are available. Use the value of the returned <code>NextToken</code> element in your request until the token comes back as <code>null</code>. Pass <code>null</code> if this is the first call.</p>"
+        },
+        "Limit": {
+          "shape": "PageLimit",
+          "documentation": "<p>The number of items that should show up on one page</p>"
+        }
+      }
+    },
+    "ListCertificatesResult": {
+      "type": "structure",
+      "members": {
+        "NextToken": {
+          "shape": "NextToken",
+          "documentation": "<p>Indicates whether another page of certificates is available when the number of available certificates exceeds the page limit.</p>"
+        },
+        "CertificatesInfo": {
+          "shape": "CertificatesInfo",
+          "documentation": "<p>A list of certificates with basic details including certificate ID, certificate common name, certificate state.</p>"
+        }
+      }
     },
     "ListIpRoutesRequest": {
       "type": "structure",
@@ -3214,7 +4494,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>If a <i>DirectoryID</i> is provided, lists only the log subscription associated with that directory. If no <i>DirectoryId</i> is provided, lists all log subscriptions associated with your AWS account. If there are no log subscriptions for the AWS account or the directory, an empty list will be returned.</p>"
+          "documentation": "<p>If a <i>DirectoryID</i> is provided, lists only the log subscription associated with that directory. If no <i>DirectoryId</i> is provided, lists all log subscriptions associated with your Amazon Web Services account. If there are no log subscriptions for the Amazon Web Services account or the directory, an empty list will be returned.</p>"
         },
         "NextToken": {
           "shape": "NextToken",
@@ -3231,7 +4511,7 @@
       "members": {
         "LogSubscriptions": {
           "shape": "LogSubscriptions",
-          "documentation": "<p>A list of active <a>LogSubscription</a> objects for calling the AWS account.</p>"
+          "documentation": "<p>A list of active <a>LogSubscription</a> objects for calling the Amazon Web Services account.</p>"
         },
         "NextToken": {
           "shape": "NextToken",
@@ -3346,6 +4626,29 @@
       "max": 1024,
       "sensitive": true
     },
+    "OCSPUrl": {
+      "type": "string",
+      "max": 1024,
+      "min": 1,
+      "pattern": "^(https?|ftp|file|ldaps?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;()]*[-a-zA-Z0-9+&@#/%=~_|()]"
+    },
+    "OSUpdateSettings": {
+      "type": "structure",
+      "members": {
+        "OSVersion": {
+          "shape": "OSVersion",
+          "documentation": "<p> OS version that the directory needs to be updated to. </p>"
+        }
+      },
+      "documentation": "<p> OS version that the directory needs to be updated to. </p>"
+    },
+    "OSVersion": {
+      "type": "string",
+      "enum": [
+        "SERVER_2012",
+        "SERVER_2019"
+      ]
+    },
     "OrganizationalUnitDN": {
       "type": "string",
       "max": 2000,
@@ -3356,7 +4659,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>Identifier of the AWS Managed Microsoft AD directory in the directory owner account.</p>"
+          "documentation": "<p>Identifier of the Managed Microsoft AD directory in the directory owner account.</p>"
         },
         "AccountId": {
           "shape": "CustomerId",
@@ -3380,6 +4683,11 @@
         }
       },
       "documentation": "<p>Describes the directory owner account details that have been shared to the directory consumer account.</p>"
+    },
+    "PageLimit": {
+      "type": "integer",
+      "max": 50,
+      "min": 1
     },
     "Password": {
       "type": "string",
@@ -3415,11 +4723,11 @@
       "members": {
         "RadiusServers": {
           "shape": "Servers",
-          "documentation": "<p>An array of strings that contains the IP addresses of the RADIUS server endpoints, or the IP addresses of your RADIUS server load balancer.</p>"
+          "documentation": "<p>An array of strings that contains the fully qualified domain name (FQDN) or IP addresses of the RADIUS server endpoints, or the FQDN or IP addresses of your RADIUS server load balancer.</p>"
         },
         "RadiusPort": {
           "shape": "PortNumber",
-          "documentation": "<p>The port that your RADIUS server is using for communications. Your on-premises network must allow inbound traffic over this port from the AWS Directory Service servers.</p>"
+          "documentation": "<p>The port that your RADIUS server is using for communications. Your self-managed network must allow inbound traffic over this port from the Directory Service servers.</p>"
         },
         "RadiusTimeout": {
           "shape": "RadiusTimeout",
@@ -3452,6 +4760,7 @@
       "type": "string",
       "max": 512,
       "min": 8,
+      "pattern": "^(\\p{LD}|\\p{Punct}| )+$",
       "sensitive": true
     },
     "RadiusStatus": {
@@ -3467,6 +4776,113 @@
       "max": 20,
       "min": 1
     },
+    "RegionDescription": {
+      "type": "structure",
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "RegionName": {
+          "shape": "RegionName",
+          "documentation": "<p>The name of the Region. For example, <code>us-east-1</code>.</p>"
+        },
+        "RegionType": {
+          "shape": "RegionType",
+          "documentation": "<p>Specifies whether the Region is the primary Region or an additional Region.</p>"
+        },
+        "Status": {
+          "shape": "DirectoryStage",
+          "documentation": "<p>The status of the replication process for the specified Region.</p>"
+        },
+        "VpcSettings": {
+          "shape": "DirectoryVpcSettings"
+        },
+        "DesiredNumberOfDomainControllers": {
+          "shape": "DesiredNumberOfDomainControllers",
+          "documentation": "<p>The desired number of domain controllers in the specified Region for the specified directory.</p>"
+        },
+        "LaunchTime": {
+          "shape": "LaunchTime",
+          "documentation": "<p>Specifies when the Region replication began.</p>"
+        },
+        "StatusLastUpdatedDateTime": {
+          "shape": "StateLastUpdatedDateTime",
+          "documentation": "<p>The date and time that the Region status was last updated.</p>"
+        },
+        "LastUpdatedDateTime": {
+          "shape": "LastUpdatedDateTime",
+          "documentation": "<p>The date and time that the Region description was last updated.</p>"
+        }
+      },
+      "documentation": "<p>The replicated Region information for a directory.</p>"
+    },
+    "RegionName": {
+      "type": "string",
+      "max": 32,
+      "min": 8
+    },
+    "RegionType": {
+      "type": "string",
+      "enum": [
+        "Primary",
+        "Additional"
+      ]
+    },
+    "RegionsDescription": {
+      "type": "list",
+      "member": {
+        "shape": "RegionDescription"
+      }
+    },
+    "RegionsInfo": {
+      "type": "structure",
+      "members": {
+        "PrimaryRegion": {
+          "shape": "RegionName",
+          "documentation": "<p>The Region where the Managed Microsoft AD directory was originally created.</p>"
+        },
+        "AdditionalRegions": {
+          "shape": "AdditionalRegions",
+          "documentation": "<p>Lists the Regions where the directory has been replicated, excluding the primary Region.</p>"
+        }
+      },
+      "documentation": "<p>Provides information about the Regions that are configured for multi-Region replication.</p>"
+    },
+    "RegisterCertificateRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "CertificateData"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        },
+        "CertificateData": {
+          "shape": "CertificateData",
+          "documentation": "<p>The certificate PEM string that needs to be registered.</p>"
+        },
+        "Type": {
+          "shape": "CertificateType",
+          "documentation": "<p>The function that the registered certificate performs. Valid values include <code>ClientLDAPS</code> or <code>ClientCertAuth</code>. The default value is <code>ClientLDAPS</code>.</p>"
+        },
+        "ClientCertAuthSettings": {
+          "shape": "ClientCertAuthSettings",
+          "documentation": "<p>A <code>ClientCertAuthSettings</code> object that contains client certificate authentication settings.</p>"
+        }
+      }
+    },
+    "RegisterCertificateResult": {
+      "type": "structure",
+      "members": {
+        "CertificateId": {
+          "shape": "CertificateId",
+          "documentation": "<p>The identifier of the certificate.</p>"
+        }
+      }
+    },
     "RegisterEventTopicRequest": {
       "type": "structure",
       "required": [
@@ -3476,11 +4892,11 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID that will publish status messages to the SNS topic.</p>"
+          "documentation": "<p>The Directory ID that will publish status messages to the Amazon SNS topic.</p>"
         },
         "TopicName": {
           "shape": "TopicName",
-          "documentation": "<p>The SNS topic name to which the directory will publish status messages. This SNS topic must be in the same region as the specified Directory ID.</p>"
+          "documentation": "<p>The Amazon SNS topic name to which the directory will publish status messages. This Amazon SNS topic must be in the same region as the specified Directory ID.</p>"
         }
       },
       "documentation": "<p>Registers a new event topic.</p>"
@@ -3513,6 +4929,7 @@
     },
     "RemoteDomainName": {
       "type": "string",
+      "max": 1024,
       "pattern": "^([a-zA-Z0-9]+[\\\\.-])+([a-zA-Z0-9])+[.]?$"
     },
     "RemoteDomainNames": {
@@ -3539,6 +4956,22 @@
       }
     },
     "RemoveIpRoutesResult": {
+      "type": "structure",
+      "members": {}
+    },
+    "RemoveRegionRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory for which you want to remove Region replication.</p>"
+        }
+      }
+    },
+    "RemoveRegionResult": {
       "type": "structure",
       "members": {}
     },
@@ -3571,7 +5004,7 @@
     },
     "RequestId": {
       "type": "string",
-      "documentation": "<p>The AWS request identifier.</p>",
+      "documentation": "<p>The Amazon Web Services request identifier.</p>",
       "pattern": "^([A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12})$"
     },
     "ResetUserPasswordRequest": {
@@ -3584,7 +5017,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>Identifier of the AWS Managed Microsoft AD or Simple AD directory in which the user resides.</p>"
+          "documentation": "<p>Identifier of the Managed Microsoft AD or Simple AD directory in which the user resides.</p>"
         },
         "UserName": {
           "shape": "CustomerUserName",
@@ -3711,6 +5144,86 @@
         "shape": "Server"
       }
     },
+    "Setting": {
+      "type": "structure",
+      "required": [
+        "Name",
+        "Value"
+      ],
+      "members": {
+        "Name": {
+          "shape": "DirectoryConfigurationSettingName",
+          "documentation": "<p>The name of the directory setting. For example:</p> <p> <code>TLS_1_0</code> </p>"
+        },
+        "Value": {
+          "shape": "DirectoryConfigurationSettingValue",
+          "documentation": "<p>The value of the directory setting for which to retrieve information. For example, for <code>TLS_1_0</code>, the valid values are: <code>Enable</code> and <code>Disable</code>.</p>"
+        }
+      },
+      "documentation": "<p>Contains information about the configurable settings for a directory.</p>"
+    },
+    "SettingEntries": {
+      "type": "list",
+      "member": {
+        "shape": "SettingEntry"
+      }
+    },
+    "SettingEntry": {
+      "type": "structure",
+      "members": {
+        "Type": {
+          "shape": "DirectoryConfigurationSettingType",
+          "documentation": "<p>The type, or category, of a directory setting. Similar settings have the same type. For example, <code>Protocol</code>, <code>Cipher</code>, or <code>Certificate-Based Authentication</code>.</p>"
+        },
+        "Name": {
+          "shape": "DirectoryConfigurationSettingName",
+          "documentation": "<p>The name of the directory setting. For example:</p> <p> <code>TLS_1_0</code> </p>"
+        },
+        "AllowedValues": {
+          "shape": "DirectoryConfigurationSettingAllowedValues",
+          "documentation": "<p>The valid range of values for the directory setting. These values depend on the <code>DataType</code> of your directory.</p>"
+        },
+        "AppliedValue": {
+          "shape": "DirectoryConfigurationSettingValue",
+          "documentation": "<p>The value of the directory setting that is applied to the directory.</p>"
+        },
+        "RequestedValue": {
+          "shape": "DirectoryConfigurationSettingValue",
+          "documentation": "<p>The value that was last requested for the directory setting.</p>"
+        },
+        "RequestStatus": {
+          "shape": "DirectoryConfigurationStatus",
+          "documentation": "<p>The overall status of the request to update the directory setting request. If the directory setting is deployed in more than one region, and the request fails in any region, the overall status is <code>Failed</code>.</p>"
+        },
+        "RequestDetailedStatus": {
+          "shape": "DirectoryConfigurationSettingRequestDetailedStatus",
+          "documentation": "<p>Details about the status of the request to update the directory setting. If the directory setting is deployed in more than one region, status is returned for the request in each region where the setting is deployed.</p>"
+        },
+        "RequestStatusMessage": {
+          "shape": "DirectoryConfigurationSettingRequestStatusMessage",
+          "documentation": "<p>The last status message for the directory status request.</p>"
+        },
+        "LastUpdatedDateTime": {
+          "shape": "DirectoryConfigurationSettingLastUpdatedDateTime",
+          "documentation": "<p>The date and time when the directory setting was last updated.</p>"
+        },
+        "LastRequestedDateTime": {
+          "shape": "DirectoryConfigurationSettingLastRequestedDateTime",
+          "documentation": "<p>The date and time when the request to update a directory setting was last submitted.</p>"
+        },
+        "DataType": {
+          "shape": "DirectoryConfigurationSettingDataType",
+          "documentation": "<p>The data type of a directory setting. This is used to define the <code>AllowedValues</code> of a setting. For example a data type can be <code>Boolean</code>, <code>DurationInSeconds</code>, or <code>Enum</code>.</p>"
+        }
+      },
+      "documentation": "<p>Contains information about the specified configurable setting for a directory.</p>"
+    },
+    "Settings": {
+      "type": "list",
+      "member": {
+        "shape": "Setting"
+      }
+    },
     "ShareDirectoryRequest": {
       "type": "structure",
       "required": [
@@ -3721,7 +5234,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>Identifier of the AWS Managed Microsoft AD directory that you want to share with other AWS accounts.</p>"
+          "documentation": "<p>Identifier of the Managed Microsoft AD directory that you want to share with other Amazon Web Services accounts.</p>"
         },
         "ShareNotes": {
           "shape": "Notes",
@@ -3733,7 +5246,7 @@
         },
         "ShareMethod": {
           "shape": "ShareMethod",
-          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your AWS organization (<code>ORGANIZATIONS</code>) or with any AWS account by sending a directory sharing request (<code>HANDSHAKE</code>).</p>"
+          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your Amazon Web Services organization (<code>ORGANIZATIONS</code>) or with any Amazon Web Services account by sending a directory sharing request (<code>HANDSHAKE</code>).</p>"
         }
       }
     },
@@ -3804,7 +5317,7 @@
         },
         "ShareMethod": {
           "shape": "ShareMethod",
-          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your AWS organization (<code>ORGANIZATIONS</code>) or with any AWS account by sending a shared directory request (<code>HANDSHAKE</code>).</p>"
+          "documentation": "<p>The method used when sharing a directory to determine whether the directory should be shared within your Amazon Web Services organization (<code>ORGANIZATIONS</code>) or with any Amazon Web Services account by sending a shared directory request (<code>HANDSHAKE</code>).</p>"
         },
         "SharedAccountId": {
           "shape": "CustomerId",
@@ -3816,7 +5329,7 @@
         },
         "ShareStatus": {
           "shape": "ShareStatus",
-          "documentation": "<p>Current directory status of the shared AWS Managed Microsoft AD directory.</p>"
+          "documentation": "<p>Current directory status of the shared Managed Microsoft AD directory.</p>"
         },
         "ShareNotes": {
           "shape": "Notes",
@@ -4066,7 +5579,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The Directory ID of the AWS directory involved in the trust relationship.</p>"
+          "documentation": "<p>The Directory ID of the Amazon Web Services directory involved in the trust relationship.</p>"
         },
         "TrustId": {
           "shape": "TrustId",
@@ -4109,7 +5622,7 @@
           "documentation": "<p>Current state of selective authentication for the trust.</p>"
         }
       },
-      "documentation": "<p>Describes a trust relationship between an AWS Managed Microsoft AD directory and an external domain.</p>"
+      "documentation": "<p>Describes a trust relationship between an Managed Microsoft AD directory and an external domain.</p>"
     },
     "TrustDirection": {
       "type": "string",
@@ -4133,7 +5646,7 @@
       "type": "string",
       "max": 128,
       "min": 1,
-      "pattern": "(.|\\s)*\\S(.|\\s)*",
+      "pattern": "^(\\p{LD}|\\p{Punct}| )+$",
       "sensitive": true
     },
     "TrustState": {
@@ -4177,7 +5690,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The identifier of the AWS Managed Microsoft AD directory that you want to stop sharing.</p>"
+          "documentation": "<p>The identifier of the Managed Microsoft AD directory that you want to stop sharing.</p>"
         },
         "UnshareTarget": {
           "shape": "UnshareTarget",
@@ -4212,6 +5725,12 @@
       },
       "documentation": "<p>Identifier that contains details about the directory consumer account with whom the directory is being unshared.</p>"
     },
+    "UpdateActivities": {
+      "type": "list",
+      "member": {
+        "shape": "UpdateInfoEntry"
+      }
+    },
     "UpdateConditionalForwarderRequest": {
       "type": "structure",
       "required": [
@@ -4222,7 +5741,7 @@
       "members": {
         "DirectoryId": {
           "shape": "DirectoryId",
-          "documentation": "<p>The directory ID of the AWS directory for which to update the conditional forwarder.</p>"
+          "documentation": "<p>The directory ID of the Amazon Web Services directory for which to update the conditional forwarder.</p>"
         },
         "RemoteDomainName": {
           "shape": "RemoteDomainName",
@@ -4239,6 +5758,74 @@
       "type": "structure",
       "members": {},
       "documentation": "<p>The result of an UpdateConditionalForwarder request.</p>"
+    },
+    "UpdateDirectorySetupRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "UpdateType"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p> The identifier of the directory on which you want to perform the update. </p>"
+        },
+        "UpdateType": {
+          "shape": "UpdateType",
+          "documentation": "<p> The type of update that needs to be performed on the directory. For example, OS. </p>"
+        },
+        "OSUpdateSettings": {
+          "shape": "OSUpdateSettings",
+          "documentation": "<p> The settings for the OS update that needs to be performed on the directory. </p>"
+        },
+        "CreateSnapshotBeforeUpdate": {
+          "shape": "CreateSnapshotBeforeUpdate",
+          "documentation": "<p> The boolean that specifies if a snapshot for the directory needs to be taken before updating the directory. </p>",
+          "box": true
+        }
+      }
+    },
+    "UpdateDirectorySetupResult": {
+      "type": "structure",
+      "members": {}
+    },
+    "UpdateInfoEntry": {
+      "type": "structure",
+      "members": {
+        "Region": {
+          "shape": "RegionName",
+          "documentation": "<p> The name of the Region. </p>"
+        },
+        "Status": {
+          "shape": "UpdateStatus",
+          "documentation": "<p> The status of the update performed on the directory. </p>"
+        },
+        "StatusReason": {
+          "shape": "UpdateStatusReason",
+          "documentation": "<p> The reason for the current status of the update type activity. </p>"
+        },
+        "InitiatedBy": {
+          "shape": "InitiatedBy",
+          "documentation": "<p> This specifies if the update was initiated by the customer or by the service team. </p>"
+        },
+        "NewValue": {
+          "shape": "UpdateValue",
+          "documentation": "<p> The new value of the target setting. </p>"
+        },
+        "PreviousValue": {
+          "shape": "UpdateValue",
+          "documentation": "<p> The old value of the target setting. </p>"
+        },
+        "StartTime": {
+          "shape": "StartDateTime",
+          "documentation": "<p> The start time of the <code>UpdateDirectorySetup</code> for the particular type. </p>"
+        },
+        "LastUpdatedDateTime": {
+          "shape": "LastUpdatedDateTime",
+          "documentation": "<p> The last updated date and time of a particular directory setting. </p>"
+        }
+      },
+      "documentation": "<p> An entry of update information related to a requested update type. </p>"
     },
     "UpdateNumberOfDomainControllersRequest": {
       "type": "structure",
@@ -4287,6 +5874,43 @@
     "UpdateSecurityGroupForDirectoryControllers": {
       "type": "boolean"
     },
+    "UpdateSettingsRequest": {
+      "type": "structure",
+      "required": [
+        "DirectoryId",
+        "Settings"
+      ],
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory for which to update settings.</p>"
+        },
+        "Settings": {
+          "shape": "Settings",
+          "documentation": "<p>The list of <a>Setting</a> objects.</p>"
+        }
+      }
+    },
+    "UpdateSettingsResult": {
+      "type": "structure",
+      "members": {
+        "DirectoryId": {
+          "shape": "DirectoryId",
+          "documentation": "<p>The identifier of the directory.</p>"
+        }
+      }
+    },
+    "UpdateStatus": {
+      "type": "string",
+      "enum": [
+        "Updated",
+        "Updating",
+        "UpdateFailed"
+      ]
+    },
+    "UpdateStatusReason": {
+      "type": "string"
+    },
     "UpdateTrustRequest": {
       "type": "structure",
       "required": [
@@ -4315,6 +5939,22 @@
         }
       }
     },
+    "UpdateType": {
+      "type": "string",
+      "enum": [
+        "OS"
+      ]
+    },
+    "UpdateValue": {
+      "type": "structure",
+      "members": {
+        "OSUpdateSettings": {
+          "shape": "OSUpdateSettings",
+          "documentation": "<p> The OS update related settings. </p>"
+        }
+      },
+      "documentation": "<p> The value for a given type of <code>UpdateSettings</code>. </p>"
+    },
     "UseSameUsername": {
       "type": "boolean"
     },
@@ -4340,7 +5980,7 @@
           "documentation": "<p>The unique Trust ID of the trust relationship to verify.</p>"
         }
       },
-      "documentation": "<p>Initiates the verification of an existing trust relationship between an AWS Managed Microsoft AD directory and an external domain.</p>"
+      "documentation": "<p>Initiates the verification of an existing trust relationship between an Managed Microsoft AD directory and an external domain.</p>"
     },
     "VerifyTrustResult": {
       "type": "structure",
@@ -4357,5 +5997,5 @@
       "pattern": "^(vpc-[0-9a-f]{8}|vpc-[0-9a-f]{17})$"
     }
   },
-  "documentation": "<fullname>AWS Directory Service</fullname> <p>AWS Directory Service is a web service that makes it easy for you to setup and run directories in the AWS cloud, or connect your AWS resources with an existing on-premises Microsoft Active Directory. This guide provides detailed information about AWS Directory Service operations, data types, parameters, and errors. For information about AWS Directory Services features, see <a href=\"https://aws.amazon.com/directoryservice/\">AWS Directory Service</a> and the <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html\">AWS Directory Service Administration Guide</a>.</p> <note> <p>AWS provides SDKs that consist of libraries and sample code for various programming languages and platforms (Java, Ruby, .Net, iOS, Android, etc.). The SDKs provide a convenient way to create programmatic access to AWS Directory Service and other AWS services. For more information about the AWS SDKs, including how to download and install them, see <a href=\"http://aws.amazon.com/tools/\">Tools for Amazon Web Services</a>.</p> </note>"
+  "documentation": "<fullname>Directory Service</fullname> <p>Directory Service is a web service that makes it easy for you to setup and run directories in the Amazon Web Services cloud, or connect your Amazon Web Services resources with an existing self-managed Microsoft Active Directory. This guide provides detailed information about Directory Service operations, data types, parameters, and errors. For information about Directory Services features, see <a href=\"https://aws.amazon.com/directoryservice/\">Directory Service</a> and the <a href=\"http://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html\">Directory Service Administration Guide</a>.</p> <note> <p>Amazon Web Services provides SDKs that consist of libraries and sample code for various programming languages and platforms (Java, Ruby, .Net, iOS, Android, etc.). The SDKs provide a convenient way to create programmatic access to Directory Service and other Amazon Web Services services. For more information about the Amazon Web Services SDKs, including how to download and install them, see <a href=\"http://aws.amazon.com/tools/\">Tools for Amazon Web Services</a>.</p> </note>"
 }
