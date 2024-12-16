@@ -1,0 +1,40 @@
+{
+  "type": "package",
+  "name": "the-sett/elm-aws-messaging",
+  "summary": "Elm client for the AWS messaging services.",
+  "license": "BSD-3-Clause",
+  "version": "1.0.0",
+  "exposed-modules": [
+    "AWS.Athena",
+    "AWS.Batch",
+    "AWS.CloudTrail",
+    "AWS.CognitoIdentity",
+    "AWS.CognitoIdentityProvider",
+    "AWS.CostExplorer",
+    "AWS.DynamoDb",
+    "AWS.Ecr",
+    "AWS.Ecs",
+    "AWS.EventBridge",
+    "AWS.IoT1clickDevicesService",
+    "AWS.IoT1clickProjects",
+    "AWS.IoTanalytics",
+    "AWS.IoTDataPlane",
+    "AWS.IoTEventsData",
+    "AWS.IoTEvents",
+    "AWS.IoTJobsDataPlane",
+    "AWS.IoTthingsGraph",
+    "AWS.Lambda",
+    "AWS.Sqs"
+  ],
+  "elm-version": "0.19.0 <= v < 0.20.0",
+  "dependencies": {
+    "NoRedInk/elm-json-decode-pipeline": "1.0.0 <= v < 2.0.0",
+    "elm/core": "1.0.2 <= v < 2.0.0",
+    "elm/json": "1.1.3 <= v < 2.0.0",
+    "miniBill/elm-codec": "1.2.0 <= v < 2.0.0",
+    "the-sett/elm-aws-core": "8.0.0 <= v < 9.0.0",
+    "the-sett/elm-refine": "1.4.0 <= v < 2.0.0",
+    "the-sett/json-optional": "1.0.0 <= v < 2.0.0"
+  },
+  "test-dependencies": {}
+}
