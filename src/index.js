@@ -49,9 +49,6 @@ ${formatLocations.join('\n')}`);
 // });
 
 const specs = [
-  "ecs-2014-11-13.normal.json",
-  "ecr-2015-09-21.normal.json",
-  "sqs-2012-11-05.normal.json",
   "athena-2017-05-18.normal.json",
   "batch-2016-08-10.normal.json",
   "ce-2017-10-25.normal.json",
@@ -62,6 +59,8 @@ const specs = [
   "cognito-idp-2016-04-18.normal.json",
   "dynamodb-2012-08-10.normal.json",
   "ec2-2016-11-15.normal.json",
+  "ecr-2015-09-21.normal.json",
+  "ecs-2014-11-13.normal.json",
   "eventbridge-2015-10-07.normal.json",
   "extra-2018-08-02.normal.json",
   "iam-2010-05-08.normal.json",
@@ -69,6 +68,7 @@ const specs = [
   "rds-2014-10-31.normal.json",
   "route53-2013-04-01.normal.json",
   "s3-2006-03-01.normal.json",
+  "sns-2010-03-31.normal.json",
   "sqs-2012-11-05.normal.json",
   "iotevents-2018-07-27.normal.json",
   "iot1click-devices-2018-05-14.normal.json",
