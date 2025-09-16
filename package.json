@@ -11,11 +11,13 @@
     "clobber": "rm -rf elm-stuff",
     "rebuild": "npm run clobber && npm install && npm run build",
     "build": "elm make --optimize --output=src/elm.js src/elm/Top.elm",
-    "start": "npm run build && node src/index.js"
+    "start": "npm run build && node src/index.js",
+    "watch": "elm-watch hot"
   },
   "dependencies": {
-    "glob": "^7.1.4",
-    "elm-format": "^0.8.2"
+    "elm-format": "^0.8.2",
+    "elm-watch": "^1.2.3",
+    "glob": "^7.1.4"
   },
   "devDependencies": {
     "elm": "latest-0.19.1"
