@@ -3,7 +3,7 @@ module IO exposing (..)
 import Task
 
 
-example : IO String (List String)
+example : IO () String (List String)
 example =
     task (Task.succeed [])
         |> andThen addOneOrFail
@@ -30,24 +30,24 @@ main =
 --
 
 
-type alias Program model x a =
-    Platform.Program () model (IO x a)
+type alias Program s x a =
+    Platform.Program () s (IO s x a)
 
 
-run : model -> IO x a -> Platform.Program () model (IO x a)
-run model io =
+run : s -> IO s x a -> Platform.Program () s (IO s x a)
+run state io =
     Platform.worker
-        { init = \_ -> update io model
+        { init = \_ -> update io state
         , update = update
         , subscriptions = \_ -> Sub.none
         }
 
 
-update : IO x a -> model -> ( model, Cmd (IO x a) )
-update msg model =
-    case msg |> Debug.log "msg" of
-        IOTask t ->
-            ( model
+update : IO s x a -> s -> ( s, Cmd (IO s x a) )
+update (State io) state =
+    case io state of
+        ( innerS, IOTask t ) ->
+            ( innerS
             , Task.attempt
                 (\r ->
                     case r of
@@ -60,13 +60,13 @@ update msg model =
                 t
             )
 
-        IOOk x ->
-            ( model
+        ( innerS, IOOk x ) ->
+            ( innerS
             , Cmd.none
             )
 
-        IOErr e ->
-            ( model
+        ( innerS, IOErr e ) ->
+            ( innerS
             , Cmd.none
             )
 
@@ -75,8 +75,12 @@ update msg model =
 --
 
 
-type IO x a
-    = IOTask (Task.Task x (IO x a))
+type IO s x a
+    = State (s -> ( s, T s x a ))
+
+
+type T s x a
+    = IOTask (Task.Task x (IO s x a))
     | IOOk a
     | IOErr x
 
@@ -85,26 +89,29 @@ type IO x a
 --
 
 
-pure : a -> IO x a
+pure : a -> IO s x a
 pure val =
-    IOOk val
+    (\s -> ( s, IOOk val ))
+        |> State
 
 
-err : x -> IO x a
+err : x -> IO s x a
 err e =
-    IOErr e
+    (\s -> ( s, IOErr e ))
+        |> State
 
 
-task : Task.Task x a -> IO x a
+task : Task.Task x a -> IO s x a
 task t =
-    t |> Task.map pure |> IOTask
+    (\s -> ( s, t |> Task.map pure |> IOTask ))
+        |> State
 
 
 
 --
 
 
-void : IO x a -> IO x ()
+void : IO s x a -> IO s x ()
 void =
     map (always ())
 
@@ -113,59 +120,87 @@ void =
 --
 
 
-map : (a -> b) -> IO x a -> IO x b
-map mf io =
-    case io of
-        IOTask t ->
-            Task.andThen (\inner -> Task.succeed (map mf inner)) t
-                |> IOTask
+map : (a -> b) -> IO s x a -> IO s x b
+map mf (State io) =
+    (\s ->
+        case io s of
+            ( innerS, IOTask t ) ->
+                ( innerS
+                , Task.andThen (\inner -> Task.succeed (map mf inner)) t |> IOTask
+                )
 
-        IOOk x ->
-            mf x |> IOOk
+            ( innerS, IOOk x ) ->
+                ( innerS
+                , mf x |> IOOk
+                )
 
-        IOErr e ->
-            IOErr e
+            ( innerS, IOErr e ) ->
+                ( innerS
+                , IOErr e
+                )
+    )
+        |> State
 
 
 map2 =
     Debug.todo ""
 
 
-andThen : (a -> IO x b) -> IO x a -> IO x b
-andThen mf io =
-    case io of
-        IOTask t ->
-            Task.andThen (\inner -> Task.succeed (andThen mf inner)) t
-                |> IOTask
+andThen : (a -> IO s x b) -> IO s x a -> IO s x b
+andThen mf (State io) =
+    (\s ->
+        case io s of
+            ( innerS, IOTask t ) ->
+                ( innerS
+                , Task.andThen (\inner -> Task.succeed (andThen mf inner)) t
+                    |> IOTask
+                )
 
-        IOOk x ->
-            mf x
+            ( innerS, IOOk x ) ->
+                let
+                    (State stateFn) =
+                        mf x
+                in
+                stateFn innerS
 
-        IOErr e ->
-            IOErr e
+            ( innerS, IOErr e ) ->
+                ( innerS
+                , IOErr e
+                )
+    )
+        |> State
 
 
-andMap : IO x a -> IO x (a -> b) -> IO x b
+andMap : IO s x a -> IO s x (a -> b) -> IO s x b
 andMap ma mf =
     andThen (\f -> andThen (f >> pure) ma) mf
 
 
-onError : (x -> IO y a) -> IO x a -> IO y a
-onError ef io =
-    case io of
-        IOTask t ->
-            Task.onError
-                (\e -> ef e |> Task.succeed)
-                (t |> Task.map (onError ef))
-                |> IOTask
+onError : (x -> IO s y a) -> IO s x a -> IO s y a
+onError ef (State io) =
+    (\s ->
+        case io s of
+            ( innerS, IOTask t ) ->
+                ( innerS
+                , Task.onError
+                    (\e -> ef e |> Task.succeed)
+                    (t |> Task.map (onError ef))
+                    |> IOTask
+                )
 
-        IOOk x ->
-            pure x
+            ( innerS, IOOk x ) ->
+                ( innerS, IOOk x )
 
-        IOErr e ->
-            ef e
+            ( innerS, IOErr e ) ->
+                let
+                    (State stateFn) =
+                        ef e
+                in
+                stateFn innerS
+    )
+        |> State
 
 
-sequence : List (IO x a) -> IO x (List a)
+sequence : List (IO s x a) -> IO s x (List a)
 sequence ios =
     List.foldr (map2 (::)) (pure []) ios
