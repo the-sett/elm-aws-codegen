@@ -3,21 +3,23 @@ module IO exposing (..)
 import Task
 
 
-example : IO String (List Int)
+example : IO String (List String)
 example =
-    pure 1
-        |> andThen (\x -> [ x ] |> Debug.log "step 1" |> pure)
-        |> andThen
-            (\xs ->
-                if List.isEmpty xs then
-                    err "Was Empty"
+    task (Task.succeed [])
+        |> andThen addOneOrFail
+        |> onError (\errorMsg -> pure [ errorMsg ] |> Debug.log "recovery")
+        |> andThen addOneOrFail
+        |> andThen (\ys -> task (Task.succeed ys) |> Debug.log "later task")
+        |> andThen (\zs -> List.reverse zs |> Debug.log "reverse" |> pure)
 
-                else
-                    2 :: xs |> Debug.log "step 2" |> pure
-            )
-        |> andThen (\ys -> task (Task.succeed ys) |> Debug.log "step 3")
-        |> andThen (\zs -> List.reverse zs |> Debug.log "step 4" |> pure)
-        |> andThen (\ys -> pure ys |> Debug.log "step 5")
+
+addOneOrFail =
+    \xs ->
+        if List.isEmpty xs then
+            err "Was Empty" |> Debug.log "failed"
+
+        else
+            "next" :: xs |> Debug.log "added" |> pure
 
 
 main =
@@ -107,14 +109,14 @@ task t =
 
 
 --
---void : IO x a -> IO x ()
---void =
---    IO.map (always ())
---
---
---mapM : (a -> IO x b) -> List a -> IO x (List b)
---mapM f =
---    List.map f >> IO.sequence
+
+
+void : IO x a -> IO x ()
+void =
+    map (always ())
+
+
+
 --
 
 
@@ -130,6 +132,10 @@ map mf io =
 
         IOPure x ->
             mf x |> IOPure
+
+
+map2 =
+    Debug.todo ""
 
 
 andThen : (a -> IO x b) -> IO x a -> IO x b
@@ -154,3 +160,29 @@ andThen mf io =
 andMap : IO x a -> IO x (a -> b) -> IO x b
 andMap ma mf =
     andThen (\f -> andThen (f >> pure) ma) mf
+
+
+onError : (x -> IO y a) -> IO x a -> IO y a
+onError ef io =
+    case io of
+        IOResult r ->
+            case r of
+                Ok x ->
+                    pure x
+
+                Err e ->
+                    ef e
+
+        IOTask t ->
+            Task.onError
+                (\e -> ef e |> Task.succeed)
+                (t |> Task.map (onError ef))
+                |> IOTask
+
+        IOPure x ->
+            pure x
+
+
+sequence : List (IO x a) -> IO x (List a)
+sequence ios =
+    List.foldr (map2 (::)) (pure []) ios
