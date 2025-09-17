@@ -81,34 +81,34 @@ const specs = [
   "iot-data-2015-05-28.normal.json"
 ]
 
-specs.forEach(function(item, index) {
-  var filename = 'api/' + item;
+// specs.forEach(function(item, index) {
+//   var filename = 'api/' + item;
+//
+//   fs.readFile(filename, 'utf8', function(err, contents) {
+//     app.ports.modelInPort.send([filename, contents]);
+//   });
+// });
 
-  fs.readFile(filename, 'utf8', function(err, contents) {
-    app.ports.modelInPort.send([filename, contents]);
-  });
-});
+// app.ports.codeOutPort.subscribe(request => {
+//   console.log("=== Processed ===: " + request[0] + "\n");
+//
+//   request[2].forEach(function(item, index) {
+//     console.log(item + "\n");
+//   });
+//
+//   var filename = 'stubs/AWS/' + request[0];
+//
+//   fs.writeFile(filename, request[1], (err) => {
+//     if (err) throw err;
+//
+//     formatFile(filename);
+//   })
+// });
 
-app.ports.codeOutPort.subscribe(request => {
-  console.log("=== Processed ===: " + request[0] + "\n");
-
-  request[2].forEach(function(item, index) {
-    console.log(item + "\n");
-  });
-
-  var filename = 'stubs/AWS/' + request[0];
-
-  fs.writeFile(filename, request[1], (err) => {
-    if (err) throw err;
-
-    formatFile(filename);
-  })
-});
-
-app.ports.errorOutPort.subscribe(request => {
-  console.log("=== Errors While Processing ========= " + request[0] + "\n");
-
-  request[1].forEach(function(item, index) {
-    console.log(item + "\n");
-  });
-});
+// app.ports.errorOutPort.subscribe(request => {
+//   console.log("=== Errors While Processing ========= " + request[0] + "\n");
+//
+//   request[1].forEach(function(item, index) {
+//     console.log(item + "\n");
+//   });
+// });

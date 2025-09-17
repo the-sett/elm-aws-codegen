@@ -22,11 +22,13 @@ import Time exposing (Posix)
 
 
 -- Top level construction
+--main : Program () Model Msg
+--main =
+--    Platform.worker { init = init, update = update, subscriptions = subscriptions }
 
 
-main : Program () Model Msg
 main =
-    Platform.worker { init = init, update = update, subscriptions = subscriptions }
+    IO.main
 
 
 type Model

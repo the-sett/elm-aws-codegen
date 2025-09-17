@@ -3,54 +3,76 @@ module IO exposing (..)
 import Task
 
 
+example : IO String (List Int)
+example =
+    pure 1
+        |> andThen (\x -> [ x ] |> Debug.log "step 1" |> pure)
+        |> andThen
+            (\xs ->
+                if List.isEmpty xs then
+                    err "Was Empty"
+
+                else
+                    2 :: xs |> Debug.log "step 2" |> pure
+            )
+        |> andThen (\ys -> task (Task.succeed ys) |> Debug.log "step 3")
+        |> andThen (\zs -> List.reverse zs |> Debug.log "step 4" |> pure)
+        |> andThen (\ys -> pure ys |> Debug.log "step 5")
+
+
+main =
+    run () example
+
+
 
 --
 
 
-type alias Program =
-    Platform.Program () Model Msg
+type alias Program model x a =
+    Platform.Program () model (IO x a)
 
 
-run : IO Never () -> Program
-run app =
+run : model -> IO x a -> Platform.Program () model (IO x a)
+run model io =
     Platform.worker
-        { init = update app
+        { init = \_ -> update io model
         , update = update
         , subscriptions = \_ -> Sub.none
         }
 
 
-type alias Model =
-    ()
-
-
-type alias Msg =
-    IO Never ()
-
-
-update : Msg -> model -> ( model, Cmd Msg )
+update : IO x a -> model -> ( model, Cmd (IO x a) )
 update msg model =
-    case msg of
+    case msg |> Debug.log "msg" of
         IOResult r ->
             case r of
                 Ok x ->
                     ( model
-                    , Task.perform identity (Task.succeed (pure x))
+                    , Cmd.none
                     )
 
                 Err e ->
                     ( model
-                    , Task.perform identity (Task.fail e)
+                    , Cmd.none
                     )
 
         IOTask t ->
             ( model
-            , Task.perform (Task.succeed >> IOTask) t
+            , Task.attempt
+                (\r ->
+                    case r of
+                        Ok x ->
+                            x
+
+                        Err e ->
+                            err e
+                )
+                t
             )
 
         IOPure x ->
             ( model
-            , Task.perform identity (Task.succeed (pure x))
+            , Cmd.none
             )
 
 
@@ -68,8 +90,8 @@ type IO x a
 --
 
 
-ok : a -> IO x a
-ok val =
+pure : a -> IO x a
+pure val =
     Ok val |> IOResult
 
 
@@ -78,22 +100,21 @@ err e =
     Err e |> IOResult
 
 
-succeed : a -> IO x a
-succeed t =
-    Task.succeed (pure t) |> IOTask
-
-
-fail : x -> IO x a
-fail e =
-    Task.fail e |> IOTask
-
-
-pure : a -> IO x a
-pure x =
-    IOPure x
+task : Task.Task x a -> IO x a
+task t =
+    t |> Task.map pure |> IOTask
 
 
 
+--
+--void : IO x a -> IO x ()
+--void =
+--    IO.map (always ())
+--
+--
+--mapM : (a -> IO x b) -> List a -> IO x (List b)
+--mapM f =
+--    List.map f >> IO.sequence
 --
 
 
@@ -133,85 +154,3 @@ andThen mf io =
 andMap : IO x a -> IO x (a -> b) -> IO x b
 andMap ma mf =
     andThen (\f -> andThen (f >> pure) ma) mf
-
-
-
--- TASKS
---run : IO x a -> IO Never (Result x a)
---run task =
---    task
---        |> IO.map Ok
---        |> IO.onError (Err >> IO.succeed)
---
---
---throw : x -> IO x a
---throw =
---    IO.fail
--- IO
---io : IO Never a -> IO x a
---io work =
---    IO.mapError never work
---
---
---mio : x -> IO Never (Maybe a) -> IO x a
---mio x work =
---    work
---        |> IO.mapError never
---        |> IO.andThen
---            (\m ->
---                case m of
---                    Just a ->
---                        IO.succeed a
---
---                    Nothing ->
---                        IO.fail x
---            )
---
---
---eio : (x -> y) -> IO Never (Result x a) -> IO y a
---eio func work =
---    work
---        |> IO.mapError never
---        |> IO.andThen
---            (\m ->
---                case m of
---                    Ok a ->
---                        IO.succeed a
---
---                    Err err ->
---                        func err |> IO.fail
---            )
---
---
---
----- INSTANCES
---
---
---void : IO x a -> IO x ()
---void =
---    IO.map (always ())
---
---
---pure : a -> IO x a
---pure =
---    IO.succeed
---
---
---apply : IO x a -> IO x (a -> b) -> IO x b
---apply ma mf =
---    bind (\f -> bind (pure << f) ma) mf
---
---
---fmap : (a -> b) -> IO x a -> IO x b
---fmap =
---    IO.map
---
---
---bind : (a -> IO x b) -> IO x a -> IO x b
---bind =
---    IO.andThen
---
---
---mapM : (a -> IO x b) -> List a -> IO x (List b)
---mapM f =
---    List.map f >> IO.sequence
