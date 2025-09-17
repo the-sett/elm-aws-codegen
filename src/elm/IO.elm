@@ -3,27 +3,35 @@ module IO exposing (..)
 import Task
 
 
-example : IO () String (List String)
+type alias Model =
+    { messages : List String }
+
+
+example : IO Model String ()
 example =
-    task (Task.succeed [])
-        |> andThen addOneOrFail
-        |> onError (\errorMsg -> pure [ errorMsg ] |> Debug.log "recovery")
-        |> andThen addOneOrFail
-        |> andThen (\ys -> task (Task.succeed ys) |> Debug.log "later task")
-        |> andThen (\zs -> List.reverse zs |> Debug.log "reverse" |> pure)
+    task (Task.succeed "")
+        |> andThen (\_ -> err "error")
+        |> andThen push
+        |> onError (\_ -> pure "recovery1" |> andThen push)
+        |> andThen (\_ -> pure "success")
+        |> andThen push
+        |> andThen (\_ -> task (Task.succeed "task"))
+        |> andThen push
+        |> andThen (\_ -> task (Task.fail "failed task"))
+        |> andThen push
+        |> onError (\_ -> pure "recovery2" |> andThen push)
+        |> andThen (\_ -> get)
+        |> map (\s -> Debug.log "state" s)
+        |> andThen (\_ -> modify (\state -> { state | messages = List.reverse state.messages }))
 
 
-addOneOrFail =
-    \xs ->
-        if List.isEmpty xs then
-            err "Was Empty" |> Debug.log "failed"
-
-        else
-            "next" :: xs |> Debug.log "added" |> pure
+push : String -> IO Model String ()
+push =
+    \msg -> modify (\state -> { state | messages = msg :: state.messages })
 
 
 main =
-    run () example
+    program { messages = [ "initial" ] } example
 
 
 
@@ -34,17 +42,23 @@ type alias Program s x a =
     Platform.Program () s (IO s x a)
 
 
-run : s -> IO s x a -> Platform.Program () s (IO s x a)
-run state io =
+program : s -> IO s x a -> Platform.Program () s (IO s x a)
+program state io =
     Platform.worker
-        { init = \_ -> update io state
-        , update = update
+        { init = \_ -> evalTasks io state
+        , update = evalTasks
         , subscriptions = \_ -> Sub.none
         }
 
 
-update : IO s x a -> s -> ( s, Cmd (IO s x a) )
-update (State io) state =
+
+--run : IO s x a -> s -> ( s, Result x a )
+--run (State io) state =
+--    Debug.todo ""
+
+
+evalTasks : IO s x a -> s -> ( s, Cmd (IO s x a) )
+evalTasks (State io) state =
     case io state of
         ( innerS, IOTask t ) ->
             ( innerS
@@ -107,8 +121,29 @@ task t =
         |> State
 
 
+advance : (s -> ( s, a )) -> IO s x a
+advance fn =
+    (\s -> fn s |> Tuple.mapSecond IOOk)
+        |> State
+
+
 
 --
+
+
+get : IO s x s
+get =
+    State (\s -> ( s, IOOk s ))
+
+
+put : s -> IO s x ()
+put s =
+    State (\_ -> ( s, IOOk () ))
+
+
+modify : (s -> s) -> IO s x ()
+modify fn =
+    State (\s -> ( fn s, IOOk () ))
 
 
 void : IO s x a -> IO s x ()
