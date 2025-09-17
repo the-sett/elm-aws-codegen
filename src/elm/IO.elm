@@ -46,18 +46,6 @@ run model io =
 update : IO x a -> model -> ( model, Cmd (IO x a) )
 update msg model =
     case msg |> Debug.log "msg" of
-        IOResult r ->
-            case r of
-                Ok x ->
-                    ( model
-                    , Cmd.none
-                    )
-
-                Err e ->
-                    ( model
-                    , Cmd.none
-                    )
-
         IOTask t ->
             ( model
             , Task.attempt
@@ -72,7 +60,12 @@ update msg model =
                 t
             )
 
-        IOPure x ->
+        IOOk x ->
+            ( model
+            , Cmd.none
+            )
+
+        IOErr e ->
             ( model
             , Cmd.none
             )
@@ -83,9 +76,9 @@ update msg model =
 
 
 type IO x a
-    = IOResult (Result x a)
-    | IOTask (Task.Task x (IO x a))
-    | IOPure a
+    = IOTask (Task.Task x (IO x a))
+    | IOOk a
+    | IOErr x
 
 
 
@@ -94,12 +87,12 @@ type IO x a
 
 pure : a -> IO x a
 pure val =
-    Ok val |> IOResult
+    IOOk val
 
 
 err : x -> IO x a
 err e =
-    Err e |> IOResult
+    IOErr e
 
 
 task : Task.Task x a -> IO x a
@@ -123,15 +116,15 @@ void =
 map : (a -> b) -> IO x a -> IO x b
 map mf io =
     case io of
-        IOResult r ->
-            Result.map mf r |> IOResult
-
         IOTask t ->
             Task.andThen (\inner -> Task.succeed (map mf inner)) t
                 |> IOTask
 
-        IOPure x ->
-            mf x |> IOPure
+        IOOk x ->
+            mf x |> IOOk
+
+        IOErr e ->
+            IOErr e
 
 
 map2 =
@@ -141,20 +134,15 @@ map2 =
 andThen : (a -> IO x b) -> IO x a -> IO x b
 andThen mf io =
     case io of
-        IOResult r ->
-            case r of
-                Ok x ->
-                    mf x
-
-                Err e ->
-                    Err e |> IOResult
-
         IOTask t ->
             Task.andThen (\inner -> Task.succeed (andThen mf inner)) t
                 |> IOTask
 
-        IOPure x ->
+        IOOk x ->
             mf x
+
+        IOErr e ->
+            IOErr e
 
 
 andMap : IO x a -> IO x (a -> b) -> IO x b
@@ -165,22 +153,17 @@ andMap ma mf =
 onError : (x -> IO y a) -> IO x a -> IO y a
 onError ef io =
     case io of
-        IOResult r ->
-            case r of
-                Ok x ->
-                    pure x
-
-                Err e ->
-                    ef e
-
         IOTask t ->
             Task.onError
                 (\e -> ef e |> Task.succeed)
                 (t |> Task.map (onError ef))
                 |> IOTask
 
-        IOPure x ->
+        IOOk x ->
             pure x
+
+        IOErr e ->
+            ef e
 
 
 sequence : List (IO x a) -> IO x (List a)
