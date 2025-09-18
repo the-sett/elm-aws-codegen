@@ -308,7 +308,7 @@ andThen mf (State io) =
 
 andMap : Procedure s x a -> Procedure s x (a -> b) -> Procedure s x b
 andMap ma mf =
-    andThen (\f -> andThen (f >> pure) ma) mf
+    andThen (\f -> map f ma) mf
 
 
 onError : (x -> Procedure s y a) -> Procedure s x a -> Procedure s y a
