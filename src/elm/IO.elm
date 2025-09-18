@@ -7,31 +7,47 @@ type alias Model =
     { messages : List String }
 
 
-example : IO Model String ()
+example : Procedure Model String ()
 example =
-    task (Task.succeed "")
+    task (Task.succeed "success1")
+        |> andThen push
         |> andThen (\_ -> err "error")
         |> andThen push
-        |> onError (\_ -> pure "recovery1" |> andThen push)
-        |> andThen (\_ -> pure "success")
+        |> onError recover
+        |> andThen (\_ -> pure "success2")
         |> andThen push
         |> andThen (\_ -> task (Task.succeed "task"))
         |> andThen push
         |> andThen (\_ -> task (Task.fail "failed task"))
         |> andThen push
-        |> onError (\_ -> pure "recovery2" |> andThen push)
+        |> andThen (\_ -> pure "skipped pure")
+        |> andThen push
+        |> andThen (\_ -> task (Task.succeed "skipped task"))
+        |> andThen push
+        |> onError recover
         |> andThen (\_ -> get)
         |> map (\s -> Debug.log "state" s)
         |> andThen (\_ -> modify (\state -> { state | messages = List.reverse state.messages }))
 
 
-push : String -> IO Model String ()
-push =
-    \msg -> modify (\state -> { state | messages = msg :: state.messages })
+push : String -> Procedure Model String ()
+push msg =
+    modify (\state -> { state | messages = msg :: state.messages })
+
+
+recover : String -> Procedure Model String ()
+recover msg =
+    pure ("recovered " ++ msg) |> andThen push
 
 
 main =
     program { messages = [ "initial" ] } example
+
+
+mostlyApplicative f aResult bResult =
+    pure (\a b -> { a = a, b = b, c = f a b })
+        |> andMap aResult
+        |> andMap bResult
 
 
 
@@ -39,28 +55,40 @@ main =
 
 
 type alias Program s x a =
-    Platform.Program () s (IO s x a)
+    Platform.Program () s (Procedure s x a)
 
 
-program : s -> IO s x a -> Platform.Program () s (IO s x a)
+program : s -> Procedure s x a -> Platform.Program () s (Procedure s x a)
 program state io =
     Platform.worker
-        { init = \_ -> evalTasks io state
-        , update = evalTasks
+        { init = \_ -> run io state
+        , update = run
         , subscriptions = \_ -> Sub.none
         }
 
 
+run : Procedure s x a -> s -> ( s, Cmd (Procedure s x a) )
+run proc state =
+    let
+        ( innerState, maybeCmd ) =
+            eval proc state
+    in
+    case maybeCmd of
+        Just cmd ->
+            ( innerState, cmd )
 
---run : IO s x a -> s -> ( s, Result x a )
---run (State io) state =
---    Debug.todo ""
+        Nothing ->
+            let
+                _ =
+                    Debug.log "run" "terminated"
+            in
+            ( innerState, Cmd.none )
 
 
-evalTasks : IO s x a -> s -> ( s, Cmd (IO s x a) )
-evalTasks (State io) state =
+eval : Procedure s x a -> s -> ( s, Maybe (Cmd (Procedure s x a)) )
+eval (State io) state =
     case io state of
-        ( innerS, IOTask t ) ->
+        ( innerS, PTask t ) ->
             ( innerS
             , Task.attempt
                 (\r ->
@@ -72,16 +100,17 @@ evalTasks (State io) state =
                             err e
                 )
                 t
+                |> Just
             )
 
-        ( innerS, IOOk x ) ->
+        ( innerS, POk x ) ->
             ( innerS
-            , Cmd.none
+            , Nothing
             )
 
-        ( innerS, IOErr e ) ->
+        ( innerS, PErr e ) ->
             ( innerS
-            , Cmd.none
+            , Nothing
             )
 
 
@@ -89,41 +118,41 @@ evalTasks (State io) state =
 --
 
 
-type IO s x a
+type Procedure s x a
     = State (s -> ( s, T s x a ))
 
 
 type T s x a
-    = IOTask (Task.Task x (IO s x a))
-    | IOOk a
-    | IOErr x
+    = PTask (Task.Task x (Procedure s x a))
+    | POk a
+    | PErr x
 
 
 
 --
 
 
-pure : a -> IO s x a
+pure : a -> Procedure s x a
 pure val =
-    (\s -> ( s, IOOk val ))
+    (\s -> ( s, POk val ))
         |> State
 
 
-err : x -> IO s x a
+err : x -> Procedure s x a
 err e =
-    (\s -> ( s, IOErr e ))
+    (\s -> ( s, PErr e ))
         |> State
 
 
-task : Task.Task x a -> IO s x a
+task : Task.Task x a -> Procedure s x a
 task t =
-    (\s -> ( s, t |> Task.map pure |> IOTask ))
+    (\s -> ( s, t |> Task.map pure |> PTask ))
         |> State
 
 
-advance : (s -> ( s, a )) -> IO s x a
+advance : (s -> ( s, a )) -> Procedure s x a
 advance fn =
-    (\s -> fn s |> Tuple.mapSecond IOOk)
+    (\s -> fn s |> Tuple.mapSecond POk)
         |> State
 
 
@@ -131,22 +160,22 @@ advance fn =
 --
 
 
-get : IO s x s
+get : Procedure s x s
 get =
-    State (\s -> ( s, IOOk s ))
+    State (\s -> ( s, POk s ))
 
 
-put : s -> IO s x ()
+put : s -> Procedure s x ()
 put s =
-    State (\_ -> ( s, IOOk () ))
+    State (\_ -> ( s, POk () ))
 
 
-modify : (s -> s) -> IO s x ()
+modify : (s -> s) -> Procedure s x ()
 modify fn =
-    State (\s -> ( fn s, IOOk () ))
+    State (\s -> ( fn s, POk () ))
 
 
-void : IO s x a -> IO s x ()
+void : Procedure s x a -> Procedure s x ()
 void =
     map (always ())
 
@@ -155,78 +184,149 @@ void =
 --
 
 
-map : (a -> b) -> IO s x a -> IO s x b
+map : (a -> b) -> Procedure s x a -> Procedure s x b
 map mf (State io) =
     (\s ->
         case io s of
-            ( innerS, IOTask t ) ->
+            ( innerS, PTask t ) ->
                 ( innerS
-                , Task.andThen (\inner -> Task.succeed (map mf inner)) t |> IOTask
+                , Task.andThen (\inner -> Task.succeed (map mf inner)) t |> PTask
                 )
 
-            ( innerS, IOOk x ) ->
+            ( innerS, POk x ) ->
                 ( innerS
-                , mf x |> IOOk
+                , mf x |> POk
                 )
 
-            ( innerS, IOErr e ) ->
+            ( innerS, PErr e ) ->
                 ( innerS
-                , IOErr e
+                , PErr e
                 )
     )
         |> State
 
 
-map2 =
-    Debug.todo ""
+map2 :
+    (a -> b -> c)
+    -> Procedure s x a
+    -> Procedure s x b
+    -> Procedure s x c
+map2 f p1 p2 =
+    pure f
+        |> andMap p1
+        |> andMap p2
 
 
-andThen : (a -> IO s x b) -> IO s x a -> IO s x b
+map3 :
+    (a -> b -> c -> d)
+    -> Procedure s x a
+    -> Procedure s x b
+    -> Procedure s x c
+    -> Procedure s x d
+map3 f p1 p2 p3 =
+    pure f
+        |> andMap p1
+        |> andMap p2
+        |> andMap p3
+
+
+map4 :
+    (a -> b -> c -> d -> e)
+    -> Procedure s x a
+    -> Procedure s x b
+    -> Procedure s x c
+    -> Procedure s x d
+    -> Procedure s x e
+map4 f p1 p2 p3 p4 =
+    pure f
+        |> andMap p1
+        |> andMap p2
+        |> andMap p3
+        |> andMap p4
+
+
+map5 :
+    (a -> b -> c -> d -> e -> f)
+    -> Procedure s x a
+    -> Procedure s x b
+    -> Procedure s x c
+    -> Procedure s x d
+    -> Procedure s x e
+    -> Procedure s x f
+map5 f p1 p2 p3 p4 p5 =
+    pure f
+        |> andMap p1
+        |> andMap p2
+        |> andMap p3
+        |> andMap p4
+        |> andMap p5
+
+
+map6 :
+    (a -> b -> c -> d -> e -> f -> g)
+    -> Procedure s x a
+    -> Procedure s x b
+    -> Procedure s x c
+    -> Procedure s x d
+    -> Procedure s x e
+    -> Procedure s x f
+    -> Procedure s x g
+map6 f p1 p2 p3 p4 p5 p6 =
+    pure f
+        |> andMap p1
+        |> andMap p2
+        |> andMap p3
+        |> andMap p4
+        |> andMap p5
+        |> andMap p6
+
+
+andThen : (a -> Procedure s x b) -> Procedure s x a -> Procedure s x b
 andThen mf (State io) =
     (\s ->
         case io s of
-            ( innerS, IOTask t ) ->
+            ( innerS, PTask t ) ->
                 ( innerS
                 , Task.andThen (\inner -> Task.succeed (andThen mf inner)) t
-                    |> IOTask
+                    |> PTask
                 )
 
-            ( innerS, IOOk x ) ->
+            ( innerS, POk x ) ->
                 let
                     (State stateFn) =
                         mf x
                 in
                 stateFn innerS
 
-            ( innerS, IOErr e ) ->
+            ( innerS, PErr e ) ->
                 ( innerS
-                , IOErr e
+                , PErr e
                 )
     )
         |> State
 
 
-andMap : IO s x a -> IO s x (a -> b) -> IO s x b
+andMap : Procedure s x a -> Procedure s x (a -> b) -> Procedure s x b
 andMap ma mf =
     andThen (\f -> andThen (f >> pure) ma) mf
 
 
-onError : (x -> IO s y a) -> IO s x a -> IO s y a
+onError : (x -> Procedure s y a) -> Procedure s x a -> Procedure s y a
 onError ef (State io) =
     (\s ->
         case io s of
-            ( innerS, IOTask t ) ->
+            ( innerS, PTask t ) ->
                 ( innerS
                 , Task.onError
                     (\e -> ef e |> Task.succeed)
                     (t |> Task.map (onError ef))
-                    |> IOTask
+                    |> PTask
                 )
 
-            ( innerS, IOOk x ) ->
-                ( innerS, IOOk x )
+            ( innerS, POk x ) ->
+                ( innerS, POk x )
 
-            ( innerS, IOErr e ) ->
+            ( innerS, PErr e ) ->
                 let
                     (State stateFn) =
                         ef e
@@ -236,6 +336,6 @@ onError ef (State io) =
         |> State
 
 
-sequence : List (IO s x a) -> IO s x (List a)
+sequence : List (Procedure s x a) -> Procedure s x (List a)
 sequence ios =
     List.foldr (map2 (::)) (pure []) ios
