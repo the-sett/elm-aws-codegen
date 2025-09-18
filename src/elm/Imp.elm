@@ -1,93 +1,47 @@
-module IO exposing (..)
+module Imp exposing
+    ( Imp
+    , advance
+    , andMap
+    , andThen
+    , err
+    , eval
+    , get
+    , map
+    , map2
+    , map3
+    , map4
+    , map5
+    , map6
+    , modify
+    , onError
+    , program
+    , pure
+    , put
+    , result
+    , sequence
+    , task
+    , void
+    )
 
 import Task
 
 
-type alias Model =
-    { messages : List String }
+type alias Program flags model err res =
+    Platform.Program flags model (Imp model err res)
 
 
-example : Procedure Model String ()
-example =
-    task (Task.succeed "success1")
-        |> andThen push
-        |> andThen (\_ -> err "error")
-        |> andThen push
-        |> onError recover
-        |> andThen (\_ -> pure "success2")
-        |> andThen push
-        |> andThen (\_ -> task (Task.succeed "task"))
-        |> andThen push
-        |> andThen (\_ -> task (Task.fail "failed task"))
-        |> andThen push
-        |> andThen (\_ -> pure "skipped pure")
-        |> andThen push
-        |> andThen (\_ -> task (Task.succeed "skipped task"))
-        |> andThen push
-        |> onError recover
-        |> andThen (\_ -> get)
-        |> map (\s -> Debug.log "state" s)
-        |> andThen (\_ -> modify (\state -> { state | messages = List.reverse state.messages }))
-
-
-push : String -> Procedure Model String ()
-push msg =
-    modify (\state -> { state | messages = msg :: state.messages })
-
-
-recover : String -> Procedure Model String ()
-recover msg =
-    pure ("recovered " ++ msg) |> andThen push
-
-
-main =
-    program { messages = [ "initial" ] } example
-
-
-mostlyApplicative f aResult bResult =
-    pure (\a b -> { a = a, b = b, c = f a b })
-        |> andMap aResult
-        |> andMap bResult
-
-
-
---
-
-
-type alias Program s x a =
-    Platform.Program () s (Procedure s x a)
-
-
-program : s -> Procedure s x a -> Platform.Program () s (Procedure s x a)
-program state io =
+program : flags -> (flags -> s) -> Imp s x a -> Platform.Program flags s (Imp s x a)
+program flags initFn io =
     Platform.worker
-        { init = \_ -> run io state
-        , update = run
+        { init = \_ -> eval io (initFn flags)
+        , update = eval
         , subscriptions = \_ -> Sub.none
         }
 
 
-run : Procedure s x a -> s -> ( s, Cmd (Procedure s x a) )
-run proc state =
-    let
-        ( innerState, maybeCmd ) =
-            eval proc state
-    in
-    case maybeCmd of
-        Just cmd ->
-            ( innerState, cmd )
-
-        Nothing ->
-            let
-                _ =
-                    Debug.log "run" "terminated"
-            in
-            ( innerState, Cmd.none )
-
-
-eval : Procedure s x a -> s -> ( s, Maybe (Cmd (Procedure s x a)) )
+eval : Imp s x a -> s -> ( s, Cmd (Imp s x a) )
 eval (State io) state =
-    case io state of
+    case io state |> Debug.log "eval" of
         ( innerS, PTask t ) ->
             ( innerS
             , Task.attempt
@@ -100,17 +54,16 @@ eval (State io) state =
                             err e
                 )
                 t
-                |> Just
             )
 
         ( innerS, POk x ) ->
             ( innerS
-            , Nothing
+            , Cmd.none
             )
 
         ( innerS, PErr e ) ->
             ( innerS
-            , Nothing
+            , Cmd.none
             )
 
 
@@ -118,12 +71,12 @@ eval (State io) state =
 --
 
 
-type Procedure s x a
+type Imp s x a
     = State (s -> ( s, T s x a ))
 
 
 type T s x a
-    = PTask (Task.Task x (Procedure s x a))
+    = PTask (Task.Task x (Imp s x a))
     | POk a
     | PErr x
 
@@ -132,50 +85,60 @@ type T s x a
 --
 
 
-pure : a -> Procedure s x a
+pure : a -> Imp s x a
 pure val =
     (\s -> ( s, POk val ))
         |> State
 
 
-err : x -> Procedure s x a
+err : x -> Imp s x a
 err e =
     (\s -> ( s, PErr e ))
         |> State
 
 
-task : Task.Task x a -> Procedure s x a
+task : Task.Task x a -> Imp s x a
 task t =
     (\s -> ( s, t |> Task.map pure |> PTask ))
         |> State
 
 
-advance : (s -> ( s, a )) -> Procedure s x a
-advance fn =
-    (\s -> fn s |> Tuple.mapSecond POk)
-        |> State
+result : Result x a -> Imp s x a
+result res =
+    case res of
+        Ok x ->
+            pure x
+
+        Err e ->
+            err e
 
 
 
 --
 
 
-get : Procedure s x s
+get : Imp s x s
 get =
     State (\s -> ( s, POk s ))
 
 
-put : s -> Procedure s x ()
+put : s -> Imp s x ()
 put s =
     State (\_ -> ( s, POk () ))
 
 
-modify : (s -> s) -> Procedure s x ()
+advance : (s -> ( s, a )) -> Imp s x a
+advance fn =
+    (\s -> fn s |> Tuple.mapSecond POk)
+        |> State
+
+
+modify : (s -> s) -> Imp s x ()
 modify fn =
     State (\s -> ( fn s, POk () ))
 
 
-void : Procedure s x a -> Procedure s x ()
+void : Imp s x a -> Imp s x ()
 void =
     map (always ())
 
@@ -184,7 +147,7 @@ void =
 --
 
 
-map : (a -> b) -> Procedure s x a -> Procedure s x b
+map : (a -> b) -> Imp s x a -> Imp s x b
 map mf (State io) =
     (\s ->
         case io s of
@@ -208,9 +171,9 @@ map mf (State io) =
 
 map2 :
     (a -> b -> c)
-    -> Procedure s x a
-    -> Procedure s x b
-    -> Procedure s x c
+    -> Imp s x a
+    -> Imp s x b
+    -> Imp s x c
 map2 f p1 p2 =
     pure f
         |> andMap p1
@@ -219,10 +182,10 @@ map2 f p1 p2 =
 
 map3 :
     (a -> b -> c -> d)
-    -> Procedure s x a
-    -> Procedure s x b
-    -> Procedure s x c
-    -> Procedure s x d
+    -> Imp s x a
+    -> Imp s x b
+    -> Imp s x c
+    -> Imp s x d
 map3 f p1 p2 p3 =
     pure f
         |> andMap p1
@@ -232,11 +195,11 @@ map3 f p1 p2 p3 =
 
 map4 :
     (a -> b -> c -> d -> e)
-    -> Procedure s x a
-    -> Procedure s x b
-    -> Procedure s x c
-    -> Procedure s x d
-    -> Procedure s x e
+    -> Imp s x a
+    -> Imp s x b
+    -> Imp s x c
+    -> Imp s x d
+    -> Imp s x e
 map4 f p1 p2 p3 p4 =
     pure f
         |> andMap p1
@@ -247,12 +210,12 @@ map4 f p1 p2 p3 p4 =
 
 map5 :
     (a -> b -> c -> d -> e -> f)
-    -> Procedure s x a
-    -> Procedure s x b
-    -> Procedure s x c
-    -> Procedure s x d
-    -> Procedure s x e
-    -> Procedure s x f
+    -> Imp s x a
+    -> Imp s x b
+    -> Imp s x c
+    -> Imp s x d
+    -> Imp s x e
+    -> Imp s x f
 map5 f p1 p2 p3 p4 p5 =
     pure f
         |> andMap p1
@@ -264,13 +227,13 @@ map5 f p1 p2 p3 p4 p5 =
 
 map6 :
     (a -> b -> c -> d -> e -> f -> g)
-    -> Procedure s x a
-    -> Procedure s x b
-    -> Procedure s x c
-    -> Procedure s x d
-    -> Procedure s x e
-    -> Procedure s x f
-    -> Procedure s x g
+    -> Imp s x a
+    -> Imp s x b
+    -> Imp s x c
+    -> Imp s x d
+    -> Imp s x e
+    -> Imp s x f
+    -> Imp s x g
 map6 f p1 p2 p3 p4 p5 p6 =
     pure f
         |> andMap p1
@@ -281,7 +244,7 @@ map6 f p1 p2 p3 p4 p5 p6 =
         |> andMap p6
 
 
-andThen : (a -> Procedure s x b) -> Procedure s x a -> Procedure s x b
+andThen : (a -> Imp s x b) -> Imp s x a -> Imp s x b
 andThen mf (State io) =
     (\s ->
         case io s of
@@ -306,12 +269,12 @@ andThen mf (State io) =
         |> State
 
 
-andMap : Procedure s x a -> Procedure s x (a -> b) -> Procedure s x b
+andMap : Imp s x a -> Imp s x (a -> b) -> Imp s x b
 andMap ma mf =
     andThen (\f -> map f ma) mf
 
 
-onError : (x -> Procedure s y a) -> Procedure s x a -> Procedure s y a
+onError : (x -> Imp s y a) -> Imp s x a -> Imp s y a
 onError ef (State io) =
     (\s ->
         case io s of
@@ -336,6 +299,6 @@ onError ef (State io) =
         |> State
 
 
-sequence : List (Procedure s x a) -> Procedure s x (List a)
+sequence : List (Imp s x a) -> Imp s x (List a)
 sequence ios =
     List.foldr (map2 (::)) (pure []) ios
